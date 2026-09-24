@@ -180,4 +180,25 @@ class DataEntryTest extends TestCase
         $response->assertSessionHasErrors('warehouse_id');
         $this->assertDatabaseCount('amr_records', 0);
     }
+
+    public function test_form_type_has_no_default_value_and_quality_defaults_to_good_treated_fair_poor(): void
+    {
+        $response = $this->get(route('records.create'));
+        $response->assertOk();
+
+        // Branches default to only three
+        $defaultBranches = Branch::orderBy('name')->pluck('name')->all();
+        $this->assertSame(['North Cotabato', 'South Cotabato', 'Sultan Kudarat'], $defaultBranches);
+
+        // Form type dropdown has no default selection
+        $response->assertSee('Select Form Type');
+        $response->assertSee('<option value="" selected>Select Form Type</option>', false);
+
+        // Quality dropdown contains only Good, Treated Fair, and Poor
+        $response->assertSee('Good</option>', false);
+        $response->assertSee('Treated Fair</option>', false);
+        $response->assertSee('Poor</option>', false);
+        $response->assertDontSee('<option value="gqa"', false);
+        $response->assertDontSee('<option value="premium"', false);
+    }
 }

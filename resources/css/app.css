@@ -1,20 +1,117 @@
 @import "tailwindcss";
+@import "../../node_modules/flyonui/src/js/plugins/overlay/variants.css";
+@import "../../node_modules/flyonui/src/js/plugins/dropdown/variants.css";
+@import "flatpickr/dist/flatpickr.css";
+@import "../../node_modules/flyonui/src/vendor/flatpickr.css";
 @plugin "flyonui";
 @plugin "@iconify/tailwind4";
 
+@source "../views/**/*.blade.php";
+@source "../../node_modules/flyonui/flyonui.js";
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
+@custom-variant overlay-open (&:where(.open, .open *));
+@custom-variant overlay-minified (&:where(.minified, .minified *), :where(.overlay-minified, .minified, .sidebar-is-minified) &);
+@custom-variant overlay-backdrop-open (&:where(.overlay-backdrop, .overlay-backdrop *));
+
+/* Fixed top header and collapsible mini sidebar layout */
+@media (min-width: 640px) {
+    #collapsible-mini-sidebar {
+        top: 4rem;
+        height: calc(100vh - 4rem);
+        width: 16.5rem;
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html.sidebar-is-minified #collapsible-mini-sidebar,
+    body.overlay-minified #collapsible-mini-sidebar,
+    #collapsible-mini-sidebar.minified {
+        width: 4.25rem !important;
+    }
+
+    .main-content-wrapper {
+        margin-inline-start: 16.5rem;
+        transition: margin-inline-start 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html.sidebar-is-minified .main-content-wrapper,
+    body.overlay-minified .main-content-wrapper {
+        margin-inline-start: 4.25rem !important;
+    }
+}
+
+@media (max-width: 639.98px) {
+    #collapsible-mini-sidebar {
+        top: 4rem;
+        height: calc(100vh - 4rem);
+    }
+
+    .main-content-wrapper {
+        margin-inline-start: 0;
+    }
+}
+
+@layer utilities {
+    .overlay.modal {
+        transition: opacity 0.2s ease-in-out;
+    }
+
+    .overlay.modal.open {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .overlay.modal.open .modal-dialog {
+        opacity: 1;
+        transform: none;
+    }
+
+    [data-trial-row] input,
+    [data-trial-row] select {
+        min-height: 2.5rem;
+        border: 1px solid var(--color-gray-300);
+        background-color: var(--color-white);
+    }
+}
+
+:root,
+[data-theme] {
+    /* Primary = Vibrant Blue */
+    --color-primary: oklch(54.6% 0.245 262.88);
+    --color-primary-content: #ffffff;
+
+    /* Secondary = Vibrant Red */
+    --color-secondary: oklch(57.7% 0.245 27.33);
+    --color-secondary-content: #ffffff;
+
+    /* Accent = Deep Blue */
+    --color-accent: oklch(48.8% 0.243 264.38);
+    --color-accent-content: #ffffff;
+
+    /* Info = Blue */
+    --color-info: oklch(62.3% 0.214 259.82);
+    --color-info-content: #ffffff;
+
+    /* Success = Blue (enforcing Red & Blue only scheme) */
+    --color-success: oklch(54.6% 0.245 262.88);
+    --color-success-content: #ffffff;
+
+    /* Warning = Red */
+    --color-warning: oklch(57.7% 0.245 27.33);
+    --color-warning-content: #ffffff;
+
+    /* Error = Red */
+    --color-error: oklch(57.7% 0.245 27.33);
+    --color-error-content: #ffffff;
+}
+
 @theme {
+    --color-primary: oklch(54.6% 0.245 262.88);
+    --color-secondary: oklch(57.7% 0.245 27.33);
     --font-sans:
         "Instrument Sans", ui-sans-serif, system-ui, sans-serif,
         "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
         "Noto Color Emoji";
 }
 
-[data-trial-row] input,
-[data-trial-row] select {
-    min-height: 2.5rem;
-    border: 1px solid var(--color-gray-300);
-    background-color: var(--color-white);
-}

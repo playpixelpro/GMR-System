@@ -30,6 +30,8 @@ class AmrRecord extends Model
         'test_milling_date',
         'palay_input_kg',
         'rice_recovery_kg',
+        'milling_recovery',
+        'is_outlier',
     ];
 
     /**
@@ -48,6 +50,8 @@ class AmrRecord extends Model
             'test_milling_date' => 'date:Y-m-d',
             'palay_input_kg' => 'decimal:2',
             'rice_recovery_kg' => 'decimal:2',
+            'milling_recovery' => 'decimal:2',
+            'is_outlier' => 'boolean',
         ];
     }
 

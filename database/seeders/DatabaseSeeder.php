@@ -21,5 +21,9 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+
+        foreach (['North Cotabato', 'South Cotabato', 'Sultan Kudarat'] as $branchName) {
+            Branch::firstOrCreate(['name' => $branchName]);
+        }
     }
 }

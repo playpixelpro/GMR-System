@@ -41,3 +41,11 @@ Route::get('/amr/report', [AmrRecordController::class, 'index'])->name(
 Route::get('/pmr/report', [PmrRecordController::class, 'index'])->name(
     'pmr.index',
 );
+
+Route::redirect('/amr', '/amr/report');
+Route::redirect('/reports/amr', '/amr/report');
+Route::redirect('/pmr', '/pmr/report');
+Route::redirect('/reports/pmr', '/pmr/report');
+Route::redirect('/arm', '/amr/report');
+Route::redirect('/arm/report', '/amr/report');
+Route::redirect('/reports/arm', '/amr/report');

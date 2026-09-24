@@ -202,4 +202,43 @@ class AmrRecordTest extends TestCase
         $response->assertSee('Trial 2');
         $response->assertSee('Trial 3');
     }
+
+    public function test_amr_status_shows_ok_when_recovery_rate_is_at_least_60_percent(): void
+    {
+        foreach ([62.50, 63.00, 62.80] as $i => $rate) {
+            AmrRecord::factory()->create([
+                'warehouse_name' => 'WH High',
+                'pile_number' => '1',
+                'variety' => 'PD',
+                'trial_number' => $i + 1,
+                'palay_input_kg' => '10000.00',
+                'rice_recovery_kg' => $rate * 100,
+            ]);
+        }
+
+        $response = $this->get(route('amr.index'));
+
+        $response->assertOk();
+        $response->assertSee('OK');
+        $response->assertDontSee('Lower than 60%');
+    }
+
+    public function test_amr_status_shows_lower_than_60_percent_when_recovery_rate_is_below_60_percent(): void
+    {
+        foreach ([58.00, 57.50, 58.20] as $i => $rate) {
+            AmrRecord::factory()->create([
+                'warehouse_name' => 'WH Low',
+                'pile_number' => '2',
+                'variety' => 'PD',
+                'trial_number' => $i + 1,
+                'palay_input_kg' => '10000.00',
+                'rice_recovery_kg' => $rate * 100,
+            ]);
+        }
+
+        $response = $this->get(route('amr.index'));
+
+        $response->assertOk();
+        $response->assertSee('Lower than 60%');
+    }
 }

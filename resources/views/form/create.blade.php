@@ -9,7 +9,7 @@
     </div>
 
     @if (session('status'))
-        <div class="mb-6 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div class="mb-6 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
             {{ session('status') }}
         </div>
     @endif
@@ -33,6 +33,7 @@
                 <label for="form_type" class="block text-sm font-medium text-gray-700">Form Type</label>
                 <select name="form_type" id="form_type" required
                         class="mt-1 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <option value="" @selected(empty(old('form_type', $formType)))>Select Form Type</option>
                     <option value="amr" @selected(old('form_type', $formType) === 'amr')>AMR</option>
                     <option value="pmr" @selected(old('form_type', $formType) === 'pmr')>PMR</option>
                 </select>
@@ -107,11 +108,9 @@
                     <select name="quality" id="quality" required data-pile-detail-field
                             class="mt-1 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                         <option value="">Select condition</option>
-                        <option value="gqa" @selected(old('quality') === 'gqa')>GQA</option>
-                        <option value="premium" @selected(old('quality') === 'premium')>Premium</option>
-                        <option value="good" @selected(old('quality') === 'good')>Good</option>
-                        <option value="fair" @selected(old('quality') === 'fair')>Fair</option>
-                        <option value="poor" @selected(old('quality') === 'poor')>Poor</option>
+                        <option value="good" @selected(strtolower((string) old('quality')) === 'good')>Good</option>
+                        <option value="treated fair" @selected(in_array(strtolower((string) old('quality')), ['treated fair', 'treated_fair'], true))>Treated Fair</option>
+                        <option value="poor" @selected(strtolower((string) old('quality')) === 'poor')>Poor</option>
                     </select>
                 </div>
                 <div>
@@ -204,7 +203,7 @@
             <h2 class="mb-4 text-base font-semibold text-gray-900">Test Milling Details</h2>
             <div data-trial-rows class="space-y-3">
                 <div data-trial-row class="grid grid-cols-1 gap-3 rounded-md border border-blue-200 bg-white p-3 sm:grid-cols-6">
-                    <div><label class="block text-sm font-medium text-gray-700">Test Milling Date</label><input type="date" name="trials[0][test_milling_date]" data-test-field required class="mt-1 block min-h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Test Milling Date</label><input type="text" name="trials[0][test_milling_date]" data-test-field data-flatpickr-date required class="input max-w-sm mt-1 block min-h-10 w-full" placeholder="Month DD, YYYY"></div>
                     <div><label class="block text-sm font-medium text-gray-700">Rice Miller</label><input type="text" name="trials[0][rice_millers]" data-amr-required class="mt-1 block min-h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"></div>
                     <div><label class="block text-sm font-medium text-gray-700">Trial</label><input type="hidden" name="trials[0][trial_number]" data-trial-value><span data-trial-label class="mt-1 block rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700"></span></div>
                     <div><label class="block text-sm font-medium text-gray-700">Palay Input (kg)</label><input type="number" name="trials[0][palay_input]" data-test-field min="0" step="any" required class="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 text-sm"></div>
@@ -216,34 +215,28 @@
             <p class="mt-3 text-xs text-gray-600" data-trial-help></p>
         </div>
 
-        <div data-test-section="pmr" class="hidden rounded-lg border border-purple-100 bg-purple-50 p-6">
+        <div data-test-section="pmr" class="hidden rounded-lg border border-red-100 bg-red-50 p-6">
             <h2 class="mb-4 text-base font-semibold text-gray-900">Laboratory Test Milling Details</h2>
             <div data-trial-rows class="space-y-3">
-                <div data-trial-row class="grid grid-cols-1 gap-3 rounded-md border border-purple-200 bg-white p-3 sm:grid-cols-5">
-                    <div><label class="block text-sm font-medium text-gray-700">Test Milling Date</label><input type="date" name="trials[0][test_milling_date]" data-test-field required class="mt-1 block min-h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"></div>
+                <div data-trial-row class="grid grid-cols-1 gap-3 rounded-md border border-red-200 bg-white p-3 sm:grid-cols-5">
+                    <div><label class="block text-sm font-medium text-gray-700">Test Milling Date</label><input type="text" name="trials[0][test_milling_date]" data-test-field data-flatpickr-date required class="input max-w-sm mt-1 block min-h-10 w-full" placeholder="Month DD, YYYY"></div>
                     <div><label class="block text-sm font-medium text-gray-700">Trial</label><input type="hidden" name="trials[0][trial_number]" data-trial-value><span data-trial-label class="mt-1 block rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700"></span></div>
                     <div><label class="block text-sm font-medium text-gray-700">Palay Input (kg)</label><input type="number" name="trials[0][palay_input]" data-test-field min="0" step="any" required class="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 text-sm"></div>
                     <div><label class="block text-sm font-medium text-gray-700">Rice Output (kg)</label><input type="number" name="trials[0][rice_recovery]" data-test-field min="0" step="any" required class="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 text-sm"></div>
                     <div data-row-action class="flex items-end gap-2"><button type="button" disabled class="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm font-medium text-gray-400 disabled:cursor-not-allowed">Edit</button><button type="button" data-delete-trial aria-label="Delete trial" title="Delete trial" class="rounded-md border border-red-200 p-2 text-red-600 hover:bg-red-50"><span class="icon-[tabler--trash] h-5 w-5" aria-hidden="true"></span></button></div>
                 </div>
             </div>
-            <button type="button" data-add-trial class="mt-3 rounded-md border border-purple-300 px-3 py-2 text-sm font-medium text-purple-700 hover:bg-purple-100">Add Laboratory Trial</button>
-            <p class="mt-3 text-xs text-gray-600">PMR allows five laboratory trials.</p>
+            <button type="button" data-add-trial class="mt-3 rounded-md border border-red-300 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-100">Add Laboratory Trial</button>
+            <p class="mt-3 text-xs text-gray-600" data-trial-help></p>
         </div>
 
-        <div class="flex flex-wrap items-center gap-3">
+        <div class="flex items-center justify-end gap-3 pt-2">
+            <button type="reset" class="rounded-md border border-gray-300 bg-white px-5 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+                Cancel
+            </button>
             <button type="submit" class="rounded-md bg-blue-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700">
                 Save Trial
             </button>
-            <button type="reset" class="rounded-md border border-gray-300 bg-white px-5 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
-                Clear
-            </button>
-            <a href="{{ route('amr.index') }}" class="rounded-md border border-gray-300 bg-white px-5 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
-                AMR Report
-            </a>
-            <a href="{{ route('pmr.index') }}" class="rounded-md border border-gray-300 bg-white px-5 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
-                PMR Report
-            </a>
         </div>
     </form>
 
@@ -314,26 +307,49 @@
             });
         }
 
+        function initFlatpickr(input) {
+            if (!input || typeof flatpickr === 'undefined') {
+                return;
+            }
+            if (input._flatpickr) {
+                input._flatpickr.destroy();
+            }
+            if (input.parentElement) {
+                input.parentElement.querySelectorAll('input:not([name])').forEach((alt) => alt.remove());
+            }
+            flatpickr(input, {
+                altInput: true,
+                altFormat: 'F j, Y',
+                dateFormat: 'Y-m-d',
+                altInputClass: 'input max-w-sm mt-1 block min-h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm',
+                allowInput: true,
+            });
+        }
+
         function updateTrialOptions() {
             const isAmr = formType.value === 'amr';
             const maximumTrial = isAmr ? 3 : 5;
             const selectedPile = pileData.find((pile) => String(pile.id) === pileSelect.value);
-            const usedTrials = selectedPile?.[formType.value]?.trials?.map(Number) || [];
-            const activeSection = document.querySelector(`[data-test-section="${formType.value}"]`);
-            const activeRows = activeSection.querySelectorAll('[data-trial-row]');
-            const activeTrialValues = activeSection.querySelectorAll('[data-trial-value]');
+            const usedTrials = formType.value ? (selectedPile?.[formType.value]?.trials?.map(Number) || []) : [];
+            const activeSection = formType.value ? document.querySelector(`[data-test-section="${formType.value}"]`) : null;
+            const activeRows = activeSection ? activeSection.querySelectorAll('[data-trial-row]') : [];
+            const activeTrialValues = activeSection ? activeSection.querySelectorAll('[data-trial-value]') : [];
 
             testSections.forEach((section) => {
-                section.classList.toggle('hidden', section.dataset.testSection !== formType.value);
+                section.classList.toggle('hidden', !formType.value || section.dataset.testSection !== formType.value);
             });
 
             testSections.forEach((section) => {
-                const isActive = section.dataset.testSection === formType.value;
+                const isActive = Boolean(formType.value && section.dataset.testSection === formType.value);
                 section.querySelectorAll('[data-test-field]').forEach((field) => {
                     const row = field.closest('[data-trial-row]');
                     const isExisting = row?.dataset.existing === 'true';
-                    field.disabled = !isActive || (isExisting && row.dataset.editing !== 'true');
+                    const shouldDisable = !isActive || (isExisting && row.dataset.editing !== 'true');
+                    field.disabled = shouldDisable;
                     field.required = isActive && !isExisting;
+                    if (field._flatpickr?.altInput) {
+                        field._flatpickr.altInput.disabled = shouldDisable;
+                    }
                 });
                 section.querySelectorAll('[data-amr-required]').forEach((field) => {
                     field.required = isActive && isAmr;
@@ -342,6 +358,13 @@
                     field.disabled = !isActive || !isAmr || (isExisting && row.dataset.editing !== 'true');
                 });
             });
+
+            if (!activeSection) {
+                if (trialHelp) {
+                    trialHelp.textContent = 'Please select a form type (AMR or PMR) to enter trials.';
+                }
+                return;
+            }
 
             const availableTrials = Array.from({ length: maximumTrial }, (_, index) => index + 1)
                 .filter((trial) => !usedTrials.includes(trial));
@@ -356,36 +379,73 @@
                 row.querySelector('[data-trial-label]').textContent = `Trial ${trialNumber}`;
             });
 
-            trialHelp.textContent = usedTrials.length > 0
-                ? `${usedTrials.length} trial(s) already completed. Add up to ${maximumTrial} total.`
-                : `${formType.value.toUpperCase()} allows ${maximumTrial} trials.`;
-            activeSection.querySelector('[data-add-trial]').disabled = activeRows.length >= maximumTrial || usedTrials.length >= maximumTrial;
+            const trialHelp = activeSection ? activeSection.querySelector('[data-trial-help]') : document.querySelector('[data-trial-help]');
+            if (trialHelp) {
+                trialHelp.textContent = usedTrials.length > 0
+                    ? `${usedTrials.length} trial(s) already completed. Add up to ${maximumTrial} total.`
+                    : `${formType.value.toUpperCase()} allows ${maximumTrial} trials.`;
+            }
+            if (activeSection) {
+                const addTrialButton = activeSection.querySelector('[data-add-trial]');
+                if (addTrialButton) {
+                    addTrialButton.disabled = activeRows.length >= maximumTrial || usedTrials.length >= maximumTrial;
+                }
+            }
         }
 
         function addTrialRow(section, update = true) {
             const rows = section.querySelector('[data-trial-rows]');
             const rowIndex = rows.querySelectorAll('[data-trial-row]').length;
-            const clone = rows.querySelector('[data-trial-row]').cloneNode(true);
+            const templateRow = rows.querySelector('[data-trial-row]');
+            const clone = templateRow.cloneNode(true);
             clone.innerHTML = clone.innerHTML.replaceAll('[0]', `[${rowIndex}]`);
+
+            // Clean up cloned flatpickr altInputs
+            clone.querySelectorAll('input:not([name])').forEach((alt) => alt.remove());
+            const dateInput = clone.querySelector('[name$="[test_milling_date]"]');
+            if (dateInput) {
+                dateInput.type = 'text';
+                dateInput.value = '';
+                dateInput.removeAttribute('value');
+                dateInput.classList.remove('flatpickr-input');
+                dateInput.style.display = '';
+                delete dateInput._flatpickr;
+                if (dateInput.parentElement) {
+                    dateInput.parentElement.querySelectorAll('input:not([name])').forEach((alt) => alt.remove());
+                }
+            }
+
             clone.dataset.existing = 'false';
             clone.dataset.editing = 'false';
             delete clone.dataset.recordId;
             clone.classList.replace('bg-gray-100', 'bg-white');
             clone.querySelectorAll('input').forEach((input) => {
                 input.value = '';
+                input.removeAttribute('value');
                 input.disabled = false;
                 input.classList.remove('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
             });
             clone.querySelector('[data-row-action]').innerHTML = trialActionMarkup();
             rows.appendChild(clone);
+
+            if (dateInput) {
+                initFlatpickr(dateInput);
+            }
+
             if (update) updateTrialOptions();
         }
 
         function resetTrialRows(section) {
             const rows = section.querySelector('[data-trial-rows]');
-            while (rows.querySelectorAll('[data-trial-row]').length > 1) {
-                rows.lastElementChild.remove();
-            }
+            rows.querySelectorAll('[data-trial-row]').forEach((row, index) => {
+                if (index > 0) {
+                    const dateInput = row.querySelector('[name$="[test_milling_date]"]');
+                    if (dateInput && dateInput._flatpickr) {
+                        dateInput._flatpickr.destroy();
+                    }
+                    row.remove();
+                }
+            });
             const firstRow = rows.querySelector('[data-trial-row]');
             firstRow.dataset.existing = 'false';
             firstRow.dataset.editing = 'false';
@@ -393,9 +453,27 @@
             firstRow.classList.replace('bg-gray-100', 'bg-white');
             firstRow.querySelectorAll('input').forEach((input) => {
                 input.value = '';
+                input.removeAttribute('value');
                 input.disabled = false;
                 input.classList.remove('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
             });
+            const firstDateInput = firstRow.querySelector('[name$="[test_milling_date]"]');
+            if (firstDateInput) {
+                if (firstDateInput._flatpickr) {
+                    firstDateInput._flatpickr.clear();
+                }
+                if (firstDateInput.parentElement) {
+                    firstDateInput.parentElement.querySelectorAll('input:not([name])').forEach((alt) => {
+                        if (!firstDateInput._flatpickr || alt !== firstDateInput._flatpickr.altInput) {
+                            alt.remove();
+                        }
+                    });
+                }
+                if (firstDateInput._flatpickr?.altInput) {
+                    firstDateInput._flatpickr.altInput.classList.remove('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
+                    firstDateInput._flatpickr.altInput.disabled = false;
+                }
+            }
             firstRow.querySelector('[data-row-action]').innerHTML = trialActionMarkup();
         }
 
@@ -420,7 +498,26 @@
                 if (riceMiller) riceMiller.value = record.rice_millers || '';
                 row.querySelector('[name$="[trial_number]"]').value = record.trial_number;
                 row.querySelector('[data-trial-label]').textContent = `Trial ${record.trial_number}`;
-                row.querySelector('[name$="[test_milling_date]"]').value = record.test_milling_date || '';
+                const dateInput = row.querySelector('[name$="[test_milling_date]"]');
+                if (dateInput) {
+                    if (dateInput.parentElement) {
+                        dateInput.parentElement.querySelectorAll('input:not([name])').forEach((alt) => {
+                            if (!dateInput._flatpickr || alt !== dateInput._flatpickr.altInput) {
+                                alt.remove();
+                            }
+                        });
+                    }
+                    if (dateInput._flatpickr) {
+                        dateInput._flatpickr.setDate(record.test_milling_date || '', true);
+                    } else {
+                        dateInput.value = record.test_milling_date || '';
+                        initFlatpickr(dateInput);
+                    }
+                    if (dateInput._flatpickr?.altInput) {
+                        dateInput._flatpickr.altInput.classList.add('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
+                        dateInput._flatpickr.altInput.disabled = true;
+                    }
+                }
                 row.querySelector('[name$="[palay_input]"]').value = record.palay_input || '';
                 row.querySelector('[name$="[rice_recovery]"]').value = record.rice_recovery || '';
                 row.querySelector('[data-row-action]').innerHTML = trialActionMarkup(true);
@@ -446,27 +543,32 @@
 
         function fillPileDetails() {
             const selectedPile = pileData.find((pile) => String(pile.id) === pileSelect.value);
-            const hasSavedDetails = Boolean(selectedPile?.amr?.records?.length || selectedPile?.pmr?.records?.length);
-            const details = selectedPile?.[formType.value]?.records?.length
-                ? selectedPile[formType.value]
-                : selectedPile?.amr?.records?.length ? selectedPile.amr : selectedPile?.pmr;
+            const hasSavedDetails = Boolean(selectedPile?.shared?.variety || selectedPile?.amr?.records?.length || selectedPile?.pmr?.records?.length);
+            const details = (formType.value && selectedPile?.[formType.value]) || selectedPile?.shared || selectedPile?.amr || selectedPile?.pmr;
 
             setPileDetailsLocked(hasSavedDetails, hasSavedDetails);
 
-            if (!details) {
-                resetTrialRows(document.querySelector(`[data-test-section="${formType.value}"]`));
+            if (!details || !hasSavedDetails) {
+                if (formType.value) {
+                    resetTrialRows(document.querySelector(`[data-test-section="${formType.value}"]`));
+                }
                 updateTrialOptions();
                 return;
             }
 
-            const activeSection = document.querySelector(`[data-test-section="${formType.value}"]`);
-            populateExistingTrialRows(activeSection, selectedPile?.[formType.value]?.records || []);
+            if (formType.value) {
+                const activeSection = document.querySelector(`[data-test-section="${formType.value}"]`);
+                if (activeSection) {
+                    populateExistingTrialRows(activeSection, selectedPile?.[formType.value]?.records || []);
+                }
+            }
             document.querySelector('#variety').value = details.variety || '';
             document.querySelector('#purity').value = details.purity || '';
             document.querySelector('#aged').value = details.aged || '';
             document.querySelector('#mc').value = details.mc || '';
-            document.querySelector('#quality').value = details.quality || '';
-            document.querySelector('#volume').value = details.volume || '';
+            const normalizedQuality = (details.quality || '').toLowerCase().replace('_', ' ');
+            document.querySelector('#quality').value = normalizedQuality;
+            document.querySelector('#volume').value = details.volume ? formatVolume(String(details.volume)) : '';
             updateTrialOptions();
         }
 
@@ -735,6 +837,10 @@
                     if (rows.querySelectorAll('[data-trial-row]').length === 1) {
                         resetTrialRows(section);
                     } else {
+                        const dateInput = row.querySelector('[name$="[test_milling_date]"]');
+                        if (dateInput && dateInput._flatpickr) {
+                            dateInput._flatpickr.destroy();
+                        }
                         row.remove();
                         reindexTrialRows(section);
                     }
@@ -755,6 +861,10 @@
                     fields.forEach((field) => {
                         field.disabled = false;
                         field.classList.remove('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
+                        if (field._flatpickr?.altInput) {
+                            field._flatpickr.altInput.disabled = false;
+                            field._flatpickr.altInput.classList.remove('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
+                        }
                     });
                     row.classList.replace('bg-gray-100', 'bg-white');
                     button.textContent = 'Save';
@@ -801,6 +911,10 @@
                     fields.forEach((field) => {
                         field.disabled = true;
                         field.classList.add('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
+                        if (field._flatpickr?.altInput) {
+                            field._flatpickr.altInput.disabled = true;
+                            field._flatpickr.altInput.classList.add('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
+                        }
                     });
                     button.textContent = 'Edit';
                 } catch (error) {
@@ -873,6 +987,14 @@
                 field.disabled = false;
             });
         });
+        document.querySelector('[data-entry-form]').addEventListener('reset', () => {
+            setTimeout(() => {
+                testSections.forEach((section) => {
+                    resetTrialRows(section);
+                });
+                updateTrialOptions();
+            }, 0);
+        });
         branchSelect.addEventListener('change', toggleNewBranch);
         pileSelect.addEventListener('change', () => {
             toggleNewPile(pileSelect.value === '__new__');
@@ -886,6 +1008,11 @@
             toggleNewWarehouse();
             togglePiles();
         });
+        function initAllDatePickers() {
+            document.querySelectorAll('[data-flatpickr-date]').forEach(initFlatpickr);
+        }
+        window.addEventListener('load', initAllDatePickers);
+        initAllDatePickers();
         updateTrialOptions();
         toggleNewBranch();
     </script>

@@ -11,6 +11,8 @@ use App\Models\Branch;
 use App\Models\Pile;
 use App\Models\PmrRecord;
 use App\Models\Warehouse;
+use App\Services\AmrCalculationService;
+use App\Services\PmrCalculationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,55 +23,64 @@ use Illuminate\View\View;
 
 class DataEntryController extends Controller
 {
+    public function __construct(
+        protected AmrCalculationService $amrCalculationService,
+        protected PmrCalculationService $pmrCalculationService,
+    ) {}
+
     public function create(): View
     {
         $piles = Pile::query()
-            ->with(['amrRecords', 'pmrRecords'])
+            ->with(['amrRecords', 'pmrRecords', 'warehouse.branch'])
             ->orderBy('number')
             ->get()
-            ->map(fn (Pile $pile): array => [
-                'id' => $pile->id,
-                'warehouse_id' => $pile->warehouse_id,
-                'number' => $pile->number,
-                'amr' => [
-                    'variety' => $pile->amrRecords->first()?->variety,
-                    'purity' => $pile->amrRecords->first()?->purity,
-                    'mc' => $pile->amrRecords->first()?->mc,
-                    'quality' => $pile->amrRecords->first()?->quality,
-                    'aged' => $pile->amrRecords->first()?->aged_months,
-                    'volume' => $pile->amrRecords->first()?->volume_bags,
-                    'rice_millers' => $pile->amrRecords->first()?->rice_millers,
-                    'trials' => $pile->amrRecords->pluck('trial_number')->values(),
-                    'records' => $pile->amrRecords->map(fn (AmrRecord $record): array => [
-                        'id' => $record->id,
-                        'trial_number' => $record->trial_number,
-                        'test_milling_date' => $record->test_milling_date?->format('Y-m-d'),
-                        'rice_millers' => $record->rice_millers,
-                        'palay_input' => $record->palay_input_kg,
-                        'rice_recovery' => $record->rice_recovery_kg,
-                    ])->values(),
-                ],
-                'pmr' => [
-                    'variety' => $pile->pmrRecords->first()?->variety,
-                    'purity' => $pile->pmrRecords->first()?->purity,
-                    'mc' => $pile->pmrRecords->first()?->mc,
-                    'quality' => $pile->pmrRecords->first()?->quality,
-                    'aged' => $pile->pmrRecords->first()?->aged_months,
-                    'volume' => $pile->pmrRecords->first()?->volume_bags,
-                    'rice_millers' => $pile->pmrRecords->first()?->rice_millers,
-                    'trials' => $pile->pmrRecords->pluck('trial_number')->values(),
-                    'records' => $pile->pmrRecords->map(fn (PmrRecord $record): array => [
-                        'id' => $record->id,
-                        'trial_number' => $record->trial_number,
-                        'test_milling_date' => $record->test_milling_date?->format('Y-m-d'),
-                        'palay_input' => $record->palay_input_kg,
-                        'rice_recovery' => $record->rice_recovery_kg,
-                    ])->values(),
-                ],
-            ]);
+            ->map(function (Pile $pile): array {
+                $sharedRecord = $pile->amrRecords->first() ?? $pile->pmrRecords->first();
+                $sharedData = [
+                    'variety' => $sharedRecord?->variety,
+                    'purity' => $sharedRecord?->purity,
+                    'mc' => $sharedRecord?->mc,
+                    'quality' => $sharedRecord?->quality,
+                    'aged' => $sharedRecord?->aged_months,
+                    'volume' => $sharedRecord?->volume_bags,
+                ];
+
+                return [
+                    'id' => $pile->id,
+                    'warehouse_id' => $pile->warehouse_id,
+                    'branch_id' => $pile->warehouse?->branch_id,
+                    'number' => $pile->number,
+                    'shared' => $sharedData,
+                    'amr' => [
+                        ...$sharedData,
+                        'rice_millers' => $pile->amrRecords->first()?->rice_millers ?? $pile->pmrRecords->first()?->rice_millers,
+                        'trials' => $pile->amrRecords->pluck('trial_number')->values(),
+                        'records' => $pile->amrRecords->map(fn (AmrRecord $record): array => [
+                            'id' => $record->id,
+                            'trial_number' => $record->trial_number,
+                            'test_milling_date' => $record->test_milling_date?->format('Y-m-d'),
+                            'rice_millers' => $record->rice_millers,
+                            'palay_input' => $record->palay_input_kg,
+                            'rice_recovery' => $record->rice_recovery_kg,
+                        ])->values(),
+                    ],
+                    'pmr' => [
+                        ...$sharedData,
+                        'rice_millers' => $pile->pmrRecords->first()?->rice_millers ?? $pile->amrRecords->first()?->rice_millers,
+                        'trials' => $pile->pmrRecords->pluck('trial_number')->values(),
+                        'records' => $pile->pmrRecords->map(fn (PmrRecord $record): array => [
+                            'id' => $record->id,
+                            'trial_number' => $record->trial_number,
+                            'test_milling_date' => $record->test_milling_date?->format('Y-m-d'),
+                            'palay_input' => $record->palay_input_kg,
+                            'rice_recovery' => $record->rice_recovery_kg,
+                        ])->values(),
+                    ],
+                ];
+            });
 
         return view('form.create', [
-            'formType' => request()->string('type', 'amr')->toString(),
+            'formType' => request()->query('type') ? request()->string('type')->toString() : null,
             'branches' => Branch::query()->orderBy('name')->get(),
             'warehouses' => Warehouse::query()->orderBy('name')->get(),
             'piles' => $piles,
@@ -106,6 +117,12 @@ class DataEntryController extends Controller
             'rice_recovery_kg' => $validated['rice_recovery'],
         ]);
 
+        if ($formType === 'amr' && $trial->pile) {
+            $this->amrCalculationService->calculateAndStoreForPile($trial->pile);
+        } elseif ($formType === 'pmr' && $trial->pile) {
+            $this->pmrCalculationService->calculateAndStoreForPile($trial->pile);
+        }
+
         if ($request->expectsJson()) {
             return response()->json([
                 'message' => strtoupper($formType).' trial updated successfully.',
@@ -125,7 +142,14 @@ class DataEntryController extends Controller
             ? AmrRecord::findOrFail($record)
             : PmrRecord::findOrFail($record);
 
+        $pile = $trial->pile;
         $trial->delete();
+
+        if ($formType === 'amr' && $pile) {
+            $this->amrCalculationService->calculateAndStoreForPile($pile);
+        } elseif ($formType === 'pmr' && $pile) {
+            $this->pmrCalculationService->calculateAndStoreForPile($pile);
+        }
 
         return response()->json([
             'message' => strtoupper($formType).' trial deleted successfully.',
@@ -145,7 +169,7 @@ class DataEntryController extends Controller
             'purity' => ['required', 'numeric', 'between:0,100'],
             'aged' => ['required', 'integer', 'min:0'],
             'mc' => ['required', 'numeric', 'between:0,100'],
-            'quality' => ['required', Rule::in(['gqa', 'premium', 'good', 'fair', 'poor'])],
+            'quality' => ['required', Rule::in(['good', 'treated fair', 'treated_fair', 'poor', 'gqa', 'premium', 'fair'])],
             'volume' => ['required', 'numeric', 'min:0'],
         ]);
 
@@ -282,6 +306,28 @@ class DataEntryController extends Controller
                 'volume_bags' => $validated['volume'],
             ];
 
+            // Synchronize all existing records for this pile in BOTH AMR and PMR tables
+            AmrRecord::query()->where('pile_id', $pile->id)->update([
+                'warehouse_name' => $warehouse->name,
+                'pile_number' => $pile->number,
+                'variety' => $validated['variety'],
+                'purity' => $validated['purity'],
+                'mc' => $validated['mc'],
+                'quality' => $validated['quality'],
+                'aged_months' => $validated['aged'],
+                'volume_bags' => $validated['volume'],
+            ]);
+            PmrRecord::query()->where('pile_id', $pile->id)->update([
+                'warehouse_name' => $warehouse->name,
+                'pile_number' => $pile->number,
+                'variety' => $validated['variety'],
+                'purity' => $validated['purity'],
+                'mc' => $validated['mc'],
+                'quality' => $validated['quality'],
+                'aged_months' => $validated['aged'],
+                'volume_bags' => $validated['volume'],
+            ]);
+
             foreach ($validated['trials'] as $trial) {
                 $recordData = [
                     ...$shared,
@@ -293,6 +339,12 @@ class DataEntryController extends Controller
                 ];
 
                 $recordModel::create($recordData);
+            }
+
+            if ($validated['form_type'] === 'amr') {
+                $this->amrCalculationService->calculateAndStoreForPile($pile);
+            } elseif ($validated['form_type'] === 'pmr') {
+                $this->pmrCalculationService->calculateAndStoreForPile($pile);
             }
         });
 

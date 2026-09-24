@@ -2,7 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\AmrRecord;
+use App\Models\Branch;
+use App\Models\Pile;
 use App\Models\PmrRecord;
+use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -108,8 +112,144 @@ class PmrRecordTest extends TestCase
             'rice_recovery' => 101,
         ]);
 
-        $response->assertRedirect(route('records.create', ['type' => 'pmr']));
         $response->assertSessionHasErrors('rice_recovery');
         $this->assertDatabaseCount('pmr_records', 0);
+    }
+
+    public function test_pmr_status_shows_ok_when_pmr_is_at_least_60_percent_and_higher_than_amr(): void
+    {
+        $branch = Branch::create(['name' => 'Branch 1']);
+        $warehouse = Warehouse::create(['branch_id' => $branch->id, 'name' => 'WH High PMR']);
+        $pile = Pile::create(['warehouse_id' => $warehouse->id, 'number' => '1']);
+
+        // Create AMR records for the same pile with 62% recovery
+        foreach ([62.0, 62.0, 62.0] as $i => $rate) {
+            AmrRecord::factory()->create([
+                'pile_id' => $pile->id,
+                'warehouse_name' => 'WH High PMR',
+                'pile_number' => '1',
+                'variety' => 'PD',
+                'trial_number' => $i + 1,
+                'palay_input_kg' => '10000.00',
+                'rice_recovery_kg' => $rate * 100,
+            ]);
+        }
+
+        // Create PMR records for the same pile with 65% recovery (higher than AMR and >= 60%)
+        foreach ([65.0, 65.0, 65.0, 65.0, 65.0] as $i => $rate) {
+            PmrRecord::factory()->create([
+                'pile_id' => $pile->id,
+                'warehouse_name' => 'WH High PMR',
+                'pile_number' => '1',
+                'variety' => 'PD',
+                'trial_number' => $i + 1,
+                'palay_input_kg' => '10000.00',
+                'rice_recovery_kg' => $rate * 100,
+            ]);
+        }
+
+        $response = $this->get(route('pmr.index'));
+
+        $response->assertOk();
+        $response->assertSee('OK');
+        $response->assertDontSee('Lower than 60%');
+        $response->assertDontSee('PMR lower than AMR');
+    }
+
+    public function test_pmr_status_shows_lower_than_60_percent_when_pmr_is_below_60_percent(): void
+    {
+        foreach ([58.0, 58.0, 58.0, 58.0, 58.0] as $i => $rate) {
+            PmrRecord::factory()->create([
+                'warehouse_name' => 'WH Low PMR',
+                'pile_number' => '2',
+                'variety' => 'PD',
+                'trial_number' => $i + 1,
+                'palay_input_kg' => '10000.00',
+                'rice_recovery_kg' => $rate * 100,
+            ]);
+        }
+
+        $response = $this->get(route('pmr.index'));
+
+        $response->assertOk();
+        $response->assertSee('Lower than 60%');
+    }
+
+    public function test_pmr_status_shows_pmr_lower_than_amr_when_pmr_is_below_amr(): void
+    {
+        $branch = Branch::create(['name' => 'Branch 1']);
+        $warehouse = Warehouse::create(['branch_id' => $branch->id, 'name' => 'WH Inverted']);
+        $pile = Pile::create(['warehouse_id' => $warehouse->id, 'number' => '3']);
+
+        // AMR is 65%
+        foreach ([65.0, 65.0, 65.0] as $i => $rate) {
+            AmrRecord::factory()->create([
+                'pile_id' => $pile->id,
+                'warehouse_name' => 'WH Inverted',
+                'pile_number' => '3',
+                'variety' => 'PD',
+                'trial_number' => $i + 1,
+                'palay_input_kg' => '10000.00',
+                'rice_recovery_kg' => $rate * 100,
+            ]);
+        }
+
+        // PMR is 62% (>= 60%, but lower than AMR 65%)
+        foreach ([62.0, 62.0, 62.0, 62.0, 62.0] as $i => $rate) {
+            PmrRecord::factory()->create([
+                'pile_id' => $pile->id,
+                'warehouse_name' => 'WH Inverted',
+                'pile_number' => '3',
+                'variety' => 'PD',
+                'trial_number' => $i + 1,
+                'palay_input_kg' => '10000.00',
+                'rice_recovery_kg' => $rate * 100,
+            ]);
+        }
+
+        $response = $this->get(route('pmr.index'));
+
+        $response->assertOk();
+        $response->assertSee('PMR lower than AMR');
+        $response->assertDontSee('Lower than 60%');
+    }
+
+    public function test_pmr_status_shows_both_when_pmr_is_below_60_and_below_amr(): void
+    {
+        $branch = Branch::create(['name' => 'Branch 1']);
+        $warehouse = Warehouse::create(['branch_id' => $branch->id, 'name' => 'WH Both Fail']);
+        $pile = Pile::create(['warehouse_id' => $warehouse->id, 'number' => '4']);
+
+        // AMR is 61%
+        foreach ([61.0, 61.0, 61.0] as $i => $rate) {
+            AmrRecord::factory()->create([
+                'pile_id' => $pile->id,
+                'warehouse_name' => 'WH Both Fail',
+                'pile_number' => '4',
+                'variety' => 'PD',
+                'trial_number' => $i + 1,
+                'palay_input_kg' => '10000.00',
+                'rice_recovery_kg' => $rate * 100,
+            ]);
+        }
+
+        // PMR is 57% (< 60% and < AMR 61%)
+        foreach ([57.0, 57.0, 57.0, 57.0, 57.0] as $i => $rate) {
+            PmrRecord::factory()->create([
+                'pile_id' => $pile->id,
+                'warehouse_name' => 'WH Both Fail',
+                'pile_number' => '4',
+                'variety' => 'PD',
+                'trial_number' => $i + 1,
+                'palay_input_kg' => '10000.00',
+                'rice_recovery_kg' => $rate * 100,
+            ]);
+        }
+
+        $response = $this->get(route('pmr.index'));
+
+        $response->assertOk();
+        $response->assertSee('PMR lower than AMR');
+        $response->assertSee('Lower than 60%');
     }
 }

@@ -46,7 +46,8 @@ class StoreDataEntryRequest extends FormRequest
     {
         $warehouseExists = Rule::exists('warehouses', 'id');
         $pileExists = Rule::exists('piles', 'id');
-        $maximumTrial = $this->input('form_type') === 'amr' ? 3 : 5;
+        $isAmr = $this->input('form_type') === 'amr';
+        $maximumTrial = $isAmr ? 3 : 5;
 
         if ($this->filled('branch_id')) {
             $warehouseExists->where('branch_id', $this->input('branch_id'));
@@ -68,7 +69,7 @@ class StoreDataEntryRequest extends FormRequest
             'variety' => ['required', 'string', 'max:100'],
             'purity' => ['required', 'numeric', 'between:0,100'],
             'mc' => ['required', 'numeric', 'between:0,100'],
-            'quality' => ['required', Rule::in(['gqa', 'premium', 'good', 'fair', 'poor'])],
+            'quality' => ['required', Rule::in(['good', 'treated fair', 'treated_fair', 'poor', 'gqa', 'premium', 'fair'])],
             'aged' => ['required', 'integer', 'min:0'],
             'volume' => ['required', 'numeric', 'min:0'],
             'trials' => ['required', 'array', 'min:1', 'max:'.$maximumTrial],
@@ -86,8 +87,9 @@ class StoreDataEntryRequest extends FormRequest
     public function after(): array
     {
         return [function (Validator $validator): void {
+            $allowedLimit = $this->input('form_type') === 'amr' ? 3 : 5;
             foreach ($this->input('trials', []) as $index => $trial) {
-                if ((int) ($trial['trial_number'] ?? 0) > ($this->input('form_type') === 'amr' ? 3 : 5)) {
+                if ((int) ($trial['trial_number'] ?? 0) > $allowedLimit) {
                     $validator->errors()->add('no_of_trial', 'The trial number exceeds the allowed limit.');
                 }
 
