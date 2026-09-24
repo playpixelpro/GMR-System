@@ -56,7 +56,6 @@
                             <td class="border border-gray-300 px-3 py-4 text-right">
                                 @if ($record)
                                     {{ number_format($record->recovery_rate_percentage, 2) }}
-                                    <a href="{{ route('records.edit', ['formType' => 'pmr', 'record' => $record->id]) }}" class="mt-1 block text-xs text-blue-600 hover:underline">Edit</a>
                                 @else
                                     —
                                 @endif

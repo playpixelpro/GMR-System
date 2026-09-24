@@ -7,6 +7,8 @@
         "dev": "vite"
     },
     "devDependencies": {
+        "@iconify/json": "^2.2.533",
+        "@iconify/tailwind4": "^1.2.3",
         "@tailwindcss/vite": "^4.0.0",
         "concurrently": "^10.0.3",
         "laravel-vite-plugin": "^3.1",
@@ -15,5 +17,8 @@
     },
     "optionalDependencies": {
         "@laravel/multiplex": "^0.4.1"
+    },
+    "dependencies": {
+        "flyonui": "^2.4.1"
     }
 }

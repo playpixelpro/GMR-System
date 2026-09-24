@@ -17,13 +17,13 @@
     </head>
     <body class="min-h-screen bg-gray-50 text-gray-900 antialiased">
         <div class="min-h-screen md:flex">
-            <aside class="border-b border-gray-200 bg-white md:min-h-screen md:w-64 md:shrink-0 md:border-b-0 md:border-r">
+            <aside class="border-b border-gray-200 bg-white md:fixed md:inset-y-0 md:left-0 md:z-30 md:w-64 md:overflow-y-auto md:border-b-0 md:border-r">
                 <div class="flex items-center justify-between px-6 py-5">
                     <a href="{{ route('home') }}" class="text-lg font-semibold text-gray-900">GMR System</a>
                 </div>
 
                 <nav class="px-4 pb-5 md:sticky md:top-0 md:pt-2">
-                    <p class="px-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Main Menu</p>
+
                     <div class="mt-3 flex flex-col gap-1">
                         <a href="{{ route('records.create') }}"
                            class="rounded-md px-3 py-2 text-sm font-medium {{ request()->routeIs('records.*') ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100' }}">
@@ -50,7 +50,7 @@
                 </nav>
             </aside>
 
-            <div class="min-w-0 flex-1">
+            <div class="min-w-0 flex-1 md:ml-64">
                 <header class="border-b border-gray-200 bg-white">
                     <div class="mx-auto flex w-[90%] items-center justify-between px-4 py-4 sm:px-6">
                         <div>

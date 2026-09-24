@@ -84,27 +84,27 @@
 
                 <div>
                     <label for="variety" class="block text-sm font-medium text-gray-700">Variety</label>
-                    <input type="text" name="variety" id="variety" value="{{ old('variety') }}" required
+                    <input type="text" name="variety" id="variety" value="{{ old('variety') }}" required data-pile-detail-field
                            class="mt-1 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
                 <div>
                     <label for="purity" class="block text-sm font-medium text-gray-700">Purity (%)</label>
-                    <input type="number" name="purity" id="purity" value="{{ old('purity') }}" min="0" max="100" step="any" required
+                    <input type="number" name="purity" id="purity" value="{{ old('purity') }}" min="0" max="100" step="any" required data-pile-detail-field
                            class="mt-1 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
                 <div>
                     <label for="aged" class="block text-sm font-medium text-gray-700">Aged (in months)</label>
-                    <input type="number" name="aged" id="aged" value="{{ old('aged') }}" min="0" step="1" required
+                    <input type="number" name="aged" id="aged" value="{{ old('aged') }}" min="0" step="1" required data-pile-detail-field
                            class="mt-1 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
                 <div>
                     <label for="mc" class="block text-sm font-medium text-gray-700">MC (%)</label>
-                    <input type="number" name="mc" id="mc" value="{{ old('mc') }}" min="0" max="100" step="any" required
+                    <input type="number" name="mc" id="mc" value="{{ old('mc') }}" min="0" max="100" step="any" required data-pile-detail-field
                            class="mt-1 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
                 <div>
                     <label for="quality" class="block text-sm font-medium text-gray-700">Quality (Condition)</label>
-                    <select name="quality" id="quality" required
+                    <select name="quality" id="quality" required data-pile-detail-field
                             class="mt-1 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                         <option value="">Select condition</option>
                         <option value="gqa" @selected(old('quality') === 'gqa')>GQA</option>
@@ -116,9 +116,14 @@
                 </div>
                 <div>
                     <label for="volume" class="block text-sm font-medium text-gray-700">Volume of Pile (kg)</label>
-                    <input type="text" name="volume" id="volume" value="{{ old('volume') }}" inputmode="decimal" autocomplete="off" required
+                    <input type="text" name="volume" id="volume" value="{{ old('volume') }}" inputmode="decimal" autocomplete="off" required data-pile-detail-field
                            class="mt-1 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
+            </div>
+            <div class="mt-4 flex justify-end">
+                <button type="button" data-edit-pile-details disabled class="min-w-48 rounded-md border border-blue-300 bg-white px-8 py-4 text-lg font-semibold text-blue-700 shadow-sm enabled:hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50">
+                    Edit
+                </button>
             </div>
         </div>
 
@@ -198,12 +203,13 @@
         <div data-test-section="amr" class="rounded-lg border border-blue-100 bg-blue-50 p-6">
             <h2 class="mb-4 text-base font-semibold text-gray-900">Test Milling Details</h2>
             <div data-trial-rows class="space-y-3">
-                <div data-trial-row class="grid grid-cols-1 gap-3 rounded-md border border-blue-200 bg-white p-3 sm:grid-cols-4">
+                <div data-trial-row class="grid grid-cols-1 gap-3 rounded-md border border-blue-200 bg-white p-3 sm:grid-cols-6">
+                    <div><label class="block text-sm font-medium text-gray-700">Test Milling Date</label><input type="date" name="trials[0][test_milling_date]" data-test-field required class="mt-1 block min-h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"></div>
                     <div><label class="block text-sm font-medium text-gray-700">Rice Miller</label><input type="text" name="trials[0][rice_millers]" data-amr-required class="mt-1 block min-h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"></div>
                     <div><label class="block text-sm font-medium text-gray-700">Trial</label><input type="hidden" name="trials[0][trial_number]" data-trial-value><span data-trial-label class="mt-1 block rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700"></span></div>
                     <div><label class="block text-sm font-medium text-gray-700">Palay Input (kg)</label><input type="number" name="trials[0][palay_input]" data-test-field min="0" step="any" required class="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 text-sm"></div>
                     <div><label class="block text-sm font-medium text-gray-700">Rice Output (kg)</label><input type="number" name="trials[0][rice_recovery]" data-test-field min="0" step="any" required class="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 text-sm"></div>
-                    <div data-row-action class="flex items-end"></div>
+                    <div data-row-action class="flex items-end gap-2"><button type="button" disabled class="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm font-medium text-gray-400 disabled:cursor-not-allowed">Edit</button><button type="button" data-delete-trial aria-label="Delete trial" title="Delete trial" class="rounded-md border border-red-200 p-2 text-red-600 hover:bg-red-50"><span class="icon-[tabler--trash] h-5 w-5" aria-hidden="true"></span></button></div>
                 </div>
             </div>
             <button type="button" data-add-trial class="mt-3 rounded-md border border-blue-300 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100">Add AMR Trial</button>
@@ -213,11 +219,12 @@
         <div data-test-section="pmr" class="hidden rounded-lg border border-purple-100 bg-purple-50 p-6">
             <h2 class="mb-4 text-base font-semibold text-gray-900">Laboratory Test Milling Details</h2>
             <div data-trial-rows class="space-y-3">
-                <div data-trial-row class="grid grid-cols-1 gap-3 rounded-md border border-purple-200 bg-white p-3 sm:grid-cols-3">
+                <div data-trial-row class="grid grid-cols-1 gap-3 rounded-md border border-purple-200 bg-white p-3 sm:grid-cols-5">
+                    <div><label class="block text-sm font-medium text-gray-700">Test Milling Date</label><input type="date" name="trials[0][test_milling_date]" data-test-field required class="mt-1 block min-h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"></div>
                     <div><label class="block text-sm font-medium text-gray-700">Trial</label><input type="hidden" name="trials[0][trial_number]" data-trial-value><span data-trial-label class="mt-1 block rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700"></span></div>
                     <div><label class="block text-sm font-medium text-gray-700">Palay Input (kg)</label><input type="number" name="trials[0][palay_input]" data-test-field min="0" step="any" required class="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 text-sm"></div>
                     <div><label class="block text-sm font-medium text-gray-700">Rice Output (kg)</label><input type="number" name="trials[0][rice_recovery]" data-test-field min="0" step="any" required class="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 text-sm"></div>
-                    <div data-row-action class="flex items-end"></div>
+                    <div data-row-action class="flex items-end gap-2"><button type="button" disabled class="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm font-medium text-gray-400 disabled:cursor-not-allowed">Edit</button><button type="button" data-delete-trial aria-label="Delete trial" title="Delete trial" class="rounded-md border border-red-200 p-2 text-red-600 hover:bg-red-50"><span class="icon-[tabler--trash] h-5 w-5" aria-hidden="true"></span></button></div>
                 </div>
             </div>
             <button type="button" data-add-trial class="mt-3 rounded-md border border-purple-300 px-3 py-2 text-sm font-medium text-purple-700 hover:bg-purple-100">Add Laboratory Trial</button>
@@ -262,10 +269,13 @@
         const pileDialogError = document.querySelector('[data-pile-dialog-error]');
         const pileOptions = Array.from(pileSelect.querySelectorAll('option[data-warehouse-id]'));
         const pileData = @json($piles);
-        const editRoutes = {
-            amr: @json(route('records.edit', ['formType' => 'amr', 'record' => 'RECORD_ID'])),
-            pmr: @json(route('records.edit', ['formType' => 'pmr', 'record' => 'RECORD_ID'])),
-        };
+        const pileDetailFields = document.querySelectorAll('[data-pile-detail-field]');
+        const editPileDetailsButton = document.querySelector('[data-edit-pile-details]');
+        let pileDetailsLocked = false;
+        let pileHasSavedDetails = false;
+        const updatePileDetailsRoute = @json(route('piles.details.update', ['pile' => 'PILE_ID']));
+        const updateRoute = @json(route('records.update', ['formType' => 'FORM_TYPE', 'record' => 'RECORD_ID']));
+        const destroyRoute = @json(route('records.destroy', ['formType' => 'FORM_TYPE', 'record' => 'RECORD_ID']));
         const warehouseDialog = document.querySelector('#warehouse-dialog');
         const warehouseDialogForm = document.querySelector('[data-warehouse-dialog-form]');
         const newWarehouseBranchSelect = document.querySelector('#new_warehouse_branch_id');
@@ -283,10 +293,26 @@
             return decimalPart ? `${formattedInteger}.${decimalPart}` : formattedInteger;
         }
 
+        function trialActionMarkup(isSaved = false) {
+            const editButton = isSaved
+                ? '<button type="button" data-edit-trial class="w-full rounded-md border border-blue-300 bg-white px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50">Edit</button>'
+                : '<button type="button" disabled class="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm font-medium text-gray-400 disabled:cursor-not-allowed">Edit</button>';
+
+            return `${editButton}<button type="button" data-delete-trial aria-label="Delete trial" title="Delete trial" class="rounded-md border border-red-200 p-2 text-red-600 hover:bg-red-50"><span class="icon-[tabler--trash] h-5 w-5" aria-hidden="true"></span></button>`;
+        }
+
         volumeInput.addEventListener('input', () => {
             volumeInput.value = formatVolume(volumeInput.value);
         });
         volumeInput.value = formatVolume(volumeInput.value);
+
+        function reindexTrialRows(section) {
+            section.querySelectorAll('[data-trial-row]').forEach((row, index) => {
+                row.querySelectorAll('[name]').forEach((field) => {
+                    field.name = field.name.replace(/trials\[\d+\]/, `trials[${index}]`);
+                });
+            });
+        }
 
         function updateTrialOptions() {
             const isAmr = formType.value === 'amr';
@@ -304,14 +330,16 @@
             testSections.forEach((section) => {
                 const isActive = section.dataset.testSection === formType.value;
                 section.querySelectorAll('[data-test-field]').forEach((field) => {
-                    const isExisting = field.closest('[data-trial-row]')?.dataset.existing === 'true';
-                    field.disabled = !isActive || isExisting;
+                    const row = field.closest('[data-trial-row]');
+                    const isExisting = row?.dataset.existing === 'true';
+                    field.disabled = !isActive || (isExisting && row.dataset.editing !== 'true');
                     field.required = isActive && !isExisting;
                 });
                 section.querySelectorAll('[data-amr-required]').forEach((field) => {
                     field.required = isActive && isAmr;
-                    const isExisting = field.closest('[data-trial-row]')?.dataset.existing === 'true';
-                    field.disabled = !isActive || !isAmr || isExisting;
+                    const row = field.closest('[data-trial-row]');
+                    const isExisting = row?.dataset.existing === 'true';
+                    field.disabled = !isActive || !isAmr || (isExisting && row.dataset.editing !== 'true');
                 });
             });
 
@@ -319,9 +347,13 @@
                 .filter((trial) => !usedTrials.includes(trial));
 
             activeTrialValues.forEach((field, rowIndex) => {
+                const row = field.closest('[data-trial-row]');
+                if (row.dataset.existing === 'true') {
+                    return;
+                }
                 const trialNumber = availableTrials[rowIndex] || availableTrials[0] || 1;
                 field.value = trialNumber;
-                field.closest('[data-trial-row]').querySelector('[data-trial-label]').textContent = `Trial ${trialNumber}`;
+                row.querySelector('[data-trial-label]').textContent = `Trial ${trialNumber}`;
             });
 
             trialHelp.textContent = usedTrials.length > 0
@@ -336,11 +368,15 @@
             const clone = rows.querySelector('[data-trial-row]').cloneNode(true);
             clone.innerHTML = clone.innerHTML.replaceAll('[0]', `[${rowIndex}]`);
             clone.dataset.existing = 'false';
+            clone.dataset.editing = 'false';
+            delete clone.dataset.recordId;
+            clone.classList.replace('bg-gray-100', 'bg-white');
             clone.querySelectorAll('input').forEach((input) => {
                 input.value = '';
                 input.disabled = false;
+                input.classList.remove('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
             });
-            clone.querySelector('[data-row-action]').innerHTML = '';
+            clone.querySelector('[data-row-action]').innerHTML = trialActionMarkup();
             rows.appendChild(clone);
             if (update) updateTrialOptions();
         }
@@ -352,11 +388,15 @@
             }
             const firstRow = rows.querySelector('[data-trial-row]');
             firstRow.dataset.existing = 'false';
+            firstRow.dataset.editing = 'false';
+            delete firstRow.dataset.recordId;
+            firstRow.classList.replace('bg-gray-100', 'bg-white');
             firstRow.querySelectorAll('input').forEach((input) => {
                 input.value = '';
                 input.disabled = false;
+                input.classList.remove('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
             });
-            firstRow.querySelector('[data-row-action]').innerHTML = '';
+            firstRow.querySelector('[data-row-action]').innerHTML = trialActionMarkup();
         }
 
         function populateExistingTrialRows(section, records) {
@@ -369,18 +409,49 @@
             records.forEach((record, index) => {
                 const row = rows[index];
                 row.dataset.existing = 'true';
+                row.dataset.recordId = record.id;
+                row.dataset.editing = 'false';
+                row.classList.replace('bg-white', 'bg-gray-100');
+                row.querySelectorAll('[data-test-field], [data-amr-required]').forEach((field) => {
+                    field.classList.add('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
+                });
                 row.querySelector('[name$="[rice_millers]"]')?.setAttribute('value', record.rice_millers || '');
                 const riceMiller = row.querySelector('[name$="[rice_millers]"]');
                 if (riceMiller) riceMiller.value = record.rice_millers || '';
+                row.querySelector('[name$="[trial_number]"]').value = record.trial_number;
+                row.querySelector('[data-trial-label]').textContent = `Trial ${record.trial_number}`;
+                row.querySelector('[name$="[test_milling_date]"]').value = record.test_milling_date || '';
                 row.querySelector('[name$="[palay_input]"]').value = record.palay_input || '';
                 row.querySelector('[name$="[rice_recovery]"]').value = record.rice_recovery || '';
-                row.querySelector('[data-row-action]').innerHTML = `<a href="${editRoutes[formType.value].replace('RECORD_ID', record.id)}" class="w-full rounded-md border border-blue-300 px-3 py-2 text-center text-xs font-medium text-blue-700 hover:bg-blue-50">Edit</a>`;
+                row.querySelector('[data-row-action]').innerHTML = trialActionMarkup(true);
             });
+        }
+
+        function setPileDetailsLocked(locked, hasSavedDetails = pileHasSavedDetails) {
+            pileDetailsLocked = locked;
+            pileHasSavedDetails = hasSavedDetails;
+            pileDetailFields.forEach((field) => {
+                if (field.tagName === 'SELECT') {
+                    field.disabled = locked;
+                } else {
+                    field.readOnly = locked;
+                }
+                field.classList.toggle('bg-gray-100', locked);
+                field.classList.toggle('text-gray-500', locked);
+                field.classList.toggle('cursor-not-allowed', locked);
+            });
+            editPileDetailsButton.disabled = !pileHasSavedDetails;
+            editPileDetailsButton.textContent = pileHasSavedDetails && !locked ? 'Save' : 'Edit';
         }
 
         function fillPileDetails() {
             const selectedPile = pileData.find((pile) => String(pile.id) === pileSelect.value);
-            const details = selectedPile?.[formType.value];
+            const hasSavedDetails = Boolean(selectedPile?.amr?.records?.length || selectedPile?.pmr?.records?.length);
+            const details = selectedPile?.[formType.value]?.records?.length
+                ? selectedPile[formType.value]
+                : selectedPile?.amr?.records?.length ? selectedPile.amr : selectedPile?.pmr;
+
+            setPileDetailsLocked(hasSavedDetails, hasSavedDetails);
 
             if (!details) {
                 resetTrialRows(document.querySelector(`[data-test-section="${formType.value}"]`));
@@ -389,14 +460,13 @@
             }
 
             const activeSection = document.querySelector(`[data-test-section="${formType.value}"]`);
-            populateExistingTrialRows(activeSection, details.records || []);
+            populateExistingTrialRows(activeSection, selectedPile?.[formType.value]?.records || []);
             document.querySelector('#variety').value = details.variety || '';
             document.querySelector('#purity').value = details.purity || '';
             document.querySelector('#aged').value = details.aged || '';
             document.querySelector('#mc').value = details.mc || '';
             document.querySelector('#quality').value = details.quality || '';
             document.querySelector('#volume').value = details.volume || '';
-            document.querySelector('#rice_millers').value = details.rice_millers || '';
             updateTrialOptions();
         }
 
@@ -434,6 +504,7 @@
             pileSelect.disabled = isNewPile;
 
             if (isNewPile) {
+                setPileDetailsLocked(false, false);
                 resetTrialRows(document.querySelector(`[data-test-section="${formType.value}"]`));
                 updateTrialOptions();
                 if (openDialog) {
@@ -617,13 +688,191 @@
             button.addEventListener('click', closePileDialog);
         });
 
+        testSections.forEach((section) => {
+            section.addEventListener('click', async (event) => {
+                const deleteButton = event.target.closest('[data-delete-trial]');
+                if (deleteButton) {
+                    const row = deleteButton.closest('[data-trial-row]');
+                    const rows = section.querySelector('[data-trial-rows]');
+                    const isSaved = row.dataset.existing === 'true';
+
+                    if (isSaved && !window.confirm('Delete this saved trial? This cannot be undone.')) {
+                        return;
+                    }
+
+                    if (isSaved) {
+                        deleteButton.disabled = true;
+                        try {
+                            const url = destroyRoute
+                                .replace('FORM_TYPE', formType.value)
+                                .replace('RECORD_ID', row.dataset.recordId);
+                            const response = await fetch(url, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                },
+                            });
+                            const data = await response.json();
+                            if (!response.ok) {
+                                throw new Error(data.message || 'The trial could not be deleted.');
+                            }
+
+                            const selectedPile = pileData.find((pile) => String(pile.id) === pileSelect.value);
+                            const pileTrials = selectedPile?.[formType.value];
+                            if (pileTrials) {
+                                const trialNumber = Number(row.querySelector('[data-trial-value]').value);
+                                pileTrials.records = pileTrials.records.filter((record) => String(record.id) !== row.dataset.recordId);
+                                pileTrials.trials = pileTrials.trials.filter((trial) => Number(trial) !== trialNumber);
+                            }
+                        } catch (error) {
+                            window.alert(error.message);
+                            deleteButton.disabled = false;
+                            return;
+                        }
+                    }
+
+                    if (rows.querySelectorAll('[data-trial-row]').length === 1) {
+                        resetTrialRows(section);
+                    } else {
+                        row.remove();
+                        reindexTrialRows(section);
+                    }
+                    updateTrialOptions();
+                    return;
+                }
+
+                const button = event.target.closest('[data-edit-trial]');
+                if (!button) {
+                    return;
+                }
+
+                const row = button.closest('[data-trial-row]');
+                const fields = row.querySelectorAll('[data-test-field], [data-amr-required]');
+
+                if (row.dataset.editing !== 'true') {
+                    row.dataset.editing = 'true';
+                    fields.forEach((field) => {
+                        field.disabled = false;
+                        field.classList.remove('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
+                    });
+                    row.classList.replace('bg-gray-100', 'bg-white');
+                    button.textContent = 'Save';
+                    return;
+                }
+
+                button.disabled = true;
+                const payload = new URLSearchParams({
+                    _token: document.querySelector('meta[name="csrf-token"]').content,
+                    test_milling_date: row.querySelector('[name$="[test_milling_date]"]').value,
+                    palay_input: row.querySelector('[name$="[palay_input]"]').value,
+                    rice_recovery: row.querySelector('[name$="[rice_recovery]"]').value,
+                });
+                const riceMiller = row.querySelector('[name$="[rice_millers]"]');
+                if (riceMiller) {
+                    payload.set('rice_millers', riceMiller.value);
+                }
+
+                try {
+                    const url = updateRoute
+                        .replace('FORM_TYPE', formType.value)
+                        .replace('RECORD_ID', row.dataset.recordId);
+                    const response = await fetch(url, {
+                        method: 'PATCH',
+                        headers: { 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: payload,
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(Object.values(data.errors || {}).flat()[0] || data.message || 'The trial could not be updated.');
+                    }
+
+                    const selectedPile = pileData.find((pile) => String(pile.id) === pileSelect.value);
+                    const savedRecord = selectedPile?.[formType.value]?.records?.find((record) => String(record.id) === row.dataset.recordId);
+                    if (savedRecord) {
+                        savedRecord.rice_millers = riceMiller?.value || null;
+                        savedRecord.palay_input = row.querySelector('[name$="[palay_input]"]').value;
+                        savedRecord.rice_recovery = row.querySelector('[name$="[rice_recovery]"]').value;
+                        savedRecord.test_milling_date = row.querySelector('[name$="[test_milling_date]"]').value;
+                    }
+
+                    row.dataset.editing = 'false';
+                    row.classList.replace('bg-white', 'bg-gray-100');
+                    fields.forEach((field) => {
+                        field.disabled = true;
+                        field.classList.add('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
+                    });
+                    button.textContent = 'Edit';
+                } catch (error) {
+                    window.alert(error.message);
+                } finally {
+                    button.disabled = false;
+                }
+            });
+        });
+
         document.querySelectorAll('[data-add-trial]').forEach((button) => {
             button.addEventListener('click', () => {
                 addTrialRow(button.closest('[data-test-section]'));
             });
         });
 
-        formType.addEventListener('change', updateTrialOptions);
+        formType.addEventListener('change', () => {
+            fillPileDetails();
+            updateTrialOptions();
+        });
+        editPileDetailsButton.addEventListener('click', async () => {
+            if (pileDetailsLocked) {
+                setPileDetailsLocked(false);
+                return;
+            }
+
+            const selectedPileId = pileSelect.value;
+            editPileDetailsButton.disabled = true;
+            const payload = new URLSearchParams({
+                _token: document.querySelector('meta[name="csrf-token"]').content,
+                variety: document.querySelector('#variety').value,
+                purity: document.querySelector('#purity').value,
+                aged: document.querySelector('#aged').value,
+                mc: document.querySelector('#mc').value,
+                quality: document.querySelector('#quality').value,
+                volume: document.querySelector('#volume').value,
+            });
+
+            try {
+                const response = await fetch(updatePileDetailsRoute.replace('PILE_ID', selectedPileId), {
+                    method: 'PATCH',
+                    headers: { 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: payload,
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(Object.values(data.errors || {}).flat()[0] || data.message || 'Pile details could not be updated.');
+                }
+
+                const selectedPile = pileData.find((pile) => String(pile.id) === selectedPileId);
+                ['amr', 'pmr'].forEach((type) => {
+                    const details = selectedPile?.[type];
+                    if (details) {
+                        details.variety = payload.get('variety');
+                        details.purity = payload.get('purity');
+                        details.aged = payload.get('aged');
+                        details.mc = payload.get('mc');
+                        details.quality = payload.get('quality');
+                        details.volume = payload.get('volume').replaceAll(',', '');
+                    }
+                });
+                setPileDetailsLocked(true, true);
+            } catch (error) {
+                window.alert(error.message);
+                editPileDetailsButton.disabled = false;
+            }
+        });
+        document.querySelector('[data-entry-form]').addEventListener('submit', () => {
+            pileDetailFields.forEach((field) => {
+                field.disabled = false;
+            });
+        });
         branchSelect.addEventListener('change', toggleNewBranch);
         pileSelect.addEventListener('change', () => {
             toggleNewPile(pileSelect.value === '__new__');

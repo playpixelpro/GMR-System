@@ -15,11 +15,15 @@ Route::get('/records/create', [DataEntryController::class, 'create'])->name(
 Route::post('/records', [DataEntryController::class, 'store'])->name(
     'records.store',
 );
-Route::get('/records/{formType}/{record}/edit', [DataEntryController::class, 'edit'])->name(
-    'records.edit',
-);
+
 Route::patch('/records/{formType}/{record}', [DataEntryController::class, 'update'])->name(
     'records.update',
+);
+Route::delete('/records/{formType}/{record}', [DataEntryController::class, 'destroyTrial'])->name(
+    'records.destroy',
+);
+Route::patch('/piles/{pile}/details', [DataEntryController::class, 'updatePileDetails'])->name(
+    'piles.details.update',
 );
 Route::post('/warehouses', [DataEntryController::class, 'createWarehouse'])->name(
     'warehouses.store',

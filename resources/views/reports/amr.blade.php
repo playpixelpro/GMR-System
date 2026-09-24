@@ -57,7 +57,6 @@
                             <td class="border border-gray-300 px-3 py-4 text-right">
                                 @if ($record)
                                     {{ number_format((float) $record->rice_recovery_kg, 2) }}
-                                    <a href="{{ route('records.edit', ['formType' => 'amr', 'record' => $record->id]) }}" class="mt-1 block text-xs text-blue-600 hover:underline">Edit</a>
                                 @else
                                     —
                                 @endif

@@ -43,6 +43,7 @@ class DataEntryController extends Controller
                     'records' => $pile->amrRecords->map(fn (AmrRecord $record): array => [
                         'id' => $record->id,
                         'trial_number' => $record->trial_number,
+                        'test_milling_date' => $record->test_milling_date?->format('Y-m-d'),
                         'rice_millers' => $record->rice_millers,
                         'palay_input' => $record->palay_input_kg,
                         'rice_recovery' => $record->rice_recovery_kg,
@@ -60,6 +61,7 @@ class DataEntryController extends Controller
                     'records' => $pile->pmrRecords->map(fn (PmrRecord $record): array => [
                         'id' => $record->id,
                         'trial_number' => $record->trial_number,
+                        'test_milling_date' => $record->test_milling_date?->format('Y-m-d'),
                         'palay_input' => $record->palay_input_kg,
                         'rice_recovery' => $record->rice_recovery_kg,
                     ])->values(),
@@ -88,18 +90,7 @@ class DataEntryController extends Controller
         ], $warehouse->wasRecentlyCreated ? 201 : 200);
     }
 
-    public function edit(string $formType, int $record): View
-    {
-        abort_unless(in_array($formType, ['amr', 'pmr'], true), 404);
-
-        $trial = $formType === 'amr'
-            ? AmrRecord::findOrFail($record)
-            : PmrRecord::findOrFail($record);
-
-        return view('form.edit', compact('formType', 'trial'));
-    }
-
-    public function update(UpdateTrialRequest $request, string $formType, int $record): RedirectResponse
+    public function update(UpdateTrialRequest $request, string $formType, int $record): JsonResponse|RedirectResponse
     {
         abort_unless(in_array($formType, ['amr', 'pmr'], true), 404);
 
@@ -110,13 +101,80 @@ class DataEntryController extends Controller
 
         $trial->update([
             'rice_millers' => $formType === 'amr' ? ($validated['rice_millers'] ?? null) : null,
+            'test_milling_date' => $validated['test_milling_date'] ?? null,
             'palay_input_kg' => $validated['palay_input'],
             'rice_recovery_kg' => $validated['rice_recovery'],
         ]);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => strtoupper($formType).' trial updated successfully.',
+            ]);
+        }
+
         return redirect()
-            ->route($formType === 'amr' ? 'amr.index' : 'pmr.index')
+            ->route('records.create', ['type' => $formType])
             ->with('status', strtoupper($formType).' trial updated successfully.');
+    }
+
+    public function destroyTrial(string $formType, int $record): JsonResponse
+    {
+        abort_unless(in_array($formType, ['amr', 'pmr'], true), 404);
+
+        $trial = $formType === 'amr'
+            ? AmrRecord::findOrFail($record)
+            : PmrRecord::findOrFail($record);
+
+        $trial->delete();
+
+        return response()->json([
+            'message' => strtoupper($formType).' trial deleted successfully.',
+        ]);
+    }
+
+    public function updatePileDetails(Request $request, Pile $pile): JsonResponse
+    {
+        if ($request->filled('volume')) {
+            $request->merge([
+                'volume' => str_replace(',', '', (string) $request->input('volume')),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'variety' => ['required', 'string', 'max:100'],
+            'purity' => ['required', 'numeric', 'between:0,100'],
+            'aged' => ['required', 'integer', 'min:0'],
+            'mc' => ['required', 'numeric', 'between:0,100'],
+            'quality' => ['required', Rule::in(['gqa', 'premium', 'good', 'fair', 'poor'])],
+            'volume' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $hasSavedRecords = AmrRecord::query()->where('pile_id', $pile->id)->exists()
+            || PmrRecord::query()->where('pile_id', $pile->id)->exists();
+
+        if (! $hasSavedRecords) {
+            throw ValidationException::withMessages([
+                'pile_id' => 'This pile has no saved trial data to update.',
+            ]);
+        }
+
+        DB::transaction(function () use ($pile, $validated): void {
+            $sharedDetails = [
+                'variety' => $validated['variety'],
+                'purity' => $validated['purity'],
+                'aged_months' => $validated['aged'],
+                'mc' => $validated['mc'],
+                'quality' => $validated['quality'],
+                'volume_bags' => $validated['volume'],
+            ];
+
+            AmrRecord::query()->where('pile_id', $pile->id)->update($sharedDetails);
+            PmrRecord::query()->where('pile_id', $pile->id)->update($sharedDetails);
+        });
+
+        return response()->json([
+            'message' => 'Pile details updated successfully.',
+        ]);
     }
 
     public function updatePileStatus(Request $request, Pile $pile): RedirectResponse
@@ -229,6 +287,7 @@ class DataEntryController extends Controller
                     ...$shared,
                     'rice_millers' => $trial['rice_millers'] ?? null,
                     'trial_number' => $trial['trial_number'],
+                    'test_milling_date' => $trial['test_milling_date'],
                     'palay_input_kg' => $trial['palay_input'],
                     'rice_recovery_kg' => $trial['rice_recovery'],
                 ];

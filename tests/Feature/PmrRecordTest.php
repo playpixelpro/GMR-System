@@ -23,6 +23,7 @@ class PmrRecordTest extends TestCase
             'quality' => 'gqa',
             'aged' => 5,
             'volume' => '11522.357',
+            'test_milling_date' => '2026-09-24',
             'no_of_trial' => 1,
             'palay_input' => '10000.00',
             'rice_recovery' => '6276.00',
@@ -32,6 +33,7 @@ class PmrRecordTest extends TestCase
         $this->assertDatabaseHas('pmr_records', [
             'warehouse_name' => 'GID#2, MLANG BS',
             'quality' => 'gqa',
+            'test_milling_date' => '2026-09-24',
             'rice_recovery_kg' => '6276.00',
         ]);
     }

@@ -27,6 +27,7 @@ class PmrRecord extends Model
         'aged_months',
         'volume_bags',
         'trial_number',
+        'test_milling_date',
         'palay_input_kg',
         'rice_recovery_kg',
     ];
@@ -44,6 +45,7 @@ class PmrRecord extends Model
             'aged_months' => 'integer',
             'volume_bags' => 'decimal:3',
             'trial_number' => 'integer',
+            'test_milling_date' => 'date:Y-m-d',
             'palay_input_kg' => 'decimal:2',
             'rice_recovery_kg' => 'decimal:2',
         ];

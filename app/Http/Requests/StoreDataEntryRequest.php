@@ -25,6 +25,7 @@ class StoreDataEntryRequest extends FormRequest
             $this->merge([
                 'trials' => [[
                     'trial_number' => $this->input('no_of_trial'),
+                    'test_milling_date' => $this->input('test_milling_date'),
                     'rice_millers' => $this->input('rice_millers'),
                     'palay_input' => $this->input('palay_input'),
                     'rice_recovery' => $this->input('rice_recovery'),
@@ -72,6 +73,7 @@ class StoreDataEntryRequest extends FormRequest
             'volume' => ['required', 'numeric', 'min:0'],
             'trials' => ['required', 'array', 'min:1', 'max:'.$maximumTrial],
             'trials.*.trial_number' => ['required', 'integer', 'min:1', 'max:'.$maximumTrial],
+            'trials.*.test_milling_date' => ['required', 'date_format:Y-m-d'],
             'trials.*.rice_millers' => ['required_if:form_type,amr', 'nullable', 'string', 'max:191'],
             'trials.*.palay_input' => ['required', 'numeric', 'gt:0'],
             'trials.*.rice_recovery' => ['required', 'numeric', 'gte:0'],
@@ -113,6 +115,7 @@ class StoreDataEntryRequest extends FormRequest
             'pile_id' => 'pile number',
             'new_pile_number' => 'new pile number',
             'trials.*.trial_number' => 'trial number',
+            'trials.*.test_milling_date' => 'test milling date',
             'trials.*.rice_millers' => 'rice miller',
             'trials.*.palay_input' => 'palay input',
             'trials.*.rice_recovery' => 'rice output',
