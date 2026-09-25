@@ -24,7 +24,7 @@ class AmrRecord extends Model
         'mc',
         'quality',
         'aged_months',
-        'volume_bags',
+        'volume_kg',
         'rice_millers',
         'trial_number',
         'test_milling_date',
@@ -32,6 +32,15 @@ class AmrRecord extends Model
         'rice_recovery_kg',
         'milling_recovery',
         'is_outlier',
+        'conduct_number',
+        'status',
+        'included_in_computation',
+        'is_locked',
+        'created_by',
+        'confirmed_by',
+        'actioned_by',
+        'confirmed_at',
+        'actioned_at',
     ];
 
     /**
@@ -45,19 +54,51 @@ class AmrRecord extends Model
             'purity' => 'decimal:2',
             'mc' => 'decimal:2',
             'aged_months' => 'integer',
-            'volume_bags' => 'decimal:3',
+            'volume_kg' => 'decimal:3',
             'trial_number' => 'integer',
             'test_milling_date' => 'date:Y-m-d',
             'palay_input_kg' => 'decimal:2',
             'rice_recovery_kg' => 'decimal:2',
             'milling_recovery' => 'decimal:2',
             'is_outlier' => 'boolean',
+            'conduct_number' => 'integer',
+            'included_in_computation' => 'boolean',
+            'is_locked' => 'boolean',
+            'confirmed_at' => 'datetime',
+            'actioned_at' => 'datetime',
         ];
     }
 
     public function pile(): BelongsTo
     {
         return $this->belongsTo(Pile::class);
+    }
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function confirmedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'confirmed_by');
+    }
+
+    public function actionedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'actioned_by');
+    }
+
+    public function scopeEligible($query)
+    {
+        return $query
+            ->where('status', 'RECOMMENDED')
+            ->where('included_in_computation', true);
+    }
+
+    public function scopeForConduct($query, int $conductNumber)
+    {
+        return $query->where('conduct_number', $conductNumber);
     }
 
     public function getWarehouseNameAttribute(?string $value): ?string
@@ -67,7 +108,7 @@ class AmrRecord extends Model
 
     public function getPileNumberAttribute(?string $value): ?string
     {
-        return $this->pile?->pile_number ?? $this->pile?->number ?? $value;
+        return $this->pile?->pile_number ?? ($this->pile?->number ?? $value);
     }
 
     public function getVarietyAttribute(?string $value): ?string
@@ -95,9 +136,9 @@ class AmrRecord extends Model
         return $this->pile?->aged_months ?? $value;
     }
 
-    public function getVolumeBagsAttribute($value)
+    public function getVolumeKgAttribute($value)
     {
-        return $this->pile?->volume_bags ?? $value;
+        return $this->pile?->volume_kg ?? $value;
     }
 
     public function getMillingRecoveryPercentageAttribute(): float

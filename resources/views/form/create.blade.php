@@ -81,6 +81,10 @@
                         <option value="__new__" @selected(old('new_pile_number'))>Add new pile...</option>
                     </select>
                     <input type="hidden" name="new_pile_number" id="new_pile_number" value="{{ old('new_pile_number') }}">
+                    <div data-retest-notice class="mt-2 hidden rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                        <strong>⚠ RETEST NOTICE</strong><br>
+                        A previous AMR/PMR test for this pile was recommended for retest. Please conduct and encode the new test result.
+                    </div>
                 </div>
 
                 <div>
@@ -116,7 +120,7 @@
                 </div>
                 <div>
                     <label for="volume" class="block text-sm font-medium text-gray-700">Volume of Pile (kg)</label>
-                    <input type="text" name="volume" id="volume" value="{{ old('volume') }}" inputmode="decimal" autocomplete="off" required data-pile-detail-field
+                    <input type="text" name="volume" id="volume" value="{{ old('volume') }}" inputmode="decimal" autocomplete="off" required data-pile-detail-field data-number-format
                            class="mt-1 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
             </div>
@@ -134,8 +138,8 @@
                     <div><label class="block text-sm font-medium text-gray-700">Trial</label><input type="hidden" name="trials[0][trial_number]" data-trial-value value="1"><span data-trial-label class="mt-1 block  px-3 py-2 text-sm text-gray-700">Trial 1</span></div>
                     <div><label class="block text-sm font-medium text-gray-700">Test Milling Date</label><input type="text" name="trials[0][test_milling_date]" data-test-field data-flatpickr-date required class="input max-w-sm mt-1 block min-h-10 w-full" placeholder="Month DD, YYYY"></div>
                     <div><label class="block text-sm font-medium text-gray-700">Rice Miller</label><input type="text" name="trials[0][rice_millers]" data-amr-required class="mt-1 block min-h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"></div>
-                    <div><label class="block text-sm font-medium text-gray-700">Palay Input (kg)</label><input type="number" name="trials[0][palay_input]" data-test-field min="0" step="any" required class="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 text-sm"></div>
-                    <div><label class="block text-sm font-medium text-gray-700">Rice Output (kg)</label><input type="number" name="trials[0][rice_recovery]" data-test-field min="0" step="any" required class="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 text-sm"></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Palay Input (kg)</label><input type="text" name="trials[0][palay_input]" data-test-field data-number-format inputmode="decimal" autocomplete="off" required class="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 text-sm"></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Rice Output (kg)</label><input type="text" name="trials[0][rice_recovery]" data-test-field data-number-format inputmode="decimal" autocomplete="off" required class="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 text-sm"></div>
                     <div data-row-action class="flex items-end gap-2"><button type="button" disabled class="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm font-medium text-gray-400 disabled:cursor-not-allowed">Edit</button><button type="button" data-delete-trial aria-label="Delete trial" title="Delete trial" class="rounded-md border border-red-200 p-2 text-red-600 hover:bg-red-50"><span class="icon-[tabler--trash] h-5 w-5" aria-hidden="true"></span></button></div>
                 </div>
             </div>
@@ -149,8 +153,8 @@
                 <div data-trial-row class="grid grid-cols-1 gap-3 rounded-md border border-red-200 bg-white p-3 sm:grid-cols-6">
                     <div><label class="block text-sm font-medium text-gray-700">Trial</label><input type="hidden" name="trials[0][trial_number]" data-trial-value value="1" disabled><span data-trial-label class="mt-1 block px-3 py-2 text-sm text-gray-700">Trial 1</span></div>
                     <div><label class="block text-sm font-medium text-gray-700">Test Milling Date</label><input type="text" name="trials[0][test_milling_date]" data-test-field data-flatpickr-date required class="input max-w-sm mt-1 block min-h-10 w-full" placeholder="Month DD, YYYY"></div>
-                    <div><label class="block text-sm font-medium text-gray-700">Palay Input (kg)</label><input type="number" name="trials[0][palay_input]" data-test-field min="0" step="any" class="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 text-sm" placeholder="Optional"></div>
-                    <div><label class="block text-sm font-medium text-gray-700">Rice Output (kg)</label><input type="number" name="trials[0][rice_recovery]" data-test-field min="0" step="any" class="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 text-sm" placeholder="Optional"></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Palay Input (kg)</label><input type="text" name="trials[0][palay_input]" data-test-field data-number-format inputmode="decimal" autocomplete="off" class="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 text-sm" placeholder="Optional"></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Rice Output (kg)</label><input type="text" name="trials[0][rice_recovery]" data-test-field data-number-format inputmode="decimal" autocomplete="off" class="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 text-sm" placeholder="Optional"></div>
                     <div><label class="block text-sm font-medium text-gray-700">RECOVERY RATE (%)</label><input type="number" name="trials[0][recovery_rate]" data-test-field min="0" max="100" step="any" class="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 text-sm" placeholder="e.g. 63.00"></div>
                     <div data-row-action class="flex items-end gap-2"><button type="button" disabled class="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm font-medium text-gray-400 disabled:cursor-not-allowed">Edit</button><button type="button" data-delete-trial aria-label="Delete trial" title="Delete trial" class="rounded-md border border-red-200 p-2 text-red-600 hover:bg-red-50"><span class="icon-[tabler--trash] h-5 w-5" aria-hidden="true"></span></button></div>
                 </div>
@@ -297,10 +301,16 @@
             return `${editButton}<button type="button" data-delete-trial aria-label="Delete trial" title="Delete trial" class="rounded-md border border-red-200 p-2 text-red-600 hover:bg-red-50"><span class="icon-[tabler--trash] h-5 w-5" aria-hidden="true"></span></button>`;
         }
 
-        volumeInput.addEventListener('input', () => {
-            volumeInput.value = formatVolume(volumeInput.value);
-        });
-        volumeInput.value = formatVolume(volumeInput.value);
+        function initializeNumberFormatting(container = document) {
+            container.querySelectorAll('[data-number-format]').forEach((input) => {
+                input.addEventListener('input', () => {
+                    input.value = formatVolume(input.value);
+                });
+                input.value = formatVolume(input.value);
+            });
+        }
+
+        initializeNumberFormatting();
 
         function reindexTrialRows(section) {
             section.querySelectorAll('[data-trial-row]').forEach((row, index) => {
@@ -333,6 +343,9 @@
             const isAmr = formType.value === 'amr';
             const maximumTrial = 3;
             const selectedPile = pileData.find((pile) => String(pile.id) === pileSelect.value);
+            const retestNotice = document.querySelector('[data-retest-notice]');
+            const hasRetestHistory = Boolean(formType.value && selectedPile?.[formType.value]?.has_retest_history);
+            retestNotice?.classList.toggle('hidden', !hasRetestHistory);
             const usedTrials = formType.value ? (selectedPile?.[formType.value]?.trials?.map(Number) || []) : [];
             const activeSection = formType.value ? document.querySelector(`[data-test-section="${formType.value}"]`) : null;
             const activeRows = activeSection ? activeSection.querySelectorAll('[data-trial-row]') : [];
@@ -462,6 +475,7 @@
             });
             clone.querySelector('[data-row-action]').innerHTML = trialActionMarkup();
             rows.appendChild(clone);
+            initializeNumberFormatting(clone);
 
             if (dateInput) {
                 initFlatpickr(dateInput);
@@ -555,8 +569,8 @@
                         dateInput._flatpickr.altInput.disabled = true;
                     }
                 }
-                row.querySelector('[name$="[palay_input]"]').value = record.palay_input !== null && record.palay_input !== undefined ? record.palay_input : '';
-                row.querySelector('[name$="[rice_recovery]"]').value = record.rice_recovery !== null && record.rice_recovery !== undefined ? record.rice_recovery : '';
+                row.querySelector('[name$="[palay_input]"]').value = record.palay_input !== null && record.palay_input !== undefined ? formatVolume(String(record.palay_input)) : '';
+                row.querySelector('[name$="[rice_recovery]"]').value = record.rice_recovery !== null && record.rice_recovery !== undefined ? formatVolume(String(record.rice_recovery)) : '';
                 const recRateField = row.querySelector('[name$="[recovery_rate]"]');
                 if (recRateField) {
                     let rateVal = record.recovery_rate ?? record.milling_recovery ?? '';
@@ -923,8 +937,8 @@
                 const payload = new URLSearchParams({
                     _token: document.querySelector('meta[name="csrf-token"]').content,
                     test_milling_date: row.querySelector('[name$="[test_milling_date]"]').value,
-                    palay_input: row.querySelector('[name$="[palay_input]"]').value,
-                    rice_recovery: row.querySelector('[name$="[rice_recovery]"]').value,
+                    palay_input: row.querySelector('[name$="[palay_input]"]').value.replace(/,/g, ''),
+                    rice_recovery: row.querySelector('[name$="[rice_recovery]"]').value.replace(/,/g, ''),
                 });
                 const riceMiller = row.querySelector('[name$="[rice_millers]"]');
                 if (riceMiller) {
@@ -1006,7 +1020,7 @@
                 aged: document.querySelector('#aged').value,
                 mc: document.querySelector('#mc').value,
                 quality: document.querySelector('#quality').value,
-                volume: document.querySelector('#volume').value,
+                volume: document.querySelector('#volume').value.replace(/,/g, ''),
             });
 
             try {
@@ -1044,8 +1058,8 @@
             const recRateInput = row.querySelector('[name$="[recovery_rate]"]');
             if (!recRateInput) return;
 
-            const palayVal = palayInput ? palayInput.value.trim() : '';
-            const riceVal = riceRecovery ? riceRecovery.value.trim() : '';
+    const palayVal = palayInput ? palayInput.value.replace(/,/g, '').trim() : '';
+            const riceVal = riceRecovery ? riceRecovery.value.replace(/,/g, '').trim() : '';
 
             const palayNum = parseFloat(palayVal);
             const riceNum = parseFloat(riceVal);
@@ -1097,6 +1111,10 @@
                     }
                 }
             }
+
+            document.querySelectorAll('[data-number-format]').forEach((field) => {
+                field.value = field.value.replace(/,/g, '');
+            });
 
             pileDetailFields.forEach((field) => {
                 field.disabled = false;

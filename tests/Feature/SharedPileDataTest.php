@@ -19,7 +19,10 @@ class SharedPileDataTest extends TestCase
     public function test_amr_and_pmr_share_pile_metadata_across_forms_and_reports(): void
     {
         $branch = Branch::firstOrCreate(['name' => 'South Cotabato']);
-        $warehouse = Warehouse::create(['name' => 'GID#2, MLANG BS', 'branch_id' => $branch->id]);
+        $warehouse = Warehouse::create([
+            'name' => 'GID#2, MLANG BS',
+            'branch_id' => $branch->id,
+        ]);
 
         // 1. Submit AMR trial for Pile 1
         $amrResponse = $this->post(route('records.store'), [
@@ -40,12 +43,18 @@ class SharedPileDataTest extends TestCase
             'rice_recovery' => '6250.00',
         ]);
 
-        $amrResponse->assertRedirect(route('records.create', ['type' => 'amr']));
+        $amrResponse->assertRedirect(
+            route('records.create', ['type' => 'amr']),
+        );
 
-        $pile = Pile::where('warehouse_id', $warehouse->id)->where('number', '1')->firstOrFail();
+        $pile = Pile::where('warehouse_id', $warehouse->id)
+            ->where('number', '1')
+            ->firstOrFail();
 
         // 2. Open PMR creation form and assert the shared pile details are populated for Pile 1
-        $createFormResponse = $this->get(route('records.create', ['type' => 'pmr']));
+        $createFormResponse = $this->get(
+            route('records.create', ['type' => 'pmr']),
+        );
         $createFormResponse->assertOk();
         $createFormResponse->assertSee('RC 160');
         $createFormResponse->assertSee('94.5');
@@ -68,7 +77,9 @@ class SharedPileDataTest extends TestCase
             'rice_recovery' => '6200.00',
         ]);
 
-        $pmrResponse->assertRedirect(route('records.create', ['type' => 'pmr']));
+        $pmrResponse->assertRedirect(
+            route('records.create', ['type' => 'pmr']),
+        );
 
         // Assert master pile table has the shared metadata
         $this->assertDatabaseHas('piles', [
@@ -81,7 +92,7 @@ class SharedPileDataTest extends TestCase
             'mc' => '12.30',
             'quality' => 'gqa',
             'aged_months' => 6,
-            'volume_bags' => '10500.500',
+            'volume_kg' => '10500.500',
         ]);
 
         // Assert database records in both tables have identical shared metadata
@@ -92,7 +103,7 @@ class SharedPileDataTest extends TestCase
             'mc' => '12.30',
             'quality' => 'gqa',
             'aged_months' => 6,
-            'volume_bags' => '10500.500',
+            'volume_kg' => '10500.500',
         ]);
 
         $this->assertDatabaseHas('pmr_records', [
@@ -102,7 +113,7 @@ class SharedPileDataTest extends TestCase
             'mc' => '12.30',
             'quality' => 'gqa',
             'aged_months' => 6,
-            'volume_bags' => '10500.500',
+            'volume_kg' => '10500.500',
         ]);
 
         // 4. Assert both reports display the exact same shared data
@@ -114,7 +125,7 @@ class SharedPileDataTest extends TestCase
         $amrReport->assertSee('94.50');
         $amrReport->assertSee('12.3');
         $amrReport->assertSee('GQA');
-        $amrReport->assertSee('10,500.500');
+        $amrReport->assertSee('210.010');
 
         $pmrReport = $this->get(route('pmr.index'));
         $pmrReport->assertOk();
@@ -124,24 +135,27 @@ class SharedPileDataTest extends TestCase
         $pmrReport->assertSee('94.50');
         $pmrReport->assertSee('12.3');
         $pmrReport->assertSee('GQA');
-        $pmrReport->assertSee('10,500.500');
+        $pmrReport->assertSee('210.010');
     }
 
     public function test_updating_shared_pile_data_synchronizes_both_amr_and_pmr_records(): void
     {
         $branch = Branch::firstOrCreate(['name' => 'South Cotabato']);
-        $warehouse = Warehouse::create(['name' => 'WH-SYNC', 'branch_id' => $branch->id]);
+        $warehouse = Warehouse::create([
+            'name' => 'WH-SYNC',
+            'branch_id' => $branch->id,
+        ]);
         $pile = Pile::create([
             'branch_id' => $branch->id,
             'warehouse_id' => $warehouse->id,
             'pile_number' => '10',
             'number' => '10',
             'variety' => 'Old Variety',
-            'purity' => 90.00,
-            'mc' => 14.00,
+            'purity' => 90.0,
+            'mc' => 14.0,
             'quality' => 'poor',
             'aged_months' => 2,
-            'volume_bags' => 5000.000,
+            'volume_kg' => 5000.0,
         ]);
 
         AmrRecord::factory()->create([
@@ -149,11 +163,11 @@ class SharedPileDataTest extends TestCase
             'warehouse_name' => $warehouse->name,
             'pile_number' => '10',
             'variety' => 'Old Variety',
-            'purity' => 90.00,
-            'mc' => 14.00,
+            'purity' => 90.0,
+            'mc' => 14.0,
             'quality' => 'poor',
             'aged_months' => 2,
-            'volume_bags' => 5000.000,
+            'volume_kg' => 5000.0,
             'trial_number' => 1,
         ]);
 
@@ -162,11 +176,11 @@ class SharedPileDataTest extends TestCase
             'warehouse_name' => $warehouse->name,
             'pile_number' => '10',
             'variety' => 'Old Variety',
-            'purity' => 90.00,
-            'mc' => 14.00,
+            'purity' => 90.0,
+            'mc' => 14.0,
             'quality' => 'poor',
             'aged_months' => 2,
-            'volume_bags' => 5000.000,
+            'volume_kg' => 5000.0,
             'trial_number' => 1,
         ]);
 
@@ -196,7 +210,7 @@ class SharedPileDataTest extends TestCase
             'mc' => '11.40',
             'quality' => 'premium',
             'aged_months' => 8,
-            'volume_bags' => '15000.000',
+            'volume_kg' => '15000.000',
         ]);
 
         // Both tables must now have the updated shared data
@@ -207,7 +221,7 @@ class SharedPileDataTest extends TestCase
             'mc' => '11.40',
             'quality' => 'premium',
             'aged_months' => 8,
-            'volume_bags' => '15000.000',
+            'volume_kg' => '15000.000',
         ]);
 
         $this->assertDatabaseHas('pmr_records', [
@@ -217,14 +231,17 @@ class SharedPileDataTest extends TestCase
             'mc' => '11.40',
             'quality' => 'premium',
             'aged_months' => 8,
-            'volume_bags' => '15000.000',
+            'volume_kg' => '15000.000',
         ]);
     }
 
     public function test_one_master_pile_record_is_created_and_never_duplicated_between_amr_and_pmr(): void
     {
         $branch = Branch::create(['name' => 'Bukidnon']);
-        $warehouse = Warehouse::create(['name' => 'Maramag Warehouse', 'branch_id' => $branch->id]);
+        $warehouse = Warehouse::create([
+            'name' => 'Maramag Warehouse',
+            'branch_id' => $branch->id,
+        ]);
 
         $this->assertEquals(0, Pile::count());
 
@@ -255,7 +272,7 @@ class SharedPileDataTest extends TestCase
         $this->assertEquals('95.00', (string) $pile->purity);
         $this->assertEquals(4, $pile->aged_months);
         $this->assertEquals('good', $pile->quality);
-        $this->assertEquals('8000.000', (string) $pile->volume_bags);
+        $this->assertEquals('8000.000', (string) $pile->volume_kg);
 
         // 2. Submit PMR form using same Branch + Warehouse + Pile Number
         $this->post(route('records.store'), [
@@ -286,7 +303,10 @@ class SharedPileDataTest extends TestCase
     public function test_submitting_existing_trial_updates_in_place_without_duplicating(): void
     {
         $branch = Branch::create(['name' => 'Davao del Sur']);
-        $warehouse = Warehouse::create(['name' => 'Digos WH', 'branch_id' => $branch->id]);
+        $warehouse = Warehouse::create([
+            'name' => 'Digos WH',
+            'branch_id' => $branch->id,
+        ]);
 
         // Submit trial 1
         $this->post(route('records.store'), [
@@ -309,7 +329,10 @@ class SharedPileDataTest extends TestCase
 
         $this->assertEquals(1, Pile::count());
         $this->assertEquals(1, AmrRecord::count());
-        $this->assertEquals('600.00', (string) AmrRecord::first()->rice_recovery_kg);
+        $this->assertEquals(
+            '600.00',
+            (string) AmrRecord::first()->rice_recovery_kg,
+        );
 
         // Re-submit trial 1 with updated recovery kg
         $this->post(route('records.store'), [
@@ -333,13 +356,19 @@ class SharedPileDataTest extends TestCase
         // Must still be only 1 pile and 1 AMR record
         $this->assertEquals(1, Pile::count());
         $this->assertEquals(1, AmrRecord::count());
-        $this->assertEquals('650.00', (string) AmrRecord::first()->rice_recovery_kg);
+        $this->assertEquals(
+            '650.00',
+            (string) AmrRecord::first()->rice_recovery_kg,
+        );
     }
 
     public function test_database_unique_constraint_enforces_one_pile_per_branch_warehouse_and_pile_number(): void
     {
         $branch = Branch::create(['name' => 'General Santos']);
-        $warehouse = Warehouse::create(['name' => 'GenSan WH', 'branch_id' => $branch->id]);
+        $warehouse = Warehouse::create([
+            'name' => 'GenSan WH',
+            'branch_id' => $branch->id,
+        ]);
 
         Pile::create([
             'branch_id' => $branch->id,

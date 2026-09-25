@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\AmrRecord;
+use App\Models\Branch;
 use App\Models\Pile;
 use App\Models\PmrCalculation;
 use App\Models\PmrRecord;
+use App\Models\Warehouse;
 use App\Services\AmrCalculationService;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class AmrRecordController extends Controller
@@ -18,8 +21,22 @@ class AmrRecordController extends Controller
     /**
      * Display the AMR report.
      */
-    public function index(): View
+    public function index(Request $request): View
     {
+        $filters = $this->filters($request);
+        $filterWarehouseNames = Warehouse::query()
+            ->when(
+                $filters['branch_id'],
+                fn ($query, $branchId) => $query->where('branch_id', $branchId),
+            )
+            ->when(
+                $filters['warehouse_id'],
+                fn ($query, $warehouseId) => $query->whereKey($warehouseId),
+            )
+            ->pluck('name');
+        $hasFilters =
+            $filters['branch_id'] !== null || $filters['warehouse_id'] !== null;
+
         // 1. Fetch all master piles that have AMR records, PMR records, or shared pile details
         $piles = Pile::query()
             ->with([
@@ -30,10 +47,35 @@ class AmrRecordController extends Controller
                 'pmrRecords' => fn ($query) => $query->orderBy('trial_number'),
             ])
             ->where(function ($query) {
-                $query->whereHas('amrRecords')
+                $query
+                    ->whereHas('amrRecords')
                     ->orWhereHas('pmrRecords')
                     ->orWhereNotNull('variety');
             })
+            ->when($filters['branch_id'], function ($query, $branchId): void {
+                $query->where(function ($branchQuery) use ($branchId): void {
+                    $branchQuery
+                        ->where('branch_id', $branchId)
+                        ->orWhereHas(
+                            'warehouse',
+                            fn ($warehouseQuery) => $warehouseQuery->where(
+                                'branch_id',
+                                $branchId,
+                            ),
+                        );
+                });
+            })
+            ->when(
+                $filters['warehouse_id'],
+                fn ($query, $warehouseId) => $query->where(
+                    'warehouse_id',
+                    $warehouseId,
+                ),
+            )
+            ->orderBy('branch_id')
+            ->orderBy('warehouse_id')
+            ->orderBy('pile_number')
+            ->orderBy('number')
             ->get();
 
         $groups = collect();
@@ -43,9 +85,20 @@ class AmrRecordController extends Controller
             $hasRecords = $records->isNotEmpty();
 
             if ($hasRecords) {
-                $calc = $this->calculationService->calculateForGroup($records, 'pile:'.$pile->id);
-                $validRecoveries = $records->filter(fn ($r) => (float) $r->palay_input_kg > 0)->map(fn ($r) => (float) $r->milling_recovery_percentage);
-                $mean = $validRecoveries->isNotEmpty() ? $validRecoveries->avg() : null;
+                $calc = $this->calculationService->calculateForGroup(
+                    $records,
+                    'pile:'.$pile->id,
+                );
+                $validRecoveries = $records
+                    ->filter(
+                        fn ($r): bool => $r->included_in_computation &&
+                            $r->status === 'RECOMMENDED',
+                    )
+                    ->filter(fn ($r) => (float) $r->palay_input_kg > 0)
+                    ->map(fn ($r) => (float) $r->milling_recovery_percentage);
+                $mean = $validRecoveries->isNotEmpty()
+                    ? $validRecoveries->avg()
+                    : null;
             } else {
                 $calc = $this->calculationService->calculate([]);
                 $mean = null;
@@ -56,9 +109,22 @@ class AmrRecordController extends Controller
             if ($pile->pmrCalculation?->pmr_rate !== null) {
                 $pmrRate = (float) $pile->pmrCalculation->pmr_rate;
             } elseif ($pile->pmrRecords->isNotEmpty()) {
-                $validPmr = $pile->pmrRecords->filter(fn (PmrRecord $r) => (float) $r->palay_input_kg > 0)
-                    ->map(fn (PmrRecord $r) => (float) $r->recovery_rate_percentage);
-                $pmrRate = $validPmr->isNotEmpty() ? (float) $validPmr->avg() : null;
+                $validPmr = $pile->pmrRecords
+                    ->filter(
+                        fn (
+                            PmrRecord $record,
+                        ): bool => $record->included_in_computation &&
+                            $record->status === 'RECOMMENDED',
+                    )
+                    ->filter(fn (PmrRecord $r) => (float) $r->palay_input_kg > 0)
+                    ->map(
+                        fn (
+                            PmrRecord $r,
+                        ) => (float) $r->recovery_rate_percentage,
+                    );
+                $pmrRate = $validPmr->isNotEmpty()
+                    ? (float) $validPmr->avg()
+                    : null;
             }
 
             $firstRecord = $records->first() ?? $pile->pmrRecords->first();
@@ -70,14 +136,16 @@ class AmrRecordController extends Controller
                 'mean' => $mean,
                 'pmr_rate' => $pmrRate,
                 'branch_name' => $pile->warehouse?->branch?->name ?? '—',
-                'warehouse_name' => $pile->warehouse?->name ?? $firstRecord?->warehouse_name ?? '—',
-                'pile_number' => $pile->pile_number ?? $pile->number ?? $firstRecord?->pile_number ?? '—',
-                'variety' => $pile->variety ?? $firstRecord?->variety ?? '—',
+                'warehouse_name' => $pile->warehouse?->name ??
+                    ($firstRecord?->warehouse_name ?? '—'),
+                'pile_number' => $pile->pile_number ??
+                    ($pile->number ?? ($firstRecord?->pile_number ?? '—')),
+                'variety' => $pile->variety ?? ($firstRecord?->variety ?? '—'),
                 'purity' => $pile->purity ?? $firstRecord?->purity,
                 'mc' => $pile->mc ?? $firstRecord?->mc,
-                'quality' => $pile->quality ?? $firstRecord?->quality ?? '',
-                'aged_months' => $pile->aged_months ?? $firstRecord?->aged_months ?? 0,
-                'volume_bags' => $pile->volume_bags ?? $firstRecord?->volume_bags ?? 0,
+                'quality' => $pile->quality ?? ($firstRecord?->quality ?? ''),
+                'aged_months' => $pile->aged_months ?? ($firstRecord?->aged_months ?? 0),
+                'volume_kg' => $pile->volume_kg ?? ($firstRecord?->volume_kg ?? 0),
                 'rice_millers' => $records->first()?->rice_millers ?? '—',
             ]);
         }
@@ -85,6 +153,13 @@ class AmrRecordController extends Controller
         // 2. Fetch standalone AMR records without pile_id
         $standaloneRecords = AmrRecord::query()
             ->whereNull('pile_id')
+            ->when(
+                $hasFilters,
+                fn ($query) => $query->whereIn(
+                    'warehouse_name',
+                    $filterWarehouseNames,
+                ),
+            )
             ->orderBy('warehouse_name')
             ->orderBy('pile_number')
             ->orderBy('trial_number')
@@ -95,23 +170,37 @@ class AmrRecordController extends Controller
                     $record->pile_number,
                     $record->variety,
                     $record->aged_months,
-                    $record->volume_bags,
+                    $record->volume_kg,
                     $record->rice_millers,
-                ])
+                ]),
             );
 
         foreach ($standaloneRecords as $key => $standaloneGroup) {
             $first = $standaloneGroup->first();
-            $calc = $this->calculationService->calculateForGroup($standaloneGroup, $key);
-            $validRecoveries = $standaloneGroup->filter(fn ($r) => (float) $r->palay_input_kg > 0)->map(fn ($r) => (float) $r->milling_recovery_percentage);
-            $mean = $validRecoveries->isNotEmpty() ? $validRecoveries->avg() : null;
+            $calc = $this->calculationService->calculateForGroup(
+                $standaloneGroup,
+                $key,
+            );
+            $validRecoveries = $standaloneGroup
+                ->filter(fn ($r) => (float) $r->palay_input_kg > 0)
+                ->map(fn ($r) => (float) $r->milling_recovery_percentage);
+            $mean = $validRecoveries->isNotEmpty()
+                ? $validRecoveries->avg()
+                : null;
 
             $pmrRate = null;
             if ($first) {
                 $matchingPmr = PmrCalculation::query()
                     ->whereHas('pile', function ($query) use ($first) {
-                        $query->where('number', $first->pile_number)
-                            ->whereHas('warehouse', fn ($w) => $w->where('name', $first->warehouse_name));
+                        $query
+                            ->where('number', $first->pile_number)
+                            ->whereHas(
+                                'warehouse',
+                                fn ($w) => $w->where(
+                                    'name',
+                                    $first->warehouse_name,
+                                ),
+                            );
                     })
                     ->latest('calculated_at')
                     ->first();
@@ -126,10 +215,19 @@ class AmrRecordController extends Controller
 
                     if ($matchingRecords->isNotEmpty()) {
                         $validRecoveriesPmr = $matchingRecords
-                            ->filter(fn (PmrRecord $r) => (float) $r->palay_input_kg > 0)
-                            ->map(fn (PmrRecord $r) => (float) $r->recovery_rate_percentage);
+                            ->filter(
+                                fn (PmrRecord $r) => (float) $r->palay_input_kg >
+                                    0,
+                            )
+                            ->map(
+                                fn (
+                                    PmrRecord $r,
+                                ) => (float) $r->recovery_rate_percentage,
+                            );
 
-                        $pmrRate = $validRecoveriesPmr->isNotEmpty() ? (float) $validRecoveriesPmr->avg() : null;
+                        $pmrRate = $validRecoveriesPmr->isNotEmpty()
+                            ? (float) $validRecoveriesPmr->avg()
+                            : null;
                     }
                 }
             }
@@ -148,11 +246,38 @@ class AmrRecordController extends Controller
                 'mc' => $first?->mc,
                 'quality' => $first?->quality ?? '',
                 'aged_months' => $first?->aged_months ?? 0,
-                'volume_bags' => $first?->volume_bags ?? 0,
+                'volume_kg' => $first?->volume_kg ?? 0,
                 'rice_millers' => $first?->rice_millers ?? '—',
             ]);
         }
 
-        return view('reports.amr', ['recordGroups' => $groups]);
+        return view('reports.amr', [
+            'branches' => Branch::query()
+                ->orderBy('name')
+                ->get(['id', 'name']),
+            'warehouses' => Warehouse::query()
+                ->when(
+                    $filters['branch_id'],
+                    fn ($query, $branchId) => $query->where(
+                        'branch_id',
+                        $branchId,
+                    ),
+                )
+                ->orderBy('name')
+                ->get(['id', 'branch_id', 'name']),
+            'filters' => $filters,
+            'recordGroups' => $groups,
+        ]);
+    }
+
+    /**
+     * @return array{branch_id: ?int, warehouse_id: ?int}
+     */
+    private function filters(Request $request): array
+    {
+        return [
+            'branch_id' => $request->integer('branch_id') ?: null,
+            'warehouse_id' => $request->integer('warehouse_id') ?: null,
+        ];
     }
 }

@@ -22,7 +22,7 @@ class AmrRecordFactory extends Factory
             'pile_number' => (string) fake()->numberBetween(1, 50),
             'variety' => fake()->randomElement(['PD', 'NSIC Rc 222']),
             'aged_months' => fake()->numberBetween(0, 24),
-            'volume_bags' => fake()->randomFloat(3, 1, 20000),
+            'volume_kg' => fake()->randomFloat(3, 1, 20000),
             'rice_millers' => fake()->company(),
             'trial_number' => fake()->numberBetween(1, 3),
             'palay_input_kg' => fake()->randomFloat(2, 1, 10000),

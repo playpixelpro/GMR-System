@@ -25,7 +25,7 @@ class PmrRecordFactory extends Factory
             'mc' => fake()->randomFloat(2, 8, 20),
             'quality' => 'gqa',
             'aged_months' => fake()->numberBetween(0, 24),
-            'volume_bags' => fake()->randomFloat(3, 1, 20000),
+            'volume_kg' => fake()->randomFloat(3, 1, 20000),
             'trial_number' => fake()->numberBetween(1, 5),
             'palay_input_kg' => 10000,
             'rice_recovery_kg' => fake()->randomFloat(2, 5000, 7000),

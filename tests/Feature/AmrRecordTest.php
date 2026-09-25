@@ -51,17 +51,21 @@ class AmrRecordTest extends TestCase
             'rice_recovery_kg' => '60.00',
         ]);
 
-        $response = $this->patchJson(route('records.update', [
-            'formType' => 'amr',
-            'record' => $trial->id,
-        ]), [
-            'rice_millers' => 'Updated Miller',
-            'palay_input' => '120.00',
-            'rice_recovery' => '75.00',
-            'test_milling_date' => '2026-09-23',
-        ]);
+        $response = $this->patchJson(
+            route('records.update', [
+                'formType' => 'amr',
+                'record' => $trial->id,
+            ]),
+            [
+                'rice_millers' => 'Updated Miller',
+                'palay_input' => '120.00',
+                'rice_recovery' => '75.00',
+                'test_milling_date' => '2026-09-23',
+            ],
+        );
 
-        $response->assertOk()
+        $response
+            ->assertOk()
             ->assertJsonPath('message', 'AMR trial updated successfully.');
         $this->assertDatabaseHas('amr_records', [
             'id' => $trial->id,
@@ -75,9 +79,17 @@ class AmrRecordTest extends TestCase
     public function test_pile_details_update_existing_trials_without_adding_records(): void
     {
         $branch = Branch::create(['name' => 'Branch']);
-        $warehouse = Warehouse::create(['branch_id' => $branch->id, 'name' => 'Warehouse']);
-        $pile = Pile::create(['warehouse_id' => $warehouse->id, 'number' => 'Pile 1']);
-        $trials = AmrRecord::factory()->count(2)->create(['pile_id' => $pile->id]);
+        $warehouse = Warehouse::create([
+            'branch_id' => $branch->id,
+            'name' => 'Warehouse',
+        ]);
+        $pile = Pile::create([
+            'warehouse_id' => $warehouse->id,
+            'number' => 'Pile 1',
+        ]);
+        $trials = AmrRecord::factory()
+            ->count(2)
+            ->create(['pile_id' => $pile->id]);
 
         $response = $this->patchJson(route('piles.details.update', $pile), [
             'variety' => 'Updated Variety',
@@ -88,7 +100,8 @@ class AmrRecordTest extends TestCase
             'volume' => '12,500.75',
         ]);
 
-        $response->assertOk()
+        $response
+            ->assertOk()
             ->assertJsonPath('message', 'Pile details updated successfully.');
         $this->assertDatabaseCount('amr_records', 2);
 
@@ -100,7 +113,7 @@ class AmrRecordTest extends TestCase
                 'aged_months' => 7,
                 'mc' => '12.25',
                 'quality' => 'premium',
-                'volume_bags' => '12500.750',
+                'volume_kg' => '12500.750',
             ]);
         }
     }
@@ -109,12 +122,15 @@ class AmrRecordTest extends TestCase
     {
         $trial = AmrRecord::factory()->create();
 
-        $response = $this->deleteJson(route('records.destroy', [
-            'formType' => 'amr',
-            'record' => $trial->id,
-        ]));
+        $response = $this->deleteJson(
+            route('records.destroy', [
+                'formType' => 'amr',
+                'record' => $trial->id,
+            ]),
+        );
 
-        $response->assertOk()
+        $response
+            ->assertOk()
             ->assertJsonPath('message', 'AMR trial deleted successfully.');
         $this->assertDatabaseMissing('amr_records', ['id' => $trial->id]);
     }
@@ -174,7 +190,7 @@ class AmrRecordTest extends TestCase
             'pile_number' => '1',
             'variety' => 'PD',
             'aged_months' => 5,
-            'volume_bags' => '10.000',
+            'volume_kg' => '10.000',
             'rice_millers' => 'Miller',
             'trial_number' => 1,
             'palay_input_kg' => '10000.00',
@@ -186,7 +202,7 @@ class AmrRecordTest extends TestCase
             'pile_number' => '1',
             'variety' => 'PD',
             'aged_months' => 5,
-            'volume_bags' => '10.000',
+            'volume_kg' => '10.000',
             'rice_millers' => 'Miller',
             'trial_number' => 2,
             'palay_input_kg' => '10000.00',
@@ -203,9 +219,48 @@ class AmrRecordTest extends TestCase
         $response->assertSee('Trial 3');
     }
 
+    public function test_amr_report_filters_by_branch_and_warehouse(): void
+    {
+        $includedBranch = Branch::create(['name' => 'Included Branch']);
+        $includedWarehouse = Warehouse::create([
+            'branch_id' => $includedBranch->id,
+            'name' => 'Included Warehouse',
+        ]);
+        $excludedBranch = Branch::create(['name' => 'Excluded Branch']);
+        Warehouse::create([
+            'branch_id' => $excludedBranch->id,
+            'name' => 'Excluded Warehouse',
+        ]);
+
+        foreach (
+            ['Included Warehouse', 'Excluded Warehouse'] as $warehouseName
+        ) {
+            AmrRecord::factory()->create([
+                'warehouse_name' => $warehouseName,
+                'pile_number' => '1',
+                'variety' => 'PD',
+                'trial_number' => 1,
+                'palay_input_kg' => '10000.00',
+                'rice_recovery_kg' => '6250.00',
+            ]);
+        }
+
+        $response = $this->get(
+            route('amr.index', [
+                'branch_id' => $includedBranch->id,
+                'warehouse_id' => $includedWarehouse->id,
+            ]),
+        );
+
+        $response
+            ->assertOk()
+            ->assertSee('Included Warehouse')
+            ->assertDontSee('Excluded Warehouse');
+    }
+
     public function test_amr_status_shows_ok_when_recovery_rate_is_at_least_60_percent(): void
     {
-        foreach ([62.50, 63.00, 62.80] as $i => $rate) {
+        foreach ([62.5, 63.0, 62.8] as $i => $rate) {
             AmrRecord::factory()->create([
                 'warehouse_name' => 'WH High',
                 'pile_number' => '1',
@@ -225,7 +280,7 @@ class AmrRecordTest extends TestCase
 
     public function test_amr_status_shows_lower_than_60_percent_when_recovery_rate_is_below_60_percent(): void
     {
-        foreach ([58.00, 57.50, 58.20] as $i => $rate) {
+        foreach ([58.0, 57.5, 58.2] as $i => $rate) {
             AmrRecord::factory()->create([
                 'warehouse_name' => 'WH Low',
                 'pile_number' => '2',

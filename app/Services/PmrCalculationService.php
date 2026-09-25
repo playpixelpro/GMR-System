@@ -36,11 +36,24 @@ class PmrCalculationService
         $profileConfig = config("nfa.profiles.{$profileKey}.pmr", []);
 
         return [
-            'name' => config("nfa.profiles.{$profileKey}.name", 'NFA Standard Milling Recovery Profile'),
-            'required_trials' => (int) ($profileConfig['required_trials'] ?? config('nfa.pmr.required_trials', self::REQUIRED_TRIALS)),
-            'minimum_valid_trials' => (int) ($profileConfig['minimum_valid_trials'] ?? config('nfa.pmr.minimum_valid_trials', self::MINIMUM_VALID_TRIALS)),
-            'outlier_tolerance_percent' => (float) ($profileConfig['outlier_tolerance_percent'] ?? config('nfa.pmr.outlier_tolerance_percent', self::OUTLIER_TOLERANCE_PERCENT)),
-            'max_cv_percent' => (float) ($profileConfig['max_cv_percent'] ?? config('nfa.pmr.max_cv_percent', self::MAX_CV_PERCENT)),
+            'name' => config(
+                "nfa.profiles.{$profileKey}.name",
+                'NFA Standard Milling Recovery Profile',
+            ),
+            'required_trials' => (int) ($profileConfig['required_trials'] ??
+                    config('nfa.pmr.required_trials', self::REQUIRED_TRIALS)),
+            'minimum_valid_trials' => (int) ($profileConfig['minimum_valid_trials'] ??
+                    config(
+                        'nfa.pmr.minimum_valid_trials',
+                        self::MINIMUM_VALID_TRIALS,
+                    )),
+            'outlier_tolerance_percent' => (float) ($profileConfig['outlier_tolerance_percent'] ??
+                    config(
+                        'nfa.pmr.outlier_tolerance_percent',
+                        self::OUTLIER_TOLERANCE_PERCENT,
+                    )),
+            'max_cv_percent' => (float) ($profileConfig['max_cv_percent'] ??
+                    config('nfa.pmr.max_cv_percent', self::MAX_CV_PERCENT)),
         ];
     }
 
@@ -66,7 +79,8 @@ class PmrCalculationService
         ?string $profile = null,
     ): PmrCalculationResult {
         $profileConfig = $this->getConfiguredProfile($profile);
-        $tolerance = $outlierTolerance ?? $profileConfig['outlier_tolerance_percent'];
+        $tolerance =
+            $outlierTolerance ?? $profileConfig['outlier_tolerance_percent'];
         $maxCvThreshold = $maxCv ?? $profileConfig['max_cv_percent'];
         $requiredTrials = $profileConfig['required_trials'];
         $minimumValidTrials = $profileConfig['minimum_valid_trials'];
@@ -74,34 +88,89 @@ class PmrCalculationService
         $normalizedTrials = [];
 
         foreach ($trials as $trial) {
-            $trialNumber = (int) ($trial instanceof PmrRecord
-                ? $trial->trial_number
-                : (is_array($trial) ? ($trial['trial_number'] ?? $trial['no_of_trial'] ?? 0) : ($trial->trial_number ?? $trial->no_of_trial ?? 0)));
+            $trialNumber =
+                (int) ($trial instanceof PmrRecord
+                    ? $trial->trial_number
+                    : (is_array($trial)
+                        ? $trial['trial_number'] ?? ($trial['no_of_trial'] ?? 0)
+                        : $trial->trial_number ?? ($trial->no_of_trial ?? 0)));
 
-            $palayInput = $trial instanceof PmrRecord
-                ? ($trial->palay_input_kg !== null ? (float) $trial->palay_input_kg : null)
-                : (is_array($trial)
-                    ? (isset($trial['palay_input_kg']) && $trial['palay_input_kg'] !== '' && $trial['palay_input_kg'] !== null ? (float) $trial['palay_input_kg'] : (isset($trial['palay_input']) && $trial['palay_input'] !== '' && $trial['palay_input'] !== null ? (float) $trial['palay_input'] : null))
-                    : (isset($trial->palay_input_kg) && $trial->palay_input_kg !== null ? (float) $trial->palay_input_kg : null));
+            $palayInput =
+                $trial instanceof PmrRecord
+                    ? ($trial->palay_input_kg !== null
+                        ? (float) $trial->palay_input_kg
+                        : null)
+                    : (is_array($trial)
+                        ? (isset($trial['palay_input_kg']) &&
+                        $trial['palay_input_kg'] !== '' &&
+                        $trial['palay_input_kg'] !== null
+                            ? (float) $trial['palay_input_kg']
+                            : (isset($trial['palay_input']) &&
+                            $trial['palay_input'] !== '' &&
+                            $trial['palay_input'] !== null
+                                ? (float) $trial['palay_input']
+                                : null))
+                        : (isset($trial->palay_input_kg) &&
+                        $trial->palay_input_kg !== null
+                            ? (float) $trial->palay_input_kg
+                            : null));
 
-            $riceRecovery = $trial instanceof PmrRecord
-                ? ($trial->rice_recovery_kg !== null ? (float) $trial->rice_recovery_kg : null)
-                : (is_array($trial)
-                    ? (isset($trial['rice_recovery_kg']) && $trial['rice_recovery_kg'] !== '' && $trial['rice_recovery_kg'] !== null ? (float) $trial['rice_recovery_kg'] : (isset($trial['rice_recovery']) && $trial['rice_recovery'] !== '' && $trial['rice_recovery'] !== null ? (float) $trial['rice_recovery'] : null))
-                    : (isset($trial->rice_recovery_kg) && $trial->rice_recovery_kg !== null ? (float) $trial->rice_recovery_kg : null));
+            $riceRecovery =
+                $trial instanceof PmrRecord
+                    ? ($trial->rice_recovery_kg !== null
+                        ? (float) $trial->rice_recovery_kg
+                        : null)
+                    : (is_array($trial)
+                        ? (isset($trial['rice_recovery_kg']) &&
+                        $trial['rice_recovery_kg'] !== '' &&
+                        $trial['rice_recovery_kg'] !== null
+                            ? (float) $trial['rice_recovery_kg']
+                            : (isset($trial['rice_recovery']) &&
+                            $trial['rice_recovery'] !== '' &&
+                            $trial['rice_recovery'] !== null
+                                ? (float) $trial['rice_recovery']
+                                : null))
+                        : (isset($trial->rice_recovery_kg) &&
+                        $trial->rice_recovery_kg !== null
+                            ? (float) $trial->rice_recovery_kg
+                            : null));
 
-            $providedRecovery = $trial instanceof PmrRecord
-                ? ($trial->milling_recovery !== null ? (float) $trial->milling_recovery : null)
-                : (is_array($trial)
-                    ? (isset($trial['recovery_rate']) && $trial['recovery_rate'] !== '' && $trial['recovery_rate'] !== null ? (float) $trial['recovery_rate'] : (isset($trial['milling_recovery']) && $trial['milling_recovery'] !== '' && $trial['milling_recovery'] !== null ? (float) $trial['milling_recovery'] : null))
-                    : (isset($trial->milling_recovery) && $trial->milling_recovery !== null ? (float) $trial->milling_recovery : (isset($trial->recovery_rate) && $trial->recovery_rate !== null ? (float) $trial->recovery_rate : null)));
+            $providedRecovery =
+                $trial instanceof PmrRecord
+                    ? ($trial->milling_recovery !== null
+                        ? (float) $trial->milling_recovery
+                        : null)
+                    : (is_array($trial)
+                        ? (isset($trial['recovery_rate']) &&
+                        $trial['recovery_rate'] !== '' &&
+                        $trial['recovery_rate'] !== null
+                            ? (float) $trial['recovery_rate']
+                            : (isset($trial['milling_recovery']) &&
+                            $trial['milling_recovery'] !== '' &&
+                            $trial['milling_recovery'] !== null
+                                ? (float) $trial['milling_recovery']
+                                : null))
+                        : (isset($trial->milling_recovery) &&
+                        $trial->milling_recovery !== null
+                            ? (float) $trial->milling_recovery
+                            : (isset($trial->recovery_rate) &&
+                            $trial->recovery_rate !== null
+                                ? (float) $trial->recovery_rate
+                                : null)));
 
             // Priority:
             // 1. If both Palay Input and Rice Output are available and Palay Input > 0:
             //    Milling Recovery (%) = (Rice Output / Palay Input) * 100
             // 2. Else: use directly provided Recovery Rate
-            if ($palayInput !== null && $riceRecovery !== null && $palayInput > 0) {
-                $millingRecovery = round(($riceRecovery / $palayInput) * 100, 2);
+            if (
+                $palayInput !== null &&
+                $riceRecovery !== null &&
+                $palayInput > 0
+            ) {
+                $millingRecovery = round(
+                    ($riceRecovery / $palayInput) * 100,
+                    2,
+                );
             } elseif ($providedRecovery !== null) {
                 $millingRecovery = round($providedRecovery, 2);
             } else {
@@ -223,7 +292,12 @@ class PmrCalculationService
         }
 
         // Take the 3 trials for calculation
-        $calculationTrials = array_slice($normalizedTrials, 0, $requiredTrials, true);
+        $calculationTrials = array_slice(
+            $normalizedTrials,
+            0,
+            $requiredTrials,
+            true,
+        );
         $recoveries = array_column($calculationTrials, 'milling_recovery');
         sort($recoveries, SORT_NUMERIC);
 
@@ -244,10 +318,13 @@ class PmrCalculationService
         foreach ($calculationTrials as $num => $t) {
             $rec = (float) $t['milling_recovery'];
             // Inclusive boundary check: lowerLimit <= rec <= upperLimit is valid
-            $isOutlier = ($rec < ($lowerLimit - $epsilon)) || ($rec > ($upperLimit + $epsilon));
+            $isOutlier =
+                $rec < $lowerLimit - $epsilon || $rec > $upperLimit + $epsilon;
 
             $calculationTrials[$num]['is_outlier'] = $isOutlier;
-            $calculationTrials[$num]['status'] = $isOutlier ? 'OUTLIER' : 'VALID';
+            $calculationTrials[$num]['status'] = $isOutlier
+                ? 'OUTLIER'
+                : 'VALID';
 
             if ($isOutlier) {
                 $outlierCount++;
@@ -257,26 +334,40 @@ class PmrCalculationService
         }
 
         // Outlier validation: At least minimumValidTrials (default 2) must remain
-        $isOutlierValid = ($validTrialCount >= $minimumValidTrials);
+        $isOutlierValid = $validTrialCount >= $minimumValidTrials;
 
         // Exclude outliers; PMR = arithmetic mean of remaining valid trials
-        $validTrials = array_filter($calculationTrials, fn ($t) => ! $t['is_outlier']);
+        $validTrials = array_filter(
+            $calculationTrials,
+            fn ($t) => ! $t['is_outlier'],
+        );
         $validRecoveries = array_column($validTrials, 'milling_recovery');
 
-        $mean = $validTrialCount > 0
-            ? round(array_sum($validRecoveries) / $validTrialCount, 2)
-            : null;
+        $mean =
+            $validTrialCount > 0
+                ? round(array_sum($validRecoveries) / $validTrialCount, 2)
+                : null;
 
         // Sample Standard Deviation (N-1)
-        $standardDeviation = $this->calculateSampleStandardDeviation($validRecoveries, $mean);
+        $standardDeviation = $this->calculateSampleStandardDeviation(
+            $validRecoveries,
+            $mean,
+        );
 
         // Coefficient of Variation: CV = (SD / Mean) * 100
-        $cv = ($standardDeviation !== null && $mean !== null && $mean > 0)
-            ? round(($standardDeviation / $mean) * 100, 2)
-            : ($validTrialCount === 1 ? 0.0 : null);
+        $cv =
+            $standardDeviation !== null && $mean !== null && $mean > 0
+                ? round(($standardDeviation / $mean) * 100, 2)
+                : ($validTrialCount === 1
+                    ? 0.0
+                    : null);
 
         // Evaluate CV against configured threshold (threshold: <= 5.00%)
-        $isCvValid = $this->evaluateCv($standardDeviation, $mean, $maxCvThreshold);
+        $isCvValid = $this->evaluateCv(
+            $standardDeviation,
+            $mean,
+            $maxCvThreshold,
+        );
 
         // Overall validity: Both outlier validation and CV validation must pass
         $isValid = $isOutlierValid && $isCvValid;
@@ -294,9 +385,9 @@ class PmrCalculationService
             $pmrRate = null;
         } else {
             $status = 'VALID';
-            $statusLabel = "Approved ({$validTrialCount}/{$requiredTrials} Trials Valid)";
+            $statusLabel = "Recommended ({$validTrialCount}/{$requiredTrials} Trials Valid)";
             $formattedCv = number_format($cv ?? 0, 2);
-            $statusMessage = "Approved PMR of {$mean}% computed as arithmetic mean of {$validTrialCount} valid trials (CV: {$formattedCv}%).";
+            $statusMessage = "Recommended PMR of {$mean}% computed as arithmetic mean of {$validTrialCount} valid trials (CV: {$formattedCv}%).";
             $pmrRate = $mean;
         }
 
@@ -363,18 +454,20 @@ class PmrCalculationService
      *
      * @param  list<float>  $values
      */
-    public function calculateSampleStandardDeviation(array $values, ?float $mean = null): ?float
-    {
+    public function calculateSampleStandardDeviation(
+        array $values,
+        ?float $mean = null,
+    ): ?float {
         $n = count($values);
         if ($n < 2) {
             return null;
         }
 
-        $avg = $mean ?? (array_sum($values) / $n);
+        $avg = $mean ?? array_sum($values) / $n;
         $sumOfSquares = 0.0;
 
         foreach ($values as $val) {
-            $sumOfSquares += (($val - $avg) ** 2);
+            $sumOfSquares += ($val - $avg) ** 2;
         }
 
         return round(sqrt($sumOfSquares / ($n - 1)), 4);
@@ -383,8 +476,10 @@ class PmrCalculationService
     /**
      * Calculate Coefficient of Variation: CV = (SD / Mean) * 100.
      */
-    public function calculateCoefficientOfVariation(?float $standardDeviation, ?float $mean): ?float
-    {
+    public function calculateCoefficientOfVariation(
+        ?float $standardDeviation,
+        ?float $mean,
+    ): ?float {
         if ($standardDeviation === null || $mean === null || $mean <= 0.0) {
             return null;
         }
@@ -396,8 +491,11 @@ class PmrCalculationService
      * Evaluate whether CV passes statistical requirement (CV <= threshold).
      * The current CV requirement is <= 5%. CV of exactly 5.00% passes; CV above 5.00% fails.
      */
-    public function evaluateCv(?float $standardDeviation, ?float $mean, ?float $maxCv = null): bool
-    {
+    public function evaluateCv(
+        ?float $standardDeviation,
+        ?float $mean,
+        ?float $maxCv = null,
+    ): bool {
         if ($standardDeviation === null || $mean === null || $mean <= 0.0) {
             return false;
         }
@@ -430,45 +528,60 @@ class PmrCalculationService
      *     spread_difference: ?float
      * }
      */
-    public function evaluateReestablishment(?float $pmrRate, ?float $amrRate): array
-    {
+    public function evaluateReestablishment(
+        ?float $pmrRate,
+        ?float $amrRate,
+    ): array {
         $isPmrBelow60 = $pmrRate !== null && $pmrRate <= 60.0;
         $isAmrBelow60 = $amrRate !== null && $amrRate <= 60.0;
-        $isPmrBelowAmr = $pmrRate !== null && $amrRate !== null && $pmrRate < $amrRate;
+        $isPmrBelowAmr =
+            $pmrRate !== null && $amrRate !== null && $pmrRate < $amrRate;
 
         // Difference: PMR - AMR (how much PMR exceeds AMR)
-        $difference = ($pmrRate !== null && $amrRate !== null)
-            ? round($pmrRate - $amrRate, 4)
-            : null;
+        $difference =
+            $pmrRate !== null && $amrRate !== null
+                ? round($pmrRate - $amrRate, 4)
+                : null;
 
         // AMR is less than PMR by more than 3 percentage points => PMR - AMR > 3.0
-        $isAmrDivergent = $difference !== null && $difference > 3.00;
+        $isAmrDivergent = $difference !== null && $difference > 3.0;
 
         $flags = [];
         $reasons = [];
 
         if ($isPmrBelow60) {
             $flags[] = 'PMR_BELOW_60';
-            $reasons[] = 'PMR ('.number_format($pmrRate, 2).'%) is 60.0% or below.';
+            $reasons[] =
+                'PMR ('.number_format($pmrRate, 2).'%) is 60.0% or below.';
         }
 
         if ($isAmrBelow60) {
             $flags[] = 'AMR_BELOW_60';
-            $reasons[] = 'AMR ('.number_format($amrRate, 2).'%) is 60.0% or below.';
+            $reasons[] =
+                'AMR ('.number_format($amrRate, 2).'%) is 60.0% or below.';
         }
 
         if ($isPmrBelowAmr) {
             $flags[] = 'PMR_BELOW_AMR';
-            $reasons[] = 'PMR ('.number_format($pmrRate, 2).'%) is less than AMR ('.number_format($amrRate, 2).'%).';
+            $reasons[] =
+                'PMR ('.
+                number_format($pmrRate, 2).
+                '%) is less than AMR ('.
+                number_format($amrRate, 2).
+                '%).';
         }
 
         if ($isAmrDivergent) {
             $flags[] = 'AMR_DIVERGENT';
             $formattedDiff = number_format($difference, 2);
-            $reasons[] = 'AMR is less than PMR by more than 3 percentage points (difference: '.$formattedDiff.' points).';
+            $reasons[] =
+                'AMR is less than PMR by more than 3 percentage points (difference: '.
+                $formattedDiff.
+                ' points).';
         }
 
-        $requires = $isPmrBelow60 || $isAmrBelow60 || $isPmrBelowAmr || $isAmrDivergent;
+        $requires =
+            $isPmrBelow60 || $isAmrBelow60 || $isPmrBelowAmr || $isAmrDivergent;
 
         return [
             'requires_reestablishment' => $requires,
@@ -504,20 +617,31 @@ class PmrCalculationService
      */
     public function evaluateReestablishmentForPile(Pile $pile): array
     {
-        $pile->loadMissing(['pmrCalculation', 'amrCalculation', 'pmrRecords', 'amrRecords']);
+        $pile->loadMissing([
+            'pmrCalculation',
+            'amrCalculation',
+            'pmrRecords',
+            'amrRecords',
+        ]);
 
         $pmrRate = $pile->pmrCalculation?->pmr_rate;
         if ($pmrRate === null && $pile->pmrRecords->isNotEmpty()) {
-            $validPmr = $pile->pmrRecords->filter(fn ($r) => (float) $r->recovery_rate_percentage > 0)
+            $validPmr = $pile->pmrRecords
+                ->filter(fn ($r) => (float) $r->recovery_rate_percentage > 0)
                 ->map(fn ($r) => (float) $r->recovery_rate_percentage);
-            $pmrRate = $validPmr->isNotEmpty() ? (float) $validPmr->avg() : null;
+            $pmrRate = $validPmr->isNotEmpty()
+                ? (float) $validPmr->avg()
+                : null;
         }
 
         $amrRate = $pile->amrCalculation?->amr_rate;
         if ($amrRate === null && $pile->amrRecords->isNotEmpty()) {
-            $validAmr = $pile->amrRecords->filter(fn ($r) => (float) $r->palay_input_kg > 0)
+            $validAmr = $pile->amrRecords
+                ->filter(fn ($r) => (float) $r->palay_input_kg > 0)
                 ->map(fn ($r) => (float) $r->milling_recovery_percentage);
-            $amrRate = $validAmr->isNotEmpty() ? (float) $validAmr->avg() : null;
+            $amrRate = $validAmr->isNotEmpty()
+                ? (float) $validAmr->avg()
+                : null;
         }
 
         return $this->evaluateReestablishment(
@@ -529,10 +653,22 @@ class PmrCalculationService
     /**
      * Compute, persist calculation snapshot, and update records for a given pile.
      */
-    public function calculateAndStoreForPile(Pile $pile, ?string $profile = null): PmrCalculationResult
-    {
+    public function calculateAndStoreForPile(
+        Pile $pile,
+        ?string $profile = null,
+    ): PmrCalculationResult {
         $pile->loadMissing('pmrRecords');
-        $result = $this->calculate($pile->pmrRecords, null, null, $profile);
+        $result = $this->calculate(
+            $pile->pmrRecords->filter(
+                fn (
+                    PmrRecord $record,
+                ): bool => $record->included_in_computation &&
+                    $record->status === 'RECOMMENDED',
+            ),
+            null,
+            null,
+            $profile,
+        );
 
         // Update trial records with individual audit flags
         foreach ($result->trials as $trialData) {
@@ -549,12 +685,19 @@ class PmrCalculationService
             ['pile_id' => $pile->id],
             [
                 'group_key' => 'pile:'.$pile->id,
-                'trial_inputs' => array_map(fn ($t) => [
-                    'trial_number' => $t['trial_number'],
-                    'palay_input_kg' => $t['palay_input_kg'],
-                    'rice_recovery_kg' => $t['rice_recovery_kg'],
-                ], $result->trials),
-                'trial_recoveries' => array_column($result->trials, 'milling_recovery', 'trial_number'),
+                'trial_inputs' => array_map(
+                    fn ($t) => [
+                        'trial_number' => $t['trial_number'],
+                        'palay_input_kg' => $t['palay_input_kg'],
+                        'rice_recovery_kg' => $t['rice_recovery_kg'],
+                    ],
+                    $result->trials,
+                ),
+                'trial_recoveries' => array_column(
+                    $result->trials,
+                    'milling_recovery',
+                    'trial_number',
+                ),
                 'median' => $result->median,
                 'lower_limit' => $result->lowerLimit,
                 'upper_limit' => $result->upperLimit,
@@ -574,10 +717,6 @@ class PmrCalculationService
             ],
         );
 
-        if ($result->isInvalid() && $pile->pmr_status === null) {
-            $pile->update(['pmr_status' => 'retest']);
-        }
-
         return $result;
     }
 
@@ -586,13 +725,20 @@ class PmrCalculationService
      *
      * @param  Collection<int, PmrRecord>|array<int, mixed>  $records
      */
-    public function calculateForGroup(iterable $records, ?string $groupKey = null, ?string $profile = null): PmrCalculationResult
-    {
-        $collection = $records instanceof Collection ? $records : collect($records);
+    public function calculateForGroup(
+        iterable $records,
+        ?string $groupKey = null,
+        ?string $profile = null,
+    ): PmrCalculationResult {
+        $collection =
+            $records instanceof Collection ? $records : collect($records);
         $firstRecord = $collection->first();
 
         if ($firstRecord instanceof PmrRecord && $firstRecord->pile) {
-            return $this->calculateAndStoreForPile($firstRecord->pile, $profile);
+            return $this->calculateAndStoreForPile(
+                $firstRecord->pile,
+                $profile,
+            );
         }
 
         $result = $this->calculate($collection, null, null, $profile);
@@ -602,12 +748,19 @@ class PmrCalculationService
                 ['group_key' => $groupKey],
                 [
                     'pile_id' => null,
-                    'trial_inputs' => array_map(fn ($t) => [
-                        'trial_number' => $t['trial_number'],
-                        'palay_input_kg' => $t['palay_input_kg'],
-                        'rice_recovery_kg' => $t['rice_recovery_kg'],
-                    ], $result->trials),
-                    'trial_recoveries' => array_column($result->trials, 'milling_recovery', 'trial_number'),
+                    'trial_inputs' => array_map(
+                        fn ($t) => [
+                            'trial_number' => $t['trial_number'],
+                            'palay_input_kg' => $t['palay_input_kg'],
+                            'rice_recovery_kg' => $t['rice_recovery_kg'],
+                        ],
+                        $result->trials,
+                    ),
+                    'trial_recoveries' => array_column(
+                        $result->trials,
+                        'milling_recovery',
+                        'trial_number',
+                    ),
                     'median' => $result->median,
                     'lower_limit' => $result->lowerLimit,
                     'upper_limit' => $result->upperLimit,

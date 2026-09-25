@@ -15,6 +15,32 @@
     </a>
 </div>
 
+<form method="GET" action="{{ route('pmr.index') }}" class="card mb-4 border border-base-content/10 bg-base-100 p-4 shadow-sm">
+    <div class="grid grid-cols-1 items-end gap-4 md:grid-cols-3">
+        <label class="form-control">
+            <span class="label-text mb-2 text-sm font-semibold text-black">Branch</span>
+            <select name="branch_id" class="select select-bordered min-h-11 w-full text-base text-black" onchange="this.form.submit()">
+                <option value="">All Branches</option>
+                @foreach ($branches as $branch)
+                    <option value="{{ $branch->id }}" @selected($filters['branch_id'] === $branch->id)>{{ $branch->name }}</option>
+                @endforeach
+            </select>
+        </label>
+        <label class="form-control">
+            <span class="label-text mb-2 text-sm font-semibold text-black">Warehouse</span>
+            <select name="warehouse_id" class="select select-bordered min-h-11 w-full text-base text-black" onchange="this.form.submit()">
+                <option value="">All Warehouses</option>
+                @foreach ($warehouses as $warehouse)
+                    <option value="{{ $warehouse->id }}" @selected($filters['warehouse_id'] === $warehouse->id)>{{ $warehouse->name }}</option>
+                @endforeach
+            </select>
+        </label>
+        <div class="flex gap-2">
+            <a href="{{ route('pmr.index') }}" class="btn btn-outline min-h-11 px-4 text-sm">Reset Filters</a>
+        </div>
+    </div>
+</form>
+
 <div class="card w-full shadow-sm border border-base-content/10 bg-base-100 overflow-hidden">
   <div class="w-full overflow-x-auto">
     <table class="table table-xs w-full text-xs">
@@ -29,7 +55,7 @@
           <th class="text-end px-2.5 py-2">MC</th>
           <th class="text-center px-2.5 py-2">QUALITY <br> (CONDITION)</th>
           <th class="text-center px-2.5 py-2">AGED <br>( in months)</th>
-          <th class="text-center px-2.5 py-2">VOLUME <br> (bags of 50kg)</th>
+          <th class="text-center px-2.5 py-2">VOLUME <br> (50kg bags)</th>
           <th class="text-center px-2.5 py-2">NO. OF <br> TRIAL</th>
           <th class="text-center px-2.0 py-2">RECOVERY<br> RATE (%)</th>
           <th class="text-center px-2.5 py-2">MEAN (%)</th>
@@ -58,7 +84,7 @@
           $mc = is_array($group) || $group instanceof \ArrayAccess ? ($group['mc'] ?? $pile?->mc ?? $firstRecord?->mc ?? 0) : ($pile?->mc ?? $firstRecord?->mc ?? 0);
           $quality = is_array($group) || $group instanceof \ArrayAccess ? ($group['quality'] ?? $pile?->quality ?? $firstRecord?->quality ?? '') : ($pile?->quality ?? $firstRecord?->quality ?? '');
           $agedMonths = is_array($group) || $group instanceof \ArrayAccess ? ($group['aged_months'] ?? $pile?->aged_months ?? $firstRecord?->aged_months ?? 0) : ($pile?->aged_months ?? $firstRecord?->aged_months ?? 0);
-          $volumeBags = is_array($group) || $group instanceof \ArrayAccess ? ($group['volume_bags'] ?? $pile?->volume_bags ?? $firstRecord?->volume_bags ?? 0) : ($pile?->volume_bags ?? $firstRecord?->volume_bags ?? 0);
+          $volumeKg = is_array($group) || $group instanceof \ArrayAccess ? ($group['volume_kg'] ?? $pile?->volume_kg ?? $firstRecord?->volume_kg ?? 0) : ($pile?->volume_kg ?? $firstRecord?->volume_kg ?? 0);
           $mean = is_array($group) || $group instanceof \ArrayAccess ? ($group['mean'] ?? $calculation->mean) : $calculation->mean;
           $stdDev = is_array($group) || $group instanceof \ArrayAccess ? ($group['standard_deviation'] ?? $calculation->standardDeviation) : $calculation->standardDeviation;
           $amrRateValue = is_array($group) || $group instanceof \ArrayAccess ? ($group['amr_rate'] ?? null) : null;
@@ -99,7 +125,7 @@
                 {{ $agedMonths }}
               </td>
               <td rowspan="{{ $maxTrials }}" class="text-end font-mono align-middle border-e border-base-content/20 px-2.5 py-1">
-                {{ number_format((float) $volumeBags, 3) }}
+                {{ number_format((float) $volumeKg / 50, 3) }}
               </td>
             @endif
 
@@ -129,7 +155,7 @@
                     </span>
                     <span class="badge badge-soft badge-neutral text-[10px] px-1 py-0 uppercase">Historical</span>
                   @elseif ($calculation->isValid)
-                    <span class="font-bold text-primary text-sm" title="Approved PMR of {{ $calculation->getFormattedPmrRate() }} computed from {{ $calculation->validTrialCount }} valid trials (CV: {{ $calculation->getFormattedCv() }})">
+                    <span class="font-bold text-primary text-sm" title="Recommended PMR of {{ $calculation->getFormattedPmrRate() }} computed from {{ $calculation->validTrialCount }} valid trials (CV: {{ $calculation->getFormattedCv() }})">
                       {{ $calculation->getFormattedPmrRate() }}
                     </span>
                     <span class="text-[10px] text-primary/80 font-mono">CV {{ $calculation->getFormattedCv() }}</span>
@@ -210,7 +236,7 @@
                     @php
                       $status = strtolower($pile->pmr_status);
                       $badgeClass = match($status) {
-                        'approved' => 'badge-primary',
+
                         'retest' => 'badge-secondary',
                         'recommend', 'recommended' => 'badge-primary',
                         'rejected' => 'badge-secondary',
@@ -239,18 +265,21 @@
                     </a>
                   @endif
 
-                  @if ($pile && ! $pile->pmr_status && $hasPmrTrials)
+                  @if ($pile && in_array($pile->pmr_status, [null, 'pending'], true) && $hasPmrTrials)
                     <div class="dropdown relative inline-flex [--placement:bottom-end]">
                       <button id="pmr-actions-{{ $pile->id }}" type="button" class="dropdown-toggle btn btn-circle btn-text btn-xs cursor-pointer" aria-haspopup="menu" aria-expanded="false" aria-label="Pile actions" title="Update status">
                         <span class="icon-[tabler--dots-vertical] size-4"></span>
                       </button>
                       <ul class="dropdown-menu dropdown-open:opacity-100 hidden min-w-36 shadow-md" role="menu" aria-labelledby="pmr-actions-{{ $pile->id }}">
                         @php
-                          $statusActions = [
-                            'recommend' => ['label' => 'Recommend', 'icon' => 'icon-[tabler--thumb-up]', 'color' => 'text-primary'],
-                            'retest' => ['label' => 'Retest', 'icon' => 'icon-[tabler--refresh]', 'color' => 'text-secondary'],
-                            'approved' => ['label' => 'Approve', 'icon' => 'icon-[tabler--check]', 'color' => 'text-primary'],
-                          ];
+                          $statusActions = $pile->pmr_status === 'pending'
+                            ? [
+                                'recommend' => ['label' => 'Recommend', 'icon' => 'icon-[tabler--thumb-up]', 'color' => 'text-primary'],
+                                'retest' => ['label' => 'Retest', 'icon' => 'icon-[tabler--refresh]', 'color' => 'text-secondary'],
+                              ]
+                            : [
+                                'confirm' => ['label' => 'Confirm', 'icon' => 'icon-[tabler--check]', 'color' => 'text-primary'],
+                              ];
                         @endphp
                         @foreach ($statusActions as $action => $opt)
                           <li>
@@ -354,7 +383,7 @@
           <div class="alert alert-soft alert-primary flex items-center gap-2.5 p-2.5 rounded-lg text-xs">
             <span class="icon-[tabler--circle-check] size-4.5 text-primary shrink-0"></span>
             <div>
-              <p class="font-semibold text-primary">Approved PMR: {{ $calculation->getFormattedPmrRate() }}</p>
+              <p class="font-semibold text-primary">Recommended PMR: {{ $calculation->getFormattedPmrRate() }}</p>
               <p class="text-base-content/70 text-[11px] mt-0.5">{{ $calculation->statusMessage }}</p>
             </div>
           </div>
@@ -388,12 +417,12 @@
             <div class="bg-base-200/50 p-2 rounded-lg border border-base-content/10 text-center">
               <span class="text-[10px] text-base-content/60 block">Lower Limit (-2%)</span>
               <span class="text-sm font-mono font-bold text-base-content mt-0.5 block">{{ $calculation->getFormattedLowerLimit() }}</span>
-              <span class="text-[9px] text-base-content/50 block">Median × 0.98</span>
+              <span class="text-[9px] text-base-content/50 block">Median Ã— 0.98</span>
             </div>
             <div class="bg-base-200/50 p-2 rounded-lg border border-base-content/10 text-center">
               <span class="text-[10px] text-base-content/60 block">Upper Limit (+2%)</span>
               <span class="text-sm font-mono font-bold text-base-content mt-0.5 block">{{ $calculation->getFormattedUpperLimit() }}</span>
-              <span class="text-[9px] text-base-content/50 block">Median × 1.02</span>
+              <span class="text-[9px] text-base-content/50 block">Median Ã— 1.02</span>
             </div>
           </div>
         </div>
@@ -468,7 +497,7 @@
                 <span class="text-sm font-mono font-bold mt-0.5 block {{ $calculation->isCvValid ? 'text-primary' : ($calculation->coefficientOfVariation !== null ? 'text-secondary' : 'text-base-content') }}">
                   {{ $calculation->getFormattedCv() }}
                 </span>
-                <span class="text-[9px] text-base-content/50 block">(s / Mean) × 100</span>
+                <span class="text-[9px] text-base-content/50 block">(s / Mean) Ã— 100</span>
               </div>
             </div>
 

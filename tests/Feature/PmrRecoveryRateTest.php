@@ -16,22 +16,22 @@ class PmrRecoveryRateTest extends TestCase
 
     private function createPile(): Pile
     {
-        $branch = Branch::create(["name" => "Bulacan Branch"]);
+        $branch = Branch::create(['name' => 'Bulacan Branch']);
         $warehouse = Warehouse::create([
-            "branch_id" => $branch->id,
-            "name" => "Warehouse A",
+            'branch_id' => $branch->id,
+            'name' => 'Warehouse A',
         ]);
 
         return Pile::create([
-            "branch_id" => $branch->id,
-            "warehouse_id" => $warehouse->id,
-            "pile_number" => "P-101",
-            "variety" => "Well Milled Rice",
-            "purity" => 95.0,
-            "aged_months" => 6,
-            "mc" => 14.0,
-            "quality" => "good",
-            "volume_bags" => 1500,
+            'branch_id' => $branch->id,
+            'warehouse_id' => $warehouse->id,
+            'pile_number' => 'P-101',
+            'variety' => 'Well Milled Rice',
+            'purity' => 95.0,
+            'aged_months' => 6,
+            'mc' => 14.0,
+            'quality' => 'good',
+            'volume_kg' => 1500,
         ]);
     }
 
@@ -39,35 +39,35 @@ class PmrRecoveryRateTest extends TestCase
     {
         $pile = $this->createPile();
 
-        $response = $this->post(route("records.store"), [
-            "form_type" => "pmr",
-            "branch_id" => $pile->branch_id,
-            "warehouse_id" => $pile->warehouse_id,
-            "pile_id" => $pile->id,
-            "variety" => $pile->variety,
-            "purity" => $pile->purity,
-            "aged" => $pile->aged_months,
-            "mc" => $pile->mc,
-            "quality" => $pile->quality,
-            "volume" => $pile->volume_bags,
-            "trials" => [
+        $response = $this->post(route('records.store'), [
+            'form_type' => 'pmr',
+            'branch_id' => $pile->branch_id,
+            'warehouse_id' => $pile->warehouse_id,
+            'pile_id' => $pile->id,
+            'variety' => $pile->variety,
+            'purity' => $pile->purity,
+            'aged' => $pile->aged_months,
+            'mc' => $pile->mc,
+            'quality' => $pile->quality,
+            'volume' => $pile->volume_kg,
+            'trials' => [
                 [
-                    "trial_number" => 1,
-                    "test_milling_date" => "2026-03-01",
-                    "palay_input" => 100,
-                    "rice_recovery" => 63,
-                    "recovery_rate" => null,
+                    'trial_number' => 1,
+                    'test_milling_date' => '2026-03-01',
+                    'palay_input' => 100,
+                    'rice_recovery' => 63,
+                    'recovery_rate' => null,
                 ],
             ],
         ]);
 
         $response->assertRedirect();
-        $this->assertDatabaseHas("pmr_records", [
-            "pile_id" => $pile->id,
-            "trial_number" => 1,
-            "palay_input_kg" => 100.0,
-            "rice_recovery_kg" => 63.0,
-            "milling_recovery" => 63.0,
+        $this->assertDatabaseHas('pmr_records', [
+            'pile_id' => $pile->id,
+            'trial_number' => 1,
+            'palay_input_kg' => 100.0,
+            'rice_recovery_kg' => 63.0,
+            'milling_recovery' => 63.0,
         ]);
     }
 
@@ -75,31 +75,31 @@ class PmrRecoveryRateTest extends TestCase
     {
         $pile = $this->createPile();
 
-        $response = $this->post(route("records.store"), [
-            "form_type" => "pmr",
-            "branch_id" => $pile->branch_id,
-            "warehouse_id" => $pile->warehouse_id,
-            "pile_id" => $pile->id,
-            "variety" => $pile->variety,
-            "purity" => $pile->purity,
-            "aged" => $pile->aged_months,
-            "mc" => $pile->mc,
-            "quality" => $pile->quality,
-            "volume" => $pile->volume_bags,
-            "trials" => [
+        $response = $this->post(route('records.store'), [
+            'form_type' => 'pmr',
+            'branch_id' => $pile->branch_id,
+            'warehouse_id' => $pile->warehouse_id,
+            'pile_id' => $pile->id,
+            'variety' => $pile->variety,
+            'purity' => $pile->purity,
+            'aged' => $pile->aged_months,
+            'mc' => $pile->mc,
+            'quality' => $pile->quality,
+            'volume' => $pile->volume_kg,
+            'trials' => [
                 [
-                    "trial_number" => 1,
-                    "test_milling_date" => "2026-03-01",
-                    "palay_input" => null,
-                    "rice_recovery" => null,
-                    "recovery_rate" => 63.0,
+                    'trial_number' => 1,
+                    'test_milling_date' => '2026-03-01',
+                    'palay_input' => null,
+                    'rice_recovery' => null,
+                    'recovery_rate' => 63.0,
                 ],
             ],
         ]);
 
         $response->assertRedirect();
-        $record = PmrRecord::where("pile_id", $pile->id)
-            ->where("trial_number", 1)
+        $record = PmrRecord::where('pile_id', $pile->id)
+            ->where('trial_number', 1)
             ->first();
         $this->assertNotNull($record);
         $this->assertNull($record->palay_input_kg);
@@ -112,31 +112,31 @@ class PmrRecoveryRateTest extends TestCase
     {
         $pile = $this->createPile();
 
-        $response = $this->post(route("records.store"), [
-            "form_type" => "pmr",
-            "branch_id" => $pile->branch_id,
-            "warehouse_id" => $pile->warehouse_id,
-            "pile_id" => $pile->id,
-            "variety" => $pile->variety,
-            "purity" => $pile->purity,
-            "aged" => $pile->aged_months,
-            "mc" => $pile->mc,
-            "quality" => $pile->quality,
-            "volume" => $pile->volume_bags,
-            "trials" => [
+        $response = $this->post(route('records.store'), [
+            'form_type' => 'pmr',
+            'branch_id' => $pile->branch_id,
+            'warehouse_id' => $pile->warehouse_id,
+            'pile_id' => $pile->id,
+            'variety' => $pile->variety,
+            'purity' => $pile->purity,
+            'aged' => $pile->aged_months,
+            'mc' => $pile->mc,
+            'quality' => $pile->quality,
+            'volume' => $pile->volume_kg,
+            'trials' => [
                 [
-                    "trial_number" => 1,
-                    "test_milling_date" => "2026-03-01",
-                    "palay_input" => 100,
-                    "rice_recovery" => null,
-                    "recovery_rate" => 63.0,
+                    'trial_number' => 1,
+                    'test_milling_date' => '2026-03-01',
+                    'palay_input' => 100,
+                    'rice_recovery' => null,
+                    'recovery_rate' => 63.0,
                 ],
             ],
         ]);
 
         $response->assertRedirect();
-        $record = PmrRecord::where("pile_id", $pile->id)
-            ->where("trial_number", 1)
+        $record = PmrRecord::where('pile_id', $pile->id)
+            ->where('trial_number', 1)
             ->first();
         $this->assertNotNull($record);
         $this->assertEquals(100.0, (float) $record->palay_input_kg);
@@ -148,31 +148,31 @@ class PmrRecoveryRateTest extends TestCase
     {
         $pile = $this->createPile();
 
-        $response = $this->post(route("records.store"), [
-            "form_type" => "pmr",
-            "branch_id" => $pile->branch_id,
-            "warehouse_id" => $pile->warehouse_id,
-            "pile_id" => $pile->id,
-            "variety" => $pile->variety,
-            "purity" => $pile->purity,
-            "aged" => $pile->aged_months,
-            "mc" => $pile->mc,
-            "quality" => $pile->quality,
-            "volume" => $pile->volume_bags,
-            "trials" => [
+        $response = $this->post(route('records.store'), [
+            'form_type' => 'pmr',
+            'branch_id' => $pile->branch_id,
+            'warehouse_id' => $pile->warehouse_id,
+            'pile_id' => $pile->id,
+            'variety' => $pile->variety,
+            'purity' => $pile->purity,
+            'aged' => $pile->aged_months,
+            'mc' => $pile->mc,
+            'quality' => $pile->quality,
+            'volume' => $pile->volume_kg,
+            'trials' => [
                 [
-                    "trial_number" => 1,
-                    "test_milling_date" => "2026-03-01",
-                    "palay_input" => null,
-                    "rice_recovery" => 63,
-                    "recovery_rate" => 63.0,
+                    'trial_number' => 1,
+                    'test_milling_date' => '2026-03-01',
+                    'palay_input' => null,
+                    'rice_recovery' => 63,
+                    'recovery_rate' => 63.0,
                 ],
             ],
         ]);
 
         $response->assertRedirect();
-        $record = PmrRecord::where("pile_id", $pile->id)
-            ->where("trial_number", 1)
+        $record = PmrRecord::where('pile_id', $pile->id)
+            ->where('trial_number', 1)
             ->first();
         $this->assertNotNull($record);
         $this->assertNull($record->palay_input_kg);
@@ -184,31 +184,31 @@ class PmrRecoveryRateTest extends TestCase
     {
         $pile = $this->createPile();
 
-        $response = $this->post(route("records.store"), [
-            "form_type" => "pmr",
-            "branch_id" => $pile->branch_id,
-            "warehouse_id" => $pile->warehouse_id,
-            "pile_id" => $pile->id,
-            "variety" => $pile->variety,
-            "purity" => $pile->purity,
-            "aged" => $pile->aged_months,
-            "mc" => $pile->mc,
-            "quality" => $pile->quality,
-            "volume" => $pile->volume_bags,
-            "trials" => [
+        $response = $this->post(route('records.store'), [
+            'form_type' => 'pmr',
+            'branch_id' => $pile->branch_id,
+            'warehouse_id' => $pile->warehouse_id,
+            'pile_id' => $pile->id,
+            'variety' => $pile->variety,
+            'purity' => $pile->purity,
+            'aged' => $pile->aged_months,
+            'mc' => $pile->mc,
+            'quality' => $pile->quality,
+            'volume' => $pile->volume_kg,
+            'trials' => [
                 [
-                    "trial_number" => 1,
-                    "test_milling_date" => "2026-03-01",
-                    "palay_input" => null,
-                    "rice_recovery" => null,
-                    "recovery_rate" => null,
+                    'trial_number' => 1,
+                    'test_milling_date' => '2026-03-01',
+                    'palay_input' => null,
+                    'rice_recovery' => null,
+                    'recovery_rate' => null,
                 ],
             ],
         ]);
 
         $response->assertSessionHasErrors([
-            "recovery_rate",
-            "trials.0.recovery_rate",
+            'recovery_rate',
+            'trials.0.recovery_rate',
         ]);
     }
 
@@ -216,32 +216,32 @@ class PmrRecoveryRateTest extends TestCase
     {
         $pile = $this->createPile();
 
-        $response = $this->post(route("records.store"), [
-            "form_type" => "amr",
-            "branch_id" => $pile->branch_id,
-            "warehouse_id" => $pile->warehouse_id,
-            "pile_id" => $pile->id,
-            "variety" => $pile->variety,
-            "purity" => $pile->purity,
-            "aged" => $pile->aged_months,
-            "mc" => $pile->mc,
-            "quality" => $pile->quality,
-            "volume" => $pile->volume_bags,
-            "trials" => [
+        $response = $this->post(route('records.store'), [
+            'form_type' => 'amr',
+            'branch_id' => $pile->branch_id,
+            'warehouse_id' => $pile->warehouse_id,
+            'pile_id' => $pile->id,
+            'variety' => $pile->variety,
+            'purity' => $pile->purity,
+            'aged' => $pile->aged_months,
+            'mc' => $pile->mc,
+            'quality' => $pile->quality,
+            'volume' => $pile->volume_kg,
+            'trials' => [
                 [
-                    "trial_number" => 1,
-                    "test_milling_date" => "2026-03-01",
-                    "rice_millers" => "Miller 1",
-                    "palay_input" => null,
-                    "rice_recovery" => null,
-                    "recovery_rate" => 63.0,
+                    'trial_number' => 1,
+                    'test_milling_date' => '2026-03-01',
+                    'rice_millers' => 'Miller 1',
+                    'palay_input' => null,
+                    'rice_recovery' => null,
+                    'recovery_rate' => 63.0,
                 ],
             ],
         ]);
 
         $response->assertSessionHasErrors([
-            "trials.0.palay_input",
-            "trials.0.rice_recovery",
+            'trials.0.palay_input',
+            'trials.0.rice_recovery',
         ]);
     }
 
@@ -249,24 +249,24 @@ class PmrRecoveryRateTest extends TestCase
     {
         $pile = $this->createPile();
         $record = PmrRecord::create([
-            "pile_id" => $pile->id,
-            "trial_number" => 1,
-            "test_milling_date" => "2026-03-01",
-            "palay_input_kg" => 100,
-            "rice_recovery_kg" => 63,
-            "milling_recovery" => 63.0,
+            'pile_id' => $pile->id,
+            'trial_number' => 1,
+            'test_milling_date' => '2026-03-01',
+            'palay_input_kg' => 100,
+            'rice_recovery_kg' => 63,
+            'milling_recovery' => 63.0,
         ]);
 
         $response = $this->patchJson(
-            route("records.update", [
-                "formType" => "pmr",
-                "record" => $record->id,
+            route('records.update', [
+                'formType' => 'pmr',
+                'record' => $record->id,
             ]),
             [
-                "test_milling_date" => "2026-03-02",
-                "palay_input" => null,
-                "rice_recovery" => null,
-                "recovery_rate" => 65.5,
+                'test_milling_date' => '2026-03-02',
+                'palay_input' => null,
+                'rice_recovery' => null,
+                'recovery_rate' => 65.5,
             ],
         );
 
@@ -283,28 +283,28 @@ class PmrRecoveryRateTest extends TestCase
 
         // 3 trials entered purely with recovery_rate and without input/output weights
         PmrRecord::create([
-            "pile_id" => $pile->id,
-            "trial_number" => 1,
-            "test_milling_date" => "2026-03-01",
-            "palay_input_kg" => null,
-            "rice_recovery_kg" => null,
-            "milling_recovery" => 64.0,
+            'pile_id' => $pile->id,
+            'trial_number' => 1,
+            'test_milling_date' => '2026-03-01',
+            'palay_input_kg' => null,
+            'rice_recovery_kg' => null,
+            'milling_recovery' => 64.0,
         ]);
         PmrRecord::create([
-            "pile_id" => $pile->id,
-            "trial_number" => 2,
-            "test_milling_date" => "2026-03-02",
-            "palay_input_kg" => null,
-            "rice_recovery_kg" => null,
-            "milling_recovery" => 64.5,
+            'pile_id' => $pile->id,
+            'trial_number' => 2,
+            'test_milling_date' => '2026-03-02',
+            'palay_input_kg' => null,
+            'rice_recovery_kg' => null,
+            'milling_recovery' => 64.5,
         ]);
         PmrRecord::create([
-            "pile_id" => $pile->id,
-            "trial_number" => 3,
-            "test_milling_date" => "2026-03-03",
-            "palay_input_kg" => null,
-            "rice_recovery_kg" => null,
-            "milling_recovery" => 65.0,
+            'pile_id' => $pile->id,
+            'trial_number' => 3,
+            'test_milling_date' => '2026-03-03',
+            'palay_input_kg' => null,
+            'rice_recovery_kg' => null,
+            'milling_recovery' => 65.0,
         ]);
 
         /** @var PmrCalculationService $service */
@@ -316,9 +316,9 @@ class PmrRecoveryRateTest extends TestCase
         $this->assertEquals(64.5, $calc->pmrRate);
 
         // Check PMR report page renders and shows '—' for missing palay inputs
-        $response = $this->get(route("pmr.index"));
+        $response = $this->get(route('pmr.index'));
         $response->assertOk();
-        $response->assertSee("64.50%");
-        $response->assertSee("—");
+        $response->assertSee('64.50%');
+        $response->assertSee('—');
     }
 }

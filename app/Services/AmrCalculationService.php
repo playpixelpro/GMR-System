@@ -25,21 +25,35 @@ class AmrCalculationService
         $normalizedTrials = [];
 
         foreach ($trials as $trial) {
-            $trialNumber = (int) ($trial instanceof AmrRecord
-                ? $trial->trial_number
-                : (is_array($trial) ? ($trial['trial_number'] ?? 0) : ($trial->trial_number ?? 0)));
+            $trialNumber =
+                (int) ($trial instanceof AmrRecord
+                    ? $trial->trial_number
+                    : (is_array($trial)
+                        ? $trial['trial_number'] ?? 0
+                        : $trial->trial_number ?? 0));
 
-            $palayInput = (float) ($trial instanceof AmrRecord
-                ? $trial->palay_input_kg
-                : (is_array($trial) ? ($trial['palay_input_kg'] ?? $trial['palay_input'] ?? 0) : ($trial->palay_input_kg ?? $trial->palay_input ?? 0)));
+            $palayInput =
+                (float) ($trial instanceof AmrRecord
+                    ? $trial->palay_input_kg
+                    : (is_array($trial)
+                        ? $trial['palay_input_kg'] ??
+                            ($trial['palay_input'] ?? 0)
+                        : $trial->palay_input_kg ??
+                            ($trial->palay_input ?? 0)));
 
-            $riceRecovery = (float) ($trial instanceof AmrRecord
-                ? $trial->rice_recovery_kg
-                : (is_array($trial) ? ($trial['rice_recovery_kg'] ?? $trial['rice_recovery'] ?? 0) : ($trial->rice_recovery_kg ?? $trial->rice_recovery ?? 0)));
+            $riceRecovery =
+                (float) ($trial instanceof AmrRecord
+                    ? $trial->rice_recovery_kg
+                    : (is_array($trial)
+                        ? $trial['rice_recovery_kg'] ??
+                            ($trial['rice_recovery'] ?? 0)
+                        : $trial->rice_recovery_kg ??
+                            ($trial->rice_recovery ?? 0)));
 
-            $millingRecovery = $palayInput > 0
-                ? round(($riceRecovery / $palayInput) * 100, 2)
-                : 0.0;
+            $millingRecovery =
+                $palayInput > 0
+                    ? round(($riceRecovery / $palayInput) * 100, 2)
+                    : 0.0;
 
             $normalizedTrials[$trialNumber] = [
                 'trial_number' => $trialNumber,
@@ -106,10 +120,14 @@ class AmrCalculationService
 
         foreach ($normalizedTrials as $index => $item) {
             $recovery = (float) $item['milling_recovery'];
-            $isOutlier = ($recovery < ($lowerLimit - $epsilon)) || ($recovery > ($upperLimit + $epsilon));
+            $isOutlier =
+                $recovery < $lowerLimit - $epsilon ||
+                $recovery > $upperLimit + $epsilon;
 
             $normalizedTrials[$index]['is_outlier'] = $isOutlier;
-            $normalizedTrials[$index]['status'] = $isOutlier ? 'OUTLIER' : 'VALID';
+            $normalizedTrials[$index]['status'] = $isOutlier
+                ? 'OUTLIER'
+                : 'VALID';
 
             if ($isOutlier) {
                 $outlierCount++;
@@ -124,18 +142,24 @@ class AmrCalculationService
         if ($validCount < self::MINIMUM_VALID_TRIALS) {
             $status = 'INVALID_FEWER_VALID_TRIALS';
             $statusLabel = "Invalid ({$outlierCount} Outliers — Retest Required)";
-            $statusMessage = 'Fewer than '.self::MINIMUM_VALID_TRIALS." valid trials remain ({$validCount} valid, {$outlierCount} outliers). Outliers exceed tolerance (±2%). A re-trial is required.";
+            $statusMessage =
+                'Fewer than '.
+                self::MINIMUM_VALID_TRIALS.
+                " valid trials remain ({$validCount} valid, {$outlierCount} outliers). Outliers exceed tolerance (±2%). A re-trial is required.";
             $amrRate = null;
             $isValid = false;
         } else {
-            $validSum = array_sum(array_column($validTrials, 'milling_recovery'));
+            $validSum = array_sum(
+                array_column($validTrials, 'milling_recovery'),
+            );
             $amrRate = round($validSum / $validCount, 2);
             $isValid = true;
             $status = 'VALID';
-            $statusLabel = $outlierCount > 0
-                ? "Approved ({$outlierCount} Outlier Excluded)"
-                : 'Approved (3/3 Trials Valid)';
-            $statusMessage = "Approved AMR of {$amrRate}% computed as arithmetic mean of {$validCount} valid trials.";
+            $statusLabel =
+                $outlierCount > 0
+                    ? "Recommended ({$outlierCount} Outlier Excluded)"
+                    : 'Recommended (3/3 Trials Valid)';
+            $statusMessage = "Recommended AMR of {$amrRate}% computed as arithmetic mean of {$validCount} valid trials.";
         }
 
         $snapshot = [
@@ -180,7 +204,14 @@ class AmrCalculationService
     public function calculateAndStoreForPile(Pile $pile): AmrCalculationResult
     {
         $pile->loadMissing('amrRecords');
-        $result = $this->calculate($pile->amrRecords);
+        $result = $this->calculate(
+            $pile->amrRecords->filter(
+                fn (
+                    AmrRecord $record,
+                ): bool => $record->included_in_computation &&
+                    $record->status === 'RECOMMENDED',
+            ),
+        );
 
         // Update trial records with individual audit flags
         foreach ($result->trials as $trialData) {
@@ -197,12 +228,19 @@ class AmrCalculationService
             ['pile_id' => $pile->id],
             [
                 'group_key' => 'pile:'.$pile->id,
-                'trial_inputs' => array_map(fn ($t) => [
-                    'trial_number' => $t['trial_number'],
-                    'palay_input_kg' => $t['palay_input_kg'],
-                    'rice_recovery_kg' => $t['rice_recovery_kg'],
-                ], $result->trials),
-                'trial_recoveries' => array_column($result->trials, 'milling_recovery', 'trial_number'),
+                'trial_inputs' => array_map(
+                    fn ($t) => [
+                        'trial_number' => $t['trial_number'],
+                        'palay_input_kg' => $t['palay_input_kg'],
+                        'rice_recovery_kg' => $t['rice_recovery_kg'],
+                    ],
+                    $result->trials,
+                ),
+                'trial_recoveries' => array_column(
+                    $result->trials,
+                    'milling_recovery',
+                    'trial_number',
+                ),
                 'median' => $result->median,
                 'lower_limit' => $result->lowerLimit,
                 'upper_limit' => $result->upperLimit,
@@ -218,10 +256,6 @@ class AmrCalculationService
             ],
         );
 
-        if ($result->status === 'INVALID_FEWER_VALID_TRIALS' && $pile->amr_status === null) {
-            $pile->update(['amr_status' => 'retest']);
-        }
-
         return $result;
     }
 
@@ -230,9 +264,12 @@ class AmrCalculationService
      *
      * @param  Collection<int, AmrRecord>|array<int, mixed>  $records
      */
-    public function calculateForGroup(iterable $records, ?string $groupKey = null): AmrCalculationResult
-    {
-        $collection = $records instanceof Collection ? $records : collect($records);
+    public function calculateForGroup(
+        iterable $records,
+        ?string $groupKey = null,
+    ): AmrCalculationResult {
+        $collection =
+            $records instanceof Collection ? $records : collect($records);
         $firstRecord = $collection->first();
 
         if ($firstRecord instanceof AmrRecord && $firstRecord->pile) {
@@ -246,12 +283,19 @@ class AmrCalculationService
                 ['group_key' => $groupKey],
                 [
                     'pile_id' => null,
-                    'trial_inputs' => array_map(fn ($t) => [
-                        'trial_number' => $t['trial_number'],
-                        'palay_input_kg' => $t['palay_input_kg'],
-                        'rice_recovery_kg' => $t['rice_recovery_kg'],
-                    ], $result->trials),
-                    'trial_recoveries' => array_column($result->trials, 'milling_recovery', 'trial_number'),
+                    'trial_inputs' => array_map(
+                        fn ($t) => [
+                            'trial_number' => $t['trial_number'],
+                            'palay_input_kg' => $t['palay_input_kg'],
+                            'rice_recovery_kg' => $t['rice_recovery_kg'],
+                        ],
+                        $result->trials,
+                    ),
+                    'trial_recoveries' => array_column(
+                        $result->trials,
+                        'milling_recovery',
+                        'trial_number',
+                    ),
                     'median' => $result->median,
                     'lower_limit' => $result->lowerLimit,
                     'upper_limit' => $result->upperLimit,

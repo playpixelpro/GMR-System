@@ -75,6 +75,19 @@
     }
 }
 
+/* Use solid black for neutral and muted text across the application. */
+@layer utilities {
+    :where(
+        [class*="text-base-content"],
+        [class*="text-gray-"],
+        [class*="text-slate-"],
+        [class*="text-zinc-"],
+        [class*="text-neutral-"]
+    ) {
+        color: #000000 !important;
+    }
+}
+
 :root,
 [data-theme] {
     /* Primary = Vibrant Blue */
@@ -114,4 +127,3 @@
         "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
         "Noto Color Emoji";
 }
-

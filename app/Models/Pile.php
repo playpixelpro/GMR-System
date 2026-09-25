@@ -22,7 +22,7 @@ class Pile extends Model
         'aged_months',
         'mc',
         'quality',
-        'volume_bags',
+        'volume_kg',
         'amr_status',
         'pmr_status',
     ];
@@ -33,7 +33,7 @@ class Pile extends Model
             'purity' => 'decimal:2',
             'mc' => 'decimal:2',
             'aged_months' => 'integer',
-            'volume_bags' => 'decimal:3',
+            'volume_kg' => 'decimal:3',
         ];
     }
 
@@ -84,12 +84,12 @@ class Pile extends Model
 
     public function getVolumeAttribute()
     {
-        return $this->volume_bags;
+        return $this->volume_kg;
     }
 
     public function setVolumeAttribute($value): void
     {
-        $this->attributes['volume_bags'] = $value;
+        $this->attributes['volume_kg'] = $value;
     }
 
     public function getAgedAttribute()

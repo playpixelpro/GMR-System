@@ -68,7 +68,7 @@
                             <span class="overlay-minified:hidden">Data Entry</span>
                         </a>
                     </li>
-                    @php($isReportActive = request()->routeIs('amr.*', 'pmr.*'))
+                    @php($isReportActive = request()->routeIs('amr.*', 'pmr.*', 'emr.*', 'gmr.*'))
                     <li class="dropdown relative {{ $isReportActive ? 'open' : '' }} [--adaptive:none] [--strategy:static] overlay-minified:[--adaptive:adaptive] overlay-minified:[--strategy:fixed] overlay-minified:[--offset:15] overlay-minified:[--trigger:hover] overlay-minified:[--placement:right-start]">
                         <button id="reports-dropdown" type="button" class="dropdown-toggle {{ $isReportActive ? 'menu-active' : '' }}" aria-haspopup="menu" aria-expanded="{{ $isReportActive ? 'true' : 'false' }}" aria-label="Reports" title="Reports">
                             <span class="icon-[tabler--report-analytics] size-5"></span>
@@ -78,6 +78,8 @@
                         <ul class="dropdown-menu mt-0 shadow-none overlay-minified:shadow-md overlay-minified:shadow-base-300/20 dropdown-open:opacity-100 {{ $isReportActive ? 'block' : 'hidden' }} min-w-60 overlay-minified:before:absolute overlay-minified:before:-start-4 overlay-minified:before:top-0 overlay-minified:before:h-full overlay-minified:before:w-4 before:bg-transparent" role="menu" aria-orientation="vertical" aria-labelledby="reports-dropdown">
                             <li><a href="{{ route('amr.index') }}" class="{{ request()->routeIs('amr.*') ? 'menu-active' : '' }}"><span class="icon-[tabler--chart-bar] size-5"></span>AMR Report</a></li>
                             <li><a href="{{ route('pmr.index') }}" class="{{ request()->routeIs('pmr.*') ? 'menu-active' : '' }}"><span class="icon-[tabler--chart-dots] size-5"></span>PMR Report</a></li>
+                            <li><a href="{{ route('emr.index') }}" class="{{ request()->routeIs('emr.*') ? 'menu-active' : '' }}"><span class="icon-[tabler--chart-arrows] size-5"></span>Expected Milling Recovery</a></li>
+                            <li><a href="{{ route('gmr.summary') }}" class="{{ request()->routeIs('gmr.*') ? 'menu-active' : '' }}"><span class="icon-[tabler--chart-dots] size-5"></span>GMR Summary</a></li>
                         </ul>
                     </li>
                 </ul>

@@ -1,58 +1,168 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# NFA GMR System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## Requirements
 
-## About Laravel
+- PHP 8.3+
+- Composer
+- Node.js and npm
+- MySQL
+- A verified Brevo sender and SMTP credentials
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Local setup
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
-
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+### 1. Install dependencies
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+composer install
+npm install
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+### 2. Create the environment file
 
-## Contributing
+```bash
+cp ".env copy.example" .env
+php artisan key:generate
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+On Windows PowerShell, use:
 
-## Code of Conduct
+```powershell
+Copy-Item ".env copy.example" .env
+php artisan key:generate
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### 3. Configure the local database
 
-## Security Vulnerabilities
+Update the database values in `.env`:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=nfa_gmr
+DB_USERNAME=your-local-database-user
+DB_PASSWORD=your-local-database-password
+```
 
-## License
+Create the database before running migrations.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### 4. Configure Brevo SMTP
+
+Use placeholders in local configuration and replace them with your Brevo values locally:
+
+```env
+MAIL_MAILER=brevo
+MAIL_FROM_ADDRESS=verified-sender@example.com
+MAIL_FROM_NAME="${APP_NAME}"
+
+BREVO_SMTP_HOST=smtp-relay.brevo.com
+BREVO_SMTP_PORT=587
+BREVO_SMTP_SCHEME=tls
+BREVO_SMTP_USERNAME=your-brevo-smtp-login
+BREVO_SMTP_PASSWORD=your-brevo-smtp-key
+BREVO_SMTP_TIMEOUT=
+BREVO_SMTP_EHLO_DOMAIN=your-domain.example
+```
+
+The sender address or domain must be verified in Brevo. Never commit `.env` or SMTP credentials.
+
+### 5. Run the database setup
+
+```bash
+php artisan migrate --seed --no-interaction
+```
+
+To recreate a local database from scratch:
+
+```bash
+php artisan migrate:fresh --seed --no-interaction
+```
+
+### 6. Build frontend assets and start the application
+
+```bash
+npm run build
+php artisan serve
+```
+
+Open the URL shown by `php artisan serve`.
+
+For active frontend development, use:
+
+```bash
+npm run dev
+```
+
+## Production setup
+
+### 1. Install dependencies
+
+```bash
+composer install --no-dev --optimize-autoloader
+npm ci
+npm run build
+```
+
+### 2. Configure production environment
+
+Create `.env` on the server. Do not copy credentials into the repository.
+
+```env
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://your-production-domain.example
+
+DB_CONNECTION=mysql
+DB_HOST=your-production-database-host
+DB_PORT=3306
+DB_DATABASE=your-production-database
+DB_USERNAME=your-production-database-user
+DB_PASSWORD=your-production-database-password
+
+MAIL_MAILER=brevo
+MAIL_FROM_ADDRESS=verified-sender@example.com
+MAIL_FROM_NAME="${APP_NAME}"
+
+BREVO_SMTP_HOST=smtp-relay.brevo.com
+BREVO_SMTP_PORT=587
+BREVO_SMTP_SCHEME=tls
+BREVO_SMTP_USERNAME=your-brevo-smtp-login
+BREVO_SMTP_PASSWORD=your-brevo-smtp-key
+BREVO_SMTP_TIMEOUT=
+BREVO_SMTP_EHLO_DOMAIN=your-domain.example
+```
+
+Use a verified sender address and a production domain for `BREVO_SMTP_EHLO_DOMAIN`.
+
+### 3. Run migrations and optimize Laravel
+
+```bash
+php artisan migrate --force
+php artisan storage:link
+php artisan optimize
+```
+
+If the administrator has not been seeded yet, set these values before running the seeder:
+
+```env
+NFA_ADMIN_EMAIL=administrator@example.com
+NFA_ADMIN_PASSWORD=use-a-strong-temporary-password
+```
+
+Then run:
+
+```bash
+php artisan db:seed --force
+```
+
+### 4. After changing environment values
+
+```bash
+php artisan config:clear
+php artisan cache:clear
+php artisan optimize
+```
+
+### 5. Web server document root
+
+Configure the web server document root to the project’s `public` directory. Do not expose the project root or `.env` file.

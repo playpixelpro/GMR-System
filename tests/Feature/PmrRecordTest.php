@@ -53,7 +53,7 @@ class PmrRecordTest extends TestCase
                 'mc' => '11.10',
                 'quality' => 'gqa',
                 'aged_months' => 5,
-                'volume_bags' => '11522.357',
+                'volume_kg' => '11522.357',
                 'trial_number' => $trialNumber + 1,
                 'palay_input_kg' => '10000.00',
                 'rice_recovery_kg' => $rate * 100,
