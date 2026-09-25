@@ -44,7 +44,7 @@ class PmrRecordTest extends TestCase
 
     public function test_pmr_report_calculates_mean_and_sample_standard_deviation(): void
     {
-        foreach ([62.76, 62.48, 61.84, 62.2, 61.8] as $trialNumber => $rate) {
+        foreach ([62.76, 62.48, 61.84] as $trialNumber => $rate) {
             PmrRecord::factory()->create([
                 'warehouse_name' => 'GID#2, MLANG BS',
                 'pile_number' => '1',
@@ -63,13 +63,13 @@ class PmrRecordTest extends TestCase
         $response = $this->get(route('pmr.index'));
 
         $response->assertOk();
-        $response->assertSee('62.22');
-        $response->assertSee('0.41');
+        $response->assertSee('62.36');
+        $response->assertSee('0.47');
         $response->assertSee('Trial 1 Recovery Rate (%)');
-        $response->assertSee('Trial 5 Recovery Rate (%)');
+        $response->assertSee('Trial 3 Recovery Rate (%)');
     }
 
-    public function test_pmr_cannot_use_more_than_five_trials(): void
+    public function test_pmr_cannot_use_more_than_three_trials(): void
     {
         $response = $this->post(route('records.store'), [
             'form_type' => 'pmr',
@@ -83,7 +83,7 @@ class PmrRecordTest extends TestCase
             'quality' => 'gqa',
             'aged' => 5,
             'volume' => 10,
-            'no_of_trial' => 6,
+            'no_of_trial' => 4,
             'palay_input' => 100,
             'rice_recovery' => 60,
         ]);
@@ -122,8 +122,8 @@ class PmrRecordTest extends TestCase
         $warehouse = Warehouse::create(['branch_id' => $branch->id, 'name' => 'WH High PMR']);
         $pile = Pile::create(['warehouse_id' => $warehouse->id, 'number' => '1']);
 
-        // Create AMR records for the same pile with 62% recovery
-        foreach ([62.0, 62.0, 62.0] as $i => $rate) {
+        // Create AMR records for the same pile with 63% recovery
+        foreach ([63.0, 63.0, 63.0] as $i => $rate) {
             AmrRecord::factory()->create([
                 'pile_id' => $pile->id,
                 'warehouse_name' => 'WH High PMR',
@@ -135,8 +135,8 @@ class PmrRecordTest extends TestCase
             ]);
         }
 
-        // Create PMR records for the same pile with 65% recovery (higher than AMR and >= 60%)
-        foreach ([65.0, 65.0, 65.0, 65.0, 65.0] as $i => $rate) {
+        // Create PMR records for the same pile with 65% recovery (higher than AMR, spread 2.0 <= 3.0, and >= 60%)
+        foreach ([65.0, 65.0, 65.0] as $i => $rate) {
             PmrRecord::factory()->create([
                 'pile_id' => $pile->id,
                 'warehouse_name' => 'WH High PMR',
@@ -154,11 +154,12 @@ class PmrRecordTest extends TestCase
         $response->assertSee('OK');
         $response->assertDontSee('Lower than 60%');
         $response->assertDontSee('PMR lower than AMR');
+        $response->assertDontSee('AMR &lt; PMR by &gt;3%');
     }
 
     public function test_pmr_status_shows_lower_than_60_percent_when_pmr_is_below_60_percent(): void
     {
-        foreach ([58.0, 58.0, 58.0, 58.0, 58.0] as $i => $rate) {
+        foreach ([58.0, 58.0, 58.0] as $i => $rate) {
             PmrRecord::factory()->create([
                 'warehouse_name' => 'WH Low PMR',
                 'pile_number' => '2',
@@ -195,7 +196,7 @@ class PmrRecordTest extends TestCase
         }
 
         // PMR is 62% (>= 60%, but lower than AMR 65%)
-        foreach ([62.0, 62.0, 62.0, 62.0, 62.0] as $i => $rate) {
+        foreach ([62.0, 62.0, 62.0] as $i => $rate) {
             PmrRecord::factory()->create([
                 'pile_id' => $pile->id,
                 'warehouse_name' => 'WH Inverted',
@@ -212,6 +213,44 @@ class PmrRecordTest extends TestCase
         $response->assertOk();
         $response->assertSee('PMR lower than AMR');
         $response->assertDontSee('Lower than 60%');
+    }
+
+    public function test_pmr_status_shows_divergent_when_amr_is_less_than_pmr_by_more_than_three_percentage_points(): void
+    {
+        $branch = Branch::create(['name' => 'Branch 1']);
+        $warehouse = Warehouse::create(['branch_id' => $branch->id, 'name' => 'WH Divergent']);
+        $pile = Pile::create(['warehouse_id' => $warehouse->id, 'number' => '5']);
+
+        // AMR is 61%
+        foreach ([61.0, 61.0, 61.0] as $i => $rate) {
+            AmrRecord::factory()->create([
+                'pile_id' => $pile->id,
+                'warehouse_name' => 'WH Divergent',
+                'pile_number' => '5',
+                'variety' => 'PD',
+                'trial_number' => $i + 1,
+                'palay_input_kg' => '10000.00',
+                'rice_recovery_kg' => $rate * 100,
+            ]);
+        }
+
+        // PMR is 66% (Spread is 66 - 61 = 5.0% > 3.0 percentage points)
+        foreach ([66.0, 66.0, 66.0] as $i => $rate) {
+            PmrRecord::factory()->create([
+                'pile_id' => $pile->id,
+                'warehouse_name' => 'WH Divergent',
+                'pile_number' => '5',
+                'variety' => 'PD',
+                'trial_number' => $i + 1,
+                'palay_input_kg' => '10000.00',
+                'rice_recovery_kg' => $rate * 100,
+            ]);
+        }
+
+        $response = $this->get(route('pmr.index'));
+
+        $response->assertOk();
+        $response->assertSee('AMR &lt; PMR by &gt;3%', false);
     }
 
     public function test_pmr_status_shows_both_when_pmr_is_below_60_and_below_amr(): void
@@ -234,7 +273,7 @@ class PmrRecordTest extends TestCase
         }
 
         // PMR is 57% (< 60% and < AMR 61%)
-        foreach ([57.0, 57.0, 57.0, 57.0, 57.0] as $i => $rate) {
+        foreach ([57.0, 57.0, 57.0] as $i => $rate) {
             PmrRecord::factory()->create([
                 'pile_id' => $pile->id,
                 'warehouse_name' => 'WH Both Fail',

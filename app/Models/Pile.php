@@ -12,7 +12,50 @@ class Pile extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['warehouse_id', 'number', 'amr_status', 'pmr_status'];
+    protected $fillable = [
+        'branch_id',
+        'warehouse_id',
+        'pile_number',
+        'number',
+        'variety',
+        'purity',
+        'aged_months',
+        'mc',
+        'quality',
+        'volume_bags',
+        'amr_status',
+        'pmr_status',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'purity' => 'decimal:2',
+            'mc' => 'decimal:2',
+            'aged_months' => 'integer',
+            'volume_bags' => 'decimal:3',
+        ];
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (Pile $pile) {
+            if ($pile->warehouse_id && ! $pile->branch_id) {
+                $pile->branch_id = $pile->warehouse?->branch_id ?? Warehouse::find($pile->warehouse_id)?->branch_id;
+            }
+
+            if (! empty($pile->pile_number) && empty($pile->number)) {
+                $pile->number = $pile->pile_number;
+            } elseif (! empty($pile->number) && empty($pile->pile_number)) {
+                $pile->pile_number = $pile->number;
+            }
+        });
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
+    }
 
     public function warehouse(): BelongsTo
     {
@@ -31,11 +74,31 @@ class Pile extends Model
 
     public function amrCalculation(): HasOne
     {
-        return $this->hasOne(AmrCalculation::class)->latestOfMany();
+        return $this->hasOne(AmrCalculation::class);
     }
 
     public function pmrCalculation(): HasOne
     {
-        return $this->hasOne(PmrCalculation::class)->latestOfMany();
+        return $this->hasOne(PmrCalculation::class);
+    }
+
+    public function getVolumeAttribute()
+    {
+        return $this->volume_bags;
+    }
+
+    public function setVolumeAttribute($value): void
+    {
+        $this->attributes['volume_bags'] = $value;
+    }
+
+    public function getAgedAttribute()
+    {
+        return $this->aged_months;
+    }
+
+    public function setAgedAttribute($value): void
+    {
+        $this->attributes['aged_months'] = $value;
     }
 }

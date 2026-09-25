@@ -9,9 +9,9 @@ use Illuminate\Support\Collection;
 
 class PmrCalculationService
 {
-    public const REQUIRED_TRIALS = 5;
+    public const REQUIRED_TRIALS = 3;
 
-    public const MINIMUM_VALID_TRIALS = 3;
+    public const MINIMUM_VALID_TRIALS = 2;
 
     public const OUTLIER_TOLERANCE_PERCENT = 0.02;
 
@@ -55,7 +55,7 @@ class PmrCalculationService
     }
 
     /**
-     * Compute PMR, outlier evaluation, and CV validation from 5 laboratory milling trials.
+     * Compute PMR, outlier evaluation, and CV validation from 3 laboratory milling trials.
      *
      * @param  iterable<mixed>  $trials
      */
@@ -78,23 +78,40 @@ class PmrCalculationService
                 ? $trial->trial_number
                 : (is_array($trial) ? ($trial['trial_number'] ?? $trial['no_of_trial'] ?? 0) : ($trial->trial_number ?? $trial->no_of_trial ?? 0)));
 
-            $palayInput = (float) ($trial instanceof PmrRecord
-                ? $trial->palay_input_kg
-                : (is_array($trial) ? ($trial['palay_input_kg'] ?? $trial['palay_input'] ?? 0) : ($trial->palay_input_kg ?? $trial->palay_input ?? 0)));
+            $palayInput = $trial instanceof PmrRecord
+                ? ($trial->palay_input_kg !== null ? (float) $trial->palay_input_kg : null)
+                : (is_array($trial)
+                    ? (isset($trial['palay_input_kg']) && $trial['palay_input_kg'] !== '' && $trial['palay_input_kg'] !== null ? (float) $trial['palay_input_kg'] : (isset($trial['palay_input']) && $trial['palay_input'] !== '' && $trial['palay_input'] !== null ? (float) $trial['palay_input'] : null))
+                    : (isset($trial->palay_input_kg) && $trial->palay_input_kg !== null ? (float) $trial->palay_input_kg : null));
 
-            $riceRecovery = (float) ($trial instanceof PmrRecord
-                ? $trial->rice_recovery_kg
-                : (is_array($trial) ? ($trial['rice_recovery_kg'] ?? $trial['rice_recovery'] ?? 0) : ($trial->rice_recovery_kg ?? $trial->rice_recovery ?? 0)));
+            $riceRecovery = $trial instanceof PmrRecord
+                ? ($trial->rice_recovery_kg !== null ? (float) $trial->rice_recovery_kg : null)
+                : (is_array($trial)
+                    ? (isset($trial['rice_recovery_kg']) && $trial['rice_recovery_kg'] !== '' && $trial['rice_recovery_kg'] !== null ? (float) $trial['rice_recovery_kg'] : (isset($trial['rice_recovery']) && $trial['rice_recovery'] !== '' && $trial['rice_recovery'] !== null ? (float) $trial['rice_recovery'] : null))
+                    : (isset($trial->rice_recovery_kg) && $trial->rice_recovery_kg !== null ? (float) $trial->rice_recovery_kg : null));
 
-            // Requirement 2: Milling Recovery (%) = (Rice Recovery / Palay Input) × 100
-            $millingRecovery = $palayInput > 0
-                ? round(($riceRecovery / $palayInput) * 100, 2)
-                : 0.0;
+            $providedRecovery = $trial instanceof PmrRecord
+                ? ($trial->milling_recovery !== null ? (float) $trial->milling_recovery : null)
+                : (is_array($trial)
+                    ? (isset($trial['recovery_rate']) && $trial['recovery_rate'] !== '' && $trial['recovery_rate'] !== null ? (float) $trial['recovery_rate'] : (isset($trial['milling_recovery']) && $trial['milling_recovery'] !== '' && $trial['milling_recovery'] !== null ? (float) $trial['milling_recovery'] : null))
+                    : (isset($trial->milling_recovery) && $trial->milling_recovery !== null ? (float) $trial->milling_recovery : (isset($trial->recovery_rate) && $trial->recovery_rate !== null ? (float) $trial->recovery_rate : null)));
+
+            // Priority:
+            // 1. If both Palay Input and Rice Output are available and Palay Input > 0:
+            //    Milling Recovery (%) = (Rice Output / Palay Input) * 100
+            // 2. Else: use directly provided Recovery Rate
+            if ($palayInput !== null && $riceRecovery !== null && $palayInput > 0) {
+                $millingRecovery = round(($riceRecovery / $palayInput) * 100, 2);
+            } elseif ($providedRecovery !== null) {
+                $millingRecovery = round($providedRecovery, 2);
+            } else {
+                $millingRecovery = 0.0;
+            }
 
             $normalizedTrials[$trialNumber] = [
                 'trial_number' => $trialNumber,
-                'palay_input_kg' => round($palayInput, 2),
-                'rice_recovery_kg' => round($riceRecovery, 2),
+                'palay_input_kg' => $palayInput !== null ? round($palayInput, 2) : null,
+                'rice_recovery_kg' => $riceRecovery !== null ? round($riceRecovery, 2) : null,
                 'milling_recovery' => $millingRecovery,
                 'is_outlier' => false,
                 'status' => 'PENDING',
@@ -105,7 +122,7 @@ class PmrCalculationService
         ksort($normalizedTrials);
         $trialCount = count($normalizedTrials);
 
-        // Requirement 1: PMR must use 5 laboratory milling trials
+        // When fewer than required trials (incomplete)
         if ($trialCount < $requiredTrials) {
             $snapshot = [
                 'formula' => 'NFA Potential Milling Recovery (PMR)',
@@ -127,7 +144,7 @@ class PmrCalculationService
                 'pmr_rate' => null,
                 'status' => 'INCOMPLETE',
                 'status_label' => "Incomplete ({$trialCount}/{$requiredTrials} Trials)",
-                'status_message' => "FIVE (5) laboratory milling trials are required to compute PMR (currently {$trialCount}/{$requiredTrials}).",
+                'status_message' => "THREE (3) laboratory milling trials are required to compute PMR (currently {$trialCount}/{$requiredTrials}).",
                 'calculated_at' => now()->toIso8601String(),
             ];
 
@@ -147,7 +164,7 @@ class PmrCalculationService
                 isValid: false,
                 status: 'INCOMPLETE',
                 statusLabel: "Incomplete ({$trialCount}/{$requiredTrials} Trials)",
-                statusMessage: "FIVE (5) laboratory milling trials are required to compute PMR (currently {$trialCount}/{$requiredTrials}).",
+                statusMessage: "THREE (3) laboratory milling trials are required to compute PMR (currently {$trialCount}/{$requiredTrials}).",
                 snapshot: $snapshot,
                 requiredTrials: $requiredTrials,
                 minimumValidTrials: $minimumValidTrials,
@@ -155,29 +172,79 @@ class PmrCalculationService
             );
         }
 
-        // Take the 5 trials for calculation
+        // Rule 15: Handle legacy >3 trial records as historical data
+        if ($trialCount > $requiredTrials) {
+            $snapshot = [
+                'formula' => 'NFA Potential Milling Recovery (PMR)',
+                'rule_version' => 'NFA-PMR-HISTORICAL-LEGACY',
+                'profile_name' => $profileConfig['name'],
+                'required_trials' => $requiredTrials,
+                'entered_trials' => $trialCount,
+                'median' => null,
+                'lower_limit' => null,
+                'upper_limit' => null,
+                'trials' => array_values($normalizedTrials),
+                'valid_trial_count' => 0,
+                'outlier_count' => 0,
+                'mean' => null,
+                'standard_deviation' => null,
+                'coefficient_of_variation' => null,
+                'is_outlier_valid' => false,
+                'is_cv_valid' => false,
+                'pmr_rate' => null,
+                'status' => 'HISTORICAL_LEGACY',
+                'status_label' => "Historical Legacy ({$trialCount} Trials)",
+                'status_message' => "Historical {$trialCount}-trial PMR record preserved. Under current NFA guidelines, PMR must be re-established under current 3-trial rules (laboratory milling trials).",
+                'calculated_at' => now()->toIso8601String(),
+            ];
+
+            return new PmrCalculationResult(
+                trials: array_values($normalizedTrials),
+                median: null,
+                lowerLimit: null,
+                upperLimit: null,
+                validTrialCount: 0,
+                outlierCount: 0,
+                mean: null,
+                standardDeviation: null,
+                coefficientOfVariation: null,
+                isOutlierValid: false,
+                isCvValid: false,
+                pmrRate: null,
+                isValid: false,
+                status: 'HISTORICAL_LEGACY',
+                statusLabel: "Historical Legacy ({$trialCount} Trials)",
+                statusMessage: "Historical {$trialCount}-trial PMR record preserved. Under current NFA guidelines, PMR must be re-established under current 3-trial rules (laboratory milling trials).",
+                snapshot: $snapshot,
+                requiredTrials: $requiredTrials,
+                minimumValidTrials: $minimumValidTrials,
+                maxCvThreshold: $maxCvThreshold,
+            );
+        }
+
+        // Take the 3 trials for calculation
         $calculationTrials = array_slice($normalizedTrials, 0, $requiredTrials, true);
         $recoveries = array_column($calculationTrials, 'milling_recovery');
         sort($recoveries, SORT_NUMERIC);
 
-        // Requirement 3: Calculate the median of the 5 trial recovery results
-        // For 5 trials, median is index 2 (the 3rd element)
+        // Calculate the median of the 3 trial recovery results (index 1 in sorted 3-element list)
         $medianIndex = (int) floor(count($recoveries) / 2);
         $median = round((float) $recoveries[$medianIndex], 2);
 
-        // Requirement 4: Apply the ±2% outlier rule based on the median
-        // Lower Limit = Median × 0.98, Upper Limit = Median × 1.02
+        // Apply the ±2% outlier rule based on the median
+        // Lower Limit = Median * (1 - tolerance), Upper Limit = Median * (1 + tolerance)
         $lowerLimit = round($median * (1 - $tolerance), 4);
         $upperLimit = round($median * (1 + $tolerance), 4);
 
-        // Requirement 5: Mark each trial as VALID or OUTLIER. Never delete original trial data.
+        // Mark each trial as VALID or OUTLIER. Never delete original trial data.
         $validTrialCount = 0;
         $outlierCount = 0;
+        $epsilon = 0.00001;
 
         foreach ($calculationTrials as $num => $t) {
             $rec = (float) $t['milling_recovery'];
             // Inclusive boundary check: lowerLimit <= rec <= upperLimit is valid
-            $isOutlier = ($rec < $lowerLimit || $rec > $upperLimit);
+            $isOutlier = ($rec < ($lowerLimit - $epsilon)) || ($rec > ($upperLimit + $epsilon));
 
             $calculationTrials[$num]['is_outlier'] = $isOutlier;
             $calculationTrials[$num]['status'] = $isOutlier ? 'OUTLIER' : 'VALID';
@@ -189,10 +256,10 @@ class PmrCalculationService
             }
         }
 
-        // Outlier validation: At least minimumValidTrials (default 3) must remain
+        // Outlier validation: At least minimumValidTrials (default 2) must remain
         $isOutlierValid = ($validTrialCount >= $minimumValidTrials);
 
-        // Requirement 6 & 7: Exclude outliers; PMR = arithmetic mean of remaining valid trials
+        // Exclude outliers; PMR = arithmetic mean of remaining valid trials
         $validTrials = array_filter($calculationTrials, fn ($t) => ! $t['is_outlier']);
         $validRecoveries = array_column($validTrials, 'milling_recovery');
 
@@ -200,15 +267,15 @@ class PmrCalculationService
             ? round(array_sum($validRecoveries) / $validTrialCount, 2)
             : null;
 
-        // Requirement 8: Calculate Sample Standard Deviation (N-1)
+        // Sample Standard Deviation (N-1)
         $standardDeviation = $this->calculateSampleStandardDeviation($validRecoveries, $mean);
 
-        // Requirement 8: Coefficient of Variation: CV = (SD / Mean) × 100
+        // Coefficient of Variation: CV = (SD / Mean) * 100
         $cv = ($standardDeviation !== null && $mean !== null && $mean > 0)
             ? round(($standardDeviation / $mean) * 100, 2)
             : ($validTrialCount === 1 ? 0.0 : null);
 
-        // Requirement 9: Evaluate CV against configured threshold (default <= 5%)
+        // Evaluate CV against configured threshold (threshold: <= 5.00%)
         $isCvValid = $this->evaluateCv($standardDeviation, $mean, $maxCvThreshold);
 
         // Overall validity: Both outlier validation and CV validation must pass
@@ -222,7 +289,7 @@ class PmrCalculationService
         } elseif (! $isCvValid) {
             $status = 'INVALID_CV_EXCEEDED';
             $statusLabel = 'Invalid / Requires Re-establishment';
-            $formattedCv = number_format($cv, 2);
+            $formattedCv = number_format($cv ?? 0, 2);
             $statusMessage = "Coefficient of Variation (CV) of {$formattedCv}% exceeds the {$maxCvThreshold}% maximum threshold. Requires re-establishment.";
             $pmrRate = null;
         } else {
@@ -238,7 +305,7 @@ class PmrCalculationService
             $normalizedTrials[$num] = $t;
         }
 
-        // Requirement 10 & 12: Store calculation details & snapshot for auditability
+        // Store calculation details & snapshot for auditability
         $snapshot = [
             'formula' => 'NFA Potential Milling Recovery (PMR)',
             'rule_version' => 'NFA-PMR-2026',
@@ -327,6 +394,7 @@ class PmrCalculationService
 
     /**
      * Evaluate whether CV passes statistical requirement (CV <= threshold).
+     * The current CV requirement is <= 5%. CV of exactly 5.00% passes; CV above 5.00% fails.
      */
     public function evaluateCv(?float $standardDeviation, ?float $mean, ?float $maxCv = null): bool
     {
@@ -335,9 +403,127 @@ class PmrCalculationService
         }
 
         $threshold = $maxCv ?? $this->getMaxCvThreshold();
-        $cv = ($standardDeviation / $mean) * 100;
+        $cv = round(($standardDeviation / $mean) * 100, 2);
 
-        return round($cv, 4) <= $threshold;
+        return $cv <= $threshold;
+    }
+
+    /**
+     * Evaluate re-establishment flags based on the latest NFA guidelines.
+     *
+     * A PMR and/or AMR must be flagged for re-establishment when:
+     * - PMR and/or AMR is 60.0% or below (<= 60.0%);
+     * - PMR is less than AMR (PMR < AMR); or
+     * - AMR is less than PMR by more than 3 percentage points (AMR < PMR - 3.0 percentage points, or PMR - AMR > 3.0).
+     *
+     * @return array{
+     *     requires_reestablishment: bool,
+     *     is_pmr_below_60: bool,
+     *     is_amr_below_60: bool,
+     *     is_pmr_below_amr: bool,
+     *     is_amr_divergent_from_pmr: bool,
+     *     flags: list<string>,
+     *     reasons: list<string>,
+     *     pmr_rate: ?float,
+     *     amr_rate: ?float,
+     *     difference: ?float,
+     *     spread_difference: ?float
+     * }
+     */
+    public function evaluateReestablishment(?float $pmrRate, ?float $amrRate): array
+    {
+        $isPmrBelow60 = $pmrRate !== null && $pmrRate <= 60.0;
+        $isAmrBelow60 = $amrRate !== null && $amrRate <= 60.0;
+        $isPmrBelowAmr = $pmrRate !== null && $amrRate !== null && $pmrRate < $amrRate;
+
+        // Difference: PMR - AMR (how much PMR exceeds AMR)
+        $difference = ($pmrRate !== null && $amrRate !== null)
+            ? round($pmrRate - $amrRate, 4)
+            : null;
+
+        // AMR is less than PMR by more than 3 percentage points => PMR - AMR > 3.0
+        $isAmrDivergent = $difference !== null && $difference > 3.00;
+
+        $flags = [];
+        $reasons = [];
+
+        if ($isPmrBelow60) {
+            $flags[] = 'PMR_BELOW_60';
+            $reasons[] = 'PMR ('.number_format($pmrRate, 2).'%) is 60.0% or below.';
+        }
+
+        if ($isAmrBelow60) {
+            $flags[] = 'AMR_BELOW_60';
+            $reasons[] = 'AMR ('.number_format($amrRate, 2).'%) is 60.0% or below.';
+        }
+
+        if ($isPmrBelowAmr) {
+            $flags[] = 'PMR_BELOW_AMR';
+            $reasons[] = 'PMR ('.number_format($pmrRate, 2).'%) is less than AMR ('.number_format($amrRate, 2).'%).';
+        }
+
+        if ($isAmrDivergent) {
+            $flags[] = 'AMR_DIVERGENT';
+            $formattedDiff = number_format($difference, 2);
+            $reasons[] = 'AMR is less than PMR by more than 3 percentage points (difference: '.$formattedDiff.' points).';
+        }
+
+        $requires = $isPmrBelow60 || $isAmrBelow60 || $isPmrBelowAmr || $isAmrDivergent;
+
+        return [
+            'requires_reestablishment' => $requires,
+            'is_pmr_below_60' => $isPmrBelow60,
+            'is_amr_below_60' => $isAmrBelow60,
+            'is_pmr_below_amr' => $isPmrBelowAmr,
+            'is_amr_divergent_from_pmr' => $isAmrDivergent,
+            'flags' => $flags,
+            'reasons' => $reasons,
+            'pmr_rate' => $pmrRate,
+            'amr_rate' => $amrRate,
+            'difference' => $difference,
+            'spread_difference' => $difference,
+        ];
+    }
+
+    /**
+     * Evaluate re-establishment flags for a master pile.
+     *
+     * @return array{
+     *     requires_reestablishment: bool,
+     *     is_pmr_below_60: bool,
+     *     is_amr_below_60: bool,
+     *     is_pmr_below_amr: bool,
+     *     is_amr_divergent_from_pmr: bool,
+     *     flags: list<string>,
+     *     reasons: list<string>,
+     *     pmr_rate: ?float,
+     *     amr_rate: ?float,
+     *     difference: ?float,
+     *     spread_difference: ?float
+     * }
+     */
+    public function evaluateReestablishmentForPile(Pile $pile): array
+    {
+        $pile->loadMissing(['pmrCalculation', 'amrCalculation', 'pmrRecords', 'amrRecords']);
+
+        $pmrRate = $pile->pmrCalculation?->pmr_rate;
+        if ($pmrRate === null && $pile->pmrRecords->isNotEmpty()) {
+            $validPmr = $pile->pmrRecords->filter(fn ($r) => (float) $r->recovery_rate_percentage > 0)
+                ->map(fn ($r) => (float) $r->recovery_rate_percentage);
+            $pmrRate = $validPmr->isNotEmpty() ? (float) $validPmr->avg() : null;
+        }
+
+        $amrRate = $pile->amrCalculation?->amr_rate;
+        if ($amrRate === null && $pile->amrRecords->isNotEmpty()) {
+            $validAmr = $pile->amrRecords->filter(fn ($r) => (float) $r->palay_input_kg > 0)
+                ->map(fn ($r) => (float) $r->milling_recovery_percentage);
+            $amrRate = $validAmr->isNotEmpty() ? (float) $validAmr->avg() : null;
+        }
+
+        return $this->evaluateReestablishment(
+            $pmrRate !== null ? (float) $pmrRate : null,
+            $amrRate !== null ? (float) $amrRate : null,
+        );
     }
 
     /**

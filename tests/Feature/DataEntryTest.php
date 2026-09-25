@@ -194,11 +194,78 @@ class DataEntryTest extends TestCase
         $response->assertSee('Select Form Type');
         $response->assertSee('<option value="" selected>Select Form Type</option>', false);
 
-        // Quality dropdown contains only Good, Treated Fair, and Poor
+        // Quality dropdown contains Good, Fair, Treated, and Poor
         $response->assertSee('Good</option>', false);
-        $response->assertSee('Treated Fair</option>', false);
+        $response->assertSee('Fair</option>', false);
+        $response->assertSee('Treated</option>', false);
+        $response->assertDontSee('Treated Fair</option>', false);
         $response->assertSee('Poor</option>', false);
         $response->assertDontSee('<option value="gqa"', false);
         $response->assertDontSee('<option value="premium"', false);
+    }
+
+    public function test_trial_numbering_is_automatically_assigned_when_not_provided_or_empty(): void
+    {
+        $branch = Branch::where('name', 'North Cotabato')->firstOrFail();
+        $warehouse = $branch->warehouses()->create(['name' => 'Auto Trial Warehouse']);
+        $pile = $warehouse->piles()->create(['number' => '10']);
+
+        $payload = [
+            'form_type' => 'amr',
+            'branch_id' => $branch->id,
+            'warehouse_id' => $warehouse->id,
+            'pile_id' => $pile->id,
+            'variety' => 'PD',
+            'purity' => 94.31,
+            'mc' => 11.1,
+            'quality' => 'good',
+            'aged' => 5,
+            'volume' => 10,
+            'trials' => [
+                [
+                    'trial_number' => '', // Empty string as sent by form when not provided
+                    'test_milling_date' => '2026-09-24',
+                    'rice_millers' => 'Miller 1',
+                    'palay_input' => 100,
+                    'rice_recovery' => 65,
+                ],
+            ],
+        ];
+
+        // 1. First trial should be automatically assigned trial 1
+        $response = $this->post(route('records.store'), $payload);
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('amr_records', [
+            'pile_id' => $pile->id,
+            'trial_number' => 1,
+            'rice_millers' => 'Miller 1',
+        ]);
+
+        // 2. Second trial without trial_number should be automatically assigned trial 2
+        $payload['trials'][0]['trial_number'] = null;
+        $payload['trials'][0]['rice_millers'] = 'Miller 2';
+        $response2 = $this->post(route('records.store'), $payload);
+        $response2->assertSessionHasNoErrors();
+        $response2->assertRedirect();
+
+        $this->assertDatabaseHas('amr_records', [
+            'pile_id' => $pile->id,
+            'trial_number' => 2,
+            'rice_millers' => 'Miller 2',
+        ]);
+    }
+
+    public function test_form_has_default_trial_number_and_disables_inactive_section(): void
+    {
+        $response = $this->get(route('records.create'));
+        $response->assertOk();
+
+        // AMR trial input has default value=1
+        $response->assertSee('name="trials[0][trial_number]" data-trial-value value="1"', false);
+
+        // PMR trial input is disabled initially to prevent duplicate empty submission
+        $response->assertSee('name="trials[0][trial_number]" data-trial-value value="1" disabled', false);
     }
 }

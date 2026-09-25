@@ -28,8 +28,8 @@ class PmrCalculationResult implements JsonSerializable
         public readonly string $statusLabel,
         public readonly string $statusMessage,
         public readonly array $snapshot,
-        public readonly int $requiredTrials = 5,
-        public readonly int $minimumValidTrials = 3,
+        public readonly int $requiredTrials = 3,
+        public readonly int $minimumValidTrials = 2,
         public readonly float $maxCvThreshold = 5.0,
     ) {}
 
@@ -43,9 +43,14 @@ class PmrCalculationResult implements JsonSerializable
         return $this->status === 'INCOMPLETE';
     }
 
+    public function isHistoricalLegacy(): bool
+    {
+        return $this->status === 'HISTORICAL_LEGACY';
+    }
+
     public function isInvalid(): bool
     {
-        return ! $this->isValid && ! $this->isIncomplete();
+        return ! $this->isValid && ! $this->isIncomplete() && ! $this->isHistoricalLegacy();
     }
 
     public function isInvalidCv(): bool

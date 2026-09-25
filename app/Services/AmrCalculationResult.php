@@ -58,6 +58,11 @@ class AmrCalculationResult implements JsonSerializable
         return number_format($this->median, 2).'%';
     }
 
+    public function getFormattedMean(): string
+    {
+        return $this->getFormattedMedian();
+    }
+
     public function getFormattedLowerLimit(): string
     {
         if ($this->lowerLimit === null) {

@@ -16,22 +16,22 @@ class PmrRecord extends Model
      * @var list<string>
      */
     protected $fillable = [
-        'pile_id',
-        'warehouse_name',
-        'pile_number',
-        'variety',
-        'rice_millers',
-        'purity',
-        'mc',
-        'quality',
-        'aged_months',
-        'volume_bags',
-        'trial_number',
-        'test_milling_date',
-        'palay_input_kg',
-        'rice_recovery_kg',
-        'milling_recovery',
-        'is_outlier',
+        "pile_id",
+        "warehouse_name",
+        "pile_number",
+        "variety",
+        "rice_millers",
+        "purity",
+        "mc",
+        "quality",
+        "aged_months",
+        "volume_bags",
+        "trial_number",
+        "test_milling_date",
+        "palay_input_kg",
+        "rice_recovery_kg",
+        "milling_recovery",
+        "is_outlier",
     ];
 
     /**
@@ -42,16 +42,16 @@ class PmrRecord extends Model
     protected function casts(): array
     {
         return [
-            'purity' => 'decimal:2',
-            'mc' => 'decimal:2',
-            'aged_months' => 'integer',
-            'volume_bags' => 'decimal:3',
-            'trial_number' => 'integer',
-            'test_milling_date' => 'date:Y-m-d',
-            'palay_input_kg' => 'decimal:2',
-            'rice_recovery_kg' => 'decimal:2',
-            'milling_recovery' => 'decimal:2',
-            'is_outlier' => 'boolean',
+            "purity" => "decimal:2",
+            "mc" => "decimal:2",
+            "aged_months" => "integer",
+            "volume_bags" => "decimal:3",
+            "trial_number" => "integer",
+            "test_milling_date" => "date:Y-m-d",
+            "palay_input_kg" => "decimal:2",
+            "rice_recovery_kg" => "decimal:2",
+            "milling_recovery" => "decimal:2",
+            "is_outlier" => "boolean",
         ];
     }
 
@@ -60,9 +60,56 @@ class PmrRecord extends Model
         return $this->belongsTo(Pile::class);
     }
 
+    public function getWarehouseNameAttribute(?string $value): ?string
+    {
+        return $this->pile?->warehouse?->name ?? $value;
+    }
+
+    public function getPileNumberAttribute(?string $value): ?string
+    {
+        return $this->pile?->pile_number ?? ($this->pile?->number ?? $value);
+    }
+
+    public function getVarietyAttribute(?string $value): ?string
+    {
+        return $this->pile?->variety ?? $value;
+    }
+
+    public function getPurityAttribute($value)
+    {
+        return $this->pile?->purity ?? $value;
+    }
+
+    public function getMcAttribute($value)
+    {
+        return $this->pile?->mc ?? $value;
+    }
+
+    public function getQualityAttribute(?string $value): ?string
+    {
+        return $this->pile?->quality ?? $value;
+    }
+
+    public function getAgedMonthsAttribute($value)
+    {
+        return $this->pile?->aged_months ?? $value;
+    }
+
+    public function getVolumeBagsAttribute($value)
+    {
+        return $this->pile?->volume_bags ?? $value;
+    }
+
     public function getRecoveryRatePercentageAttribute(): float
     {
-        if ((float) $this->palay_input_kg === 0.0) {
+        if ($this->milling_recovery !== null) {
+            return (float) $this->milling_recovery;
+        }
+
+        if (
+            $this->palay_input_kg === null ||
+            (float) $this->palay_input_kg === 0.0
+        ) {
             return 0.0;
         }
 

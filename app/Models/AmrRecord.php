@@ -60,6 +60,46 @@ class AmrRecord extends Model
         return $this->belongsTo(Pile::class);
     }
 
+    public function getWarehouseNameAttribute(?string $value): ?string
+    {
+        return $this->pile?->warehouse?->name ?? $value;
+    }
+
+    public function getPileNumberAttribute(?string $value): ?string
+    {
+        return $this->pile?->pile_number ?? $this->pile?->number ?? $value;
+    }
+
+    public function getVarietyAttribute(?string $value): ?string
+    {
+        return $this->pile?->variety ?? $value;
+    }
+
+    public function getPurityAttribute($value)
+    {
+        return $this->pile?->purity ?? $value;
+    }
+
+    public function getMcAttribute($value)
+    {
+        return $this->pile?->mc ?? $value;
+    }
+
+    public function getQualityAttribute(?string $value): ?string
+    {
+        return $this->pile?->quality ?? $value;
+    }
+
+    public function getAgedMonthsAttribute($value)
+    {
+        return $this->pile?->aged_months ?? $value;
+    }
+
+    public function getVolumeBagsAttribute($value)
+    {
+        return $this->pile?->volume_bags ?? $value;
+    }
+
     public function getMillingRecoveryPercentageAttribute(): float
     {
         if ((float) $this->palay_input_kg === 0.0) {

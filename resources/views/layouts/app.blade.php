@@ -43,7 +43,6 @@
 
             <div>
                 <a href="{{ route('home') }}" class="text-sm font-semibold text-base-content hover:text-primary transition-colors block leading-tight">NFA GMR</a>
-                <p class="text-xs text-base-content/50 leading-tight">Rice trial management</p>
             </div>
         </div>
 

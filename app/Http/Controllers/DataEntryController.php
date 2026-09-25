@@ -37,19 +37,20 @@ class DataEntryController extends Controller
             ->map(function (Pile $pile): array {
                 $sharedRecord = $pile->amrRecords->first() ?? $pile->pmrRecords->first();
                 $sharedData = [
-                    'variety' => $sharedRecord?->variety,
-                    'purity' => $sharedRecord?->purity,
-                    'mc' => $sharedRecord?->mc,
-                    'quality' => $sharedRecord?->quality,
-                    'aged' => $sharedRecord?->aged_months,
-                    'volume' => $sharedRecord?->volume_bags,
+                    'variety' => $pile->variety ?? $sharedRecord?->variety,
+                    'purity' => $pile->purity ?? $sharedRecord?->purity,
+                    'mc' => $pile->mc ?? $sharedRecord?->mc,
+                    'quality' => $pile->quality ?? $sharedRecord?->quality,
+                    'aged' => $pile->aged_months ?? $sharedRecord?->aged_months,
+                    'volume' => $pile->volume_bags ?? $sharedRecord?->volume_bags,
                 ];
 
                 return [
                     'id' => $pile->id,
                     'warehouse_id' => $pile->warehouse_id,
-                    'branch_id' => $pile->warehouse?->branch_id,
-                    'number' => $pile->number,
+                    'branch_id' => $pile->branch_id ?? $pile->warehouse?->branch_id,
+                    'number' => $pile->pile_number ?? $pile->number,
+                    'pile_number' => $pile->pile_number ?? $pile->number,
                     'shared' => $sharedData,
                     'amr' => [
                         ...$sharedData,
@@ -74,6 +75,8 @@ class DataEntryController extends Controller
                             'test_milling_date' => $record->test_milling_date?->format('Y-m-d'),
                             'palay_input' => $record->palay_input_kg,
                             'rice_recovery' => $record->rice_recovery_kg,
+                            'recovery_rate' => $record->milling_recovery !== null ? (float) $record->milling_recovery : $record->recovery_rate_percentage,
+                            'milling_recovery' => $record->milling_recovery !== null ? (float) $record->milling_recovery : null,
                         ])->values(),
                     ],
                 ];
@@ -110,12 +113,32 @@ class DataEntryController extends Controller
             : PmrRecord::findOrFail($record);
         $validated = $request->validated();
 
-        $trial->update([
-            'rice_millers' => $formType === 'amr' ? ($validated['rice_millers'] ?? null) : null,
-            'test_milling_date' => $validated['test_milling_date'] ?? null,
-            'palay_input_kg' => $validated['palay_input'],
-            'rice_recovery_kg' => $validated['rice_recovery'],
-        ]);
+        if ($formType === 'pmr') {
+            $palayInput = isset($validated['palay_input']) && $validated['palay_input'] !== '' && $validated['palay_input'] !== null ? $validated['palay_input'] : null;
+            $riceRecovery = isset($validated['rice_recovery']) && $validated['rice_recovery'] !== '' && $validated['rice_recovery'] !== null ? $validated['rice_recovery'] : null;
+
+            if ($palayInput !== null && $riceRecovery !== null && (float) $palayInput > 0) {
+                $millingRecovery = round(((float) $riceRecovery / (float) $palayInput) * 100, 2);
+            } elseif (isset($validated['recovery_rate']) && $validated['recovery_rate'] !== '' && $validated['recovery_rate'] !== null) {
+                $millingRecovery = round((float) $validated['recovery_rate'], 2);
+            } else {
+                $millingRecovery = $trial->milling_recovery;
+            }
+
+            $trial->update([
+                'test_milling_date' => $validated['test_milling_date'] ?? null,
+                'palay_input_kg' => $palayInput,
+                'rice_recovery_kg' => $riceRecovery,
+                'milling_recovery' => $millingRecovery,
+            ]);
+        } else {
+            $trial->update([
+                'rice_millers' => $validated['rice_millers'] ?? null,
+                'test_milling_date' => $validated['test_milling_date'] ?? null,
+                'palay_input_kg' => $validated['palay_input'],
+                'rice_recovery_kg' => $validated['rice_recovery'],
+            ]);
+        }
 
         if ($formType === 'amr' && $trial->pile) {
             $this->amrCalculationService->calculateAndStoreForPile($trial->pile);
@@ -126,12 +149,27 @@ class DataEntryController extends Controller
         if ($request->expectsJson()) {
             return response()->json([
                 'message' => strtoupper($formType).' trial updated successfully.',
+                'record' => [
+                    'id' => $trial->id,
+                    'trial_number' => $trial->trial_number,
+                    'test_milling_date' => $trial->test_milling_date?->format('Y-m-d'),
+                    'rice_millers' => $trial->rice_millers,
+                    'palay_input' => $trial->palay_input_kg,
+                    'rice_recovery' => $trial->rice_recovery_kg,
+                    'recovery_rate' => $trial->milling_recovery !== null ? (float) $trial->milling_recovery : null,
+                    'milling_recovery' => $trial->milling_recovery !== null ? (float) $trial->milling_recovery : null,
+                ],
             ]);
         }
 
         return redirect()
             ->route('records.create', ['type' => $formType])
             ->with('status', strtoupper($formType).' trial updated successfully.');
+    }
+
+    public function destroy(Request $request, string $formType, int $record): JsonResponse
+    {
+        return $this->destroyTrial($formType, $record);
     }
 
     public function destroyTrial(string $formType, int $record): JsonResponse
@@ -169,12 +207,13 @@ class DataEntryController extends Controller
             'purity' => ['required', 'numeric', 'between:0,100'],
             'aged' => ['required', 'integer', 'min:0'],
             'mc' => ['required', 'numeric', 'between:0,100'],
-            'quality' => ['required', Rule::in(['good', 'treated fair', 'treated_fair', 'poor', 'gqa', 'premium', 'fair'])],
+            'quality' => ['required', Rule::in(['good', 'fair', 'treated', 'treated fair', 'treated_fair', 'poor', 'gqa', 'premium'])],
             'volume' => ['required', 'numeric', 'min:0'],
         ]);
 
         $hasSavedRecords = AmrRecord::query()->where('pile_id', $pile->id)->exists()
-            || PmrRecord::query()->where('pile_id', $pile->id)->exists();
+            || PmrRecord::query()->where('pile_id', $pile->id)->exists()
+            || $pile->variety !== null;
 
         if (! $hasSavedRecords) {
             throw ValidationException::withMessages([
@@ -192,6 +231,8 @@ class DataEntryController extends Controller
                 'volume_bags' => $validated['volume'],
             ];
 
+            $pile->update($sharedDetails);
+
             AmrRecord::query()->where('pile_id', $pile->id)->update($sharedDetails);
             PmrRecord::query()->where('pile_id', $pile->id)->update($sharedDetails);
         });
@@ -205,11 +246,12 @@ class DataEntryController extends Controller
     {
         $validated = $request->validate([
             'form_type' => ['required', Rule::in(['amr', 'pmr'])],
-            'action' => ['required', Rule::in(['recommend', 'retest', 'approved'])],
+            'action' => ['required', 'string', 'max:50'],
         ]);
 
+        $column = $validated['form_type'].'_status';
         $pile->update([
-            $validated['form_type'].'_status' => $validated['action'],
+            $column => $validated['action'],
         ]);
 
         return back()->with(
@@ -220,17 +262,32 @@ class DataEntryController extends Controller
 
     public function createPile(StorePileRequest $request): JsonResponse
     {
-        $pile = Pile::create([
-            'warehouse_id' => $request->validated('warehouse_id'),
-            'number' => trim($request->validated('number')),
-        ]);
+        $warehouse = Warehouse::with('branch')->findOrFail($request->validated('warehouse_id'));
+        $pileNumber = trim($request->validated('number'));
+
+        $pile = Pile::where('warehouse_id', $warehouse->id)
+            ->where(function ($query) use ($pileNumber) {
+                $query->where('pile_number', $pileNumber)
+                    ->orWhere('number', $pileNumber);
+            })
+            ->first();
+
+        if (! $pile) {
+            $pile = Pile::create([
+                'branch_id' => $warehouse->branch_id,
+                'warehouse_id' => $warehouse->id,
+                'pile_number' => $pileNumber,
+                'number' => $pileNumber,
+            ]);
+        }
 
         return response()->json([
             'id' => $pile->id,
-            'number' => $pile->number,
+            'number' => $pile->pile_number ?? $pile->number,
+            'pile_number' => $pile->pile_number ?? $pile->number,
             'warehouse_id' => $pile->warehouse_id,
-            'branch_id' => $request->validated('branch_id'),
-        ], 201);
+            'branch_id' => $warehouse->branch_id,
+        ], $pile->wasRecentlyCreated ? 201 : 200);
     }
 
     public function store(StoreDataEntryRequest $request): RedirectResponse
@@ -250,21 +307,71 @@ class DataEntryController extends Controller
                 ])
                 : $branch->warehouses()->findOrFail($validated['warehouse_id']);
 
-            $pile = isset($validated['pile_id'])
-                ? $warehouse->piles()->findOrFail($validated['pile_id'])
-                : $warehouse->piles()->firstOrCreate([
-                    'number' => trim($validated['new_pile_number'] ?? $validated['pile_number']),
-                ]);
+            $pileNumber = trim((string) ($validated['new_pile_number'] ?? $validated['pile_number'] ?? ''));
+            if ($pileNumber === '' && ! empty($validated['pile_id'])) {
+                $selected = Pile::find($validated['pile_id']);
+                $pileNumber = (string) ($selected?->pile_number ?? $selected?->number ?? '');
+            }
+
+            // 1. Find the pile using Branch + Warehouse + Pile Number
+            $pile = Pile::where('warehouse_id', $warehouse->id)
+                ->where(function ($query) use ($branch) {
+                    $query->where('branch_id', $branch->id)
+                        ->orWhereNull('branch_id');
+                })
+                ->where(function ($query) use ($pileNumber) {
+                    $query->where('pile_number', $pileNumber)
+                        ->orWhere('number', $pileNumber);
+                })
+                ->first();
+
+            $sharedPileData = [
+                'branch_id' => $branch->id,
+                'warehouse_id' => $warehouse->id,
+                'number' => $pileNumber,
+                'pile_number' => $pileNumber,
+                'variety' => $validated['variety'],
+                'purity' => $validated['purity'],
+                'aged_months' => $validated['aged'],
+                'mc' => $validated['mc'],
+                'quality' => $validated['quality'],
+                'volume_bags' => $validated['volume'],
+            ];
+
+            // 2. If pile does not exist, create it with all pile details
+            // 3. If pile already exists, use existing pile (NEVER duplicate)
+            if (! $pile) {
+                $pile = Pile::create($sharedPileData);
+            } else {
+                $pile->update($sharedPileData);
+            }
 
             $recordModel = $validated['form_type'] === 'amr'
                 ? AmrRecord::class
                 : PmrRecord::class;
             $statusColumn = $validated['form_type'].'_status';
-            $maximumTrials = $validated['form_type'] === 'amr' ? 3 : 5;
-            $existingTrialNumbers = $recordModel::where('pile_id', $pile->id)
-                ->pluck('trial_number')
-                ->map(fn ($trial): int => (int) $trial)
-                ->all();
+            $maximumTrials = 3;
+
+            $existingRecords = $recordModel::where('pile_id', $pile->id)->get()->keyBy('trial_number');
+            $existingTrialNumbers = $existingRecords->keys()->map(fn ($trial): int => (int) $trial)->all();
+
+            $usedTrialNumbers = $existingTrialNumbers;
+            $trials = $validated['trials'];
+            foreach ($trials as &$trial) {
+                if (empty($trial['trial_number']) || ! is_numeric($trial['trial_number'])) {
+                    $next = 1;
+                    while (in_array($next, $usedTrialNumbers, true)) {
+                        $next++;
+                    }
+                    $trial['trial_number'] = $next;
+                    $usedTrialNumbers[] = $next;
+                } else {
+                    $usedTrialNumbers[] = (int) $trial['trial_number'];
+                }
+            }
+            unset($trial);
+            $validated['trials'] = $trials;
+
             $submittedTrialNumbers = collect($validated['trials'])
                 ->pluck('trial_number')
                 ->map(fn ($trial): int => (int) $trial)
@@ -273,43 +380,29 @@ class DataEntryController extends Controller
             if ($pile->{$statusColumn} !== null) {
                 throw ValidationException::withMessages([
                     'trials' => 'This pile is locked for '.strtoupper($validated['form_type']).' after the '.$pile->{$statusColumn}.' action.',
+                    'no_of_trial' => 'This pile is locked for '.strtoupper($validated['form_type']).' after the '.$pile->{$statusColumn}.' action.',
                 ]);
             }
 
             if (count($submittedTrialNumbers) !== count(array_unique($submittedTrialNumbers))) {
                 throw ValidationException::withMessages([
                     'trials' => 'Each trial number can only be submitted once.',
+                    'no_of_trial' => 'Each trial number can only be submitted once.',
                 ]);
             }
 
-            if (count($existingTrialNumbers) + count($submittedTrialNumbers) > $maximumTrials) {
+            $newTrialsCount = collect($submittedTrialNumbers)->filter(fn ($t) => ! in_array($t, $existingTrialNumbers, true))->count();
+            if (count($existingTrialNumbers) + $newTrialsCount > $maximumTrials) {
                 throw ValidationException::withMessages([
                     'trials' => strtoupper($validated['form_type']).' cannot exceed '.$maximumTrials.' trials for this pile.',
+                    'no_of_trial' => strtoupper($validated['form_type']).' cannot exceed '.$maximumTrials.' trials for this pile.',
                 ]);
             }
-
-            if (array_intersect($existingTrialNumbers, $submittedTrialNumbers) !== []) {
-                throw ValidationException::withMessages([
-                    'trials' => 'One or more selected trials have already been completed for this pile.',
-                ]);
-            }
-
-            $shared = [
-                'pile_id' => $pile->id,
-                'warehouse_name' => $warehouse->name,
-                'pile_number' => $pile->number,
-                'variety' => $validated['variety'],
-                'purity' => $validated['purity'],
-                'mc' => $validated['mc'],
-                'quality' => $validated['quality'],
-                'aged_months' => $validated['aged'],
-                'volume_bags' => $validated['volume'],
-            ];
 
             // Synchronize all existing records for this pile in BOTH AMR and PMR tables
             AmrRecord::query()->where('pile_id', $pile->id)->update([
                 'warehouse_name' => $warehouse->name,
-                'pile_number' => $pile->number,
+                'pile_number' => $pile->pile_number ?? $pile->number,
                 'variety' => $validated['variety'],
                 'purity' => $validated['purity'],
                 'mc' => $validated['mc'],
@@ -319,7 +412,7 @@ class DataEntryController extends Controller
             ]);
             PmrRecord::query()->where('pile_id', $pile->id)->update([
                 'warehouse_name' => $warehouse->name,
-                'pile_number' => $pile->number,
+                'pile_number' => $pile->pile_number ?? $pile->number,
                 'variety' => $validated['variety'],
                 'purity' => $validated['purity'],
                 'mc' => $validated['mc'],
@@ -328,17 +421,55 @@ class DataEntryController extends Controller
                 'volume_bags' => $validated['volume'],
             ]);
 
+            // Save or update trials for this assessment
             foreach ($validated['trials'] as $trial) {
-                $recordData = [
-                    ...$shared,
-                    'rice_millers' => $trial['rice_millers'] ?? null,
-                    'trial_number' => $trial['trial_number'],
+                $trialNumber = (int) $trial['trial_number'];
+                $existing = $existingRecords->get($trialNumber);
+
+                $palayInput = isset($trial['palay_input']) && $trial['palay_input'] !== '' && $trial['palay_input'] !== null
+                    ? (float) $trial['palay_input']
+                    : null;
+                $riceRecovery = isset($trial['rice_recovery']) && $trial['rice_recovery'] !== '' && $trial['rice_recovery'] !== null
+                    ? (float) $trial['rice_recovery']
+                    : null;
+
+                if ($validated['form_type'] === 'pmr') {
+                    if ($palayInput !== null && $riceRecovery !== null && $palayInput > 0) {
+                        $millingRecovery = round(($riceRecovery / $palayInput) * 100, 2);
+                    } elseif (isset($trial['recovery_rate']) && $trial['recovery_rate'] !== '' && $trial['recovery_rate'] !== null) {
+                        $millingRecovery = round((float) $trial['recovery_rate'], 2);
+                    } else {
+                        $millingRecovery = null;
+                    }
+                } else {
+                    $millingRecovery = ($palayInput !== null && $palayInput > 0 && $riceRecovery !== null)
+                        ? round(($riceRecovery / $palayInput) * 100, 2)
+                        : null;
+                }
+
+                $trialData = [
+                    'pile_id' => $pile->id,
+                    'warehouse_name' => $warehouse->name,
+                    'pile_number' => $pile->pile_number ?? $pile->number,
+                    'variety' => $validated['variety'],
+                    'purity' => $validated['purity'],
+                    'mc' => $validated['mc'],
+                    'quality' => $validated['quality'],
+                    'aged_months' => $validated['aged'],
+                    'volume_bags' => $validated['volume'],
+                    'rice_millers' => $validated['form_type'] === 'amr' ? ($trial['rice_millers'] ?? null) : null,
+                    'trial_number' => $trialNumber,
                     'test_milling_date' => $trial['test_milling_date'],
-                    'palay_input_kg' => $trial['palay_input'],
-                    'rice_recovery_kg' => $trial['rice_recovery'],
+                    'palay_input_kg' => $palayInput,
+                    'rice_recovery_kg' => $riceRecovery,
+                    'milling_recovery' => $millingRecovery,
                 ];
 
-                $recordModel::create($recordData);
+                if ($existing) {
+                    $existing->update($trialData);
+                } else {
+                    $recordModel::create($trialData);
+                }
             }
 
             if ($validated['form_type'] === 'amr') {
@@ -352,8 +483,7 @@ class DataEntryController extends Controller
             ->route('records.create', ['type' => $validated['form_type']])
             ->with(
                 'status',
-                strtoupper($validated['form_type']).
-                    ' trial saved successfully.',
+                strtoupper($validated['form_type']).' trial saved successfully.',
             );
     }
 }
