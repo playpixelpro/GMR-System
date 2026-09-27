@@ -7,7 +7,9 @@ use App\Models\Branch;
 use App\Models\Pile;
 use App\Models\PmrRecord;
 use App\Models\Warehouse;
+use App\Services\EmrExportService;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\URL;
@@ -16,6 +18,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EmrDashboardController extends Controller
 {
+    public function __construct(
+        protected EmrExportService $exportService,
+    ) {}
+
     /**
      * Display the Expected Milling Recovery dashboard.
      */
@@ -97,6 +103,42 @@ class EmrDashboardController extends Controller
                 'Content-Type' => 'text/csv; charset=UTF-8',
             ],
         );
+    }
+
+    /**
+     * Export the currently filtered dashboard rows as Excel.
+     */
+    public function exportExcel(Request $request): StreamedResponse
+    {
+        $filters = $this->filters($request);
+        $rows = $this->rows($filters);
+        $filterNames = $this->filterNames($filters);
+
+        return $this->exportService->exportExcel($rows, $filterNames);
+    }
+
+    /**
+     * Download the currently filtered dashboard rows as PDF.
+     */
+    public function exportPdf(Request $request): Response
+    {
+        $filters = $this->filters($request);
+        $rows = $this->rows($filters);
+        $filterNames = $this->filterNames($filters);
+
+        return $this->exportService->exportPdf($rows, $filterNames);
+    }
+
+    /**
+     * @param  array{branch_id: ?int, warehouse_id: ?int}  $filters
+     * @return array{branch: ?string, warehouse: ?string}
+     */
+    private function filterNames(array $filters): array
+    {
+        return [
+            'branch' => $filters['branch_id'] ? Branch::find($filters['branch_id'])?->name : null,
+            'warehouse' => $filters['warehouse_id'] ? Warehouse::find($filters['warehouse_id'])?->name : null,
+        ];
     }
 
     /**

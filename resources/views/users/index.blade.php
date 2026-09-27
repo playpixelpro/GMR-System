@@ -341,7 +341,7 @@
                     </div>
                 </div>
 
-                <div class="rounded-lg bg-warning/10 p-3 text-xs text-warning-content border border-warning/20 flex items-start gap-2">
+                <div class="rounded-lg bg-warning/10 p-3 text-xs text-black border border-warning/20 flex items-start gap-2">
                     <span class="icon-[tabler--shield-lock] size-4 shrink-0 mt-0.5 text-warning"></span>
                     <div>
                         <strong>Notice:</strong> The user is required to change this temporary password upon their first login before they can access the system.

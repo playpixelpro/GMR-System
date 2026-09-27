@@ -13,42 +13,42 @@ use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {
-    Route::get('/login', [AuthController::class, 'showLoginForm'])->name(
+    Route::get('/login', [AuthController::class, 'create'])->name(
         'login',
     );
-    Route::post('/login', [AuthController::class, 'login'])->name(
+    Route::post('/login', [AuthController::class, 'store'])->name(
         'login.submit',
     );
 
     Route::get('/forgot-password', [
         AuthController::class,
-        'showForgotPasswordForm',
+        'requestReset',
     ])->name('password.request');
     Route::post('/forgot-password', [
         AuthController::class,
-        'sendResetLinkEmail',
+        'sendReset',
     ])->name('password.email');
 
     Route::get('/reset-password/{token}', [
         AuthController::class,
-        'showResetPasswordForm',
+        'editReset',
     ])->name('password.reset');
     Route::post('/reset-password', [
         AuthController::class,
-        'resetPassword',
+        'updateReset',
     ])->name('password.update');
 });
 
 Route::middleware('auth')->group(function (): void {
-    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
 
     Route::get('/change-password', [
         AuthController::class,
-        'showChangePasswordForm',
+        'editPassword',
     ])->name('password.change');
     Route::post('/change-password', [
         AuthController::class,
-        'changePassword',
+        'updatePassword',
     ])->name('password.change.submit');
 
     Route::get('/profile', [UserController::class, 'profile'])->name('profile.edit');
@@ -68,26 +68,30 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/users', [UserController::class, 'store'])->name(
             'users.store',
         );
-        Route::patch('/users/{user}/role', [
-            UserController::class,
-            'updateRole',
-        ])->name('users.update-role');
-        Route::patch('/users/{user}/status', [
-            UserController::class,
-            'updateStatus',
-        ])->name('users.update-status');
         Route::delete('/users/{user}', [
             UserController::class,
             'destroy',
         ])->name('users.destroy');
-        Route::post('/users/{user}/generate-temp-password', [
+        Route::post('/users/{user}/disable', [
             UserController::class,
-            'generateTemporaryPassword',
-        ])->name('users.generate-temp-password');
-        Route::patch('/users/{user}/edit-mode', [
+            'disable',
+        ])->name('users.disable');
+        Route::post('/users/{user}/reset-password', [
             UserController::class,
-            'updateEditMode',
-        ])->name('users.update-edit-mode');
+            'resetPassword',
+        ])->name('users.reset-password');
+        Route::post('/users/{user}/unlock-edit', [
+            UserController::class,
+            'unlockEdit',
+        ])->name('users.unlock-edit');
+        Route::post('/users/{user}/lock-edit', [
+            UserController::class,
+            'lockEdit',
+        ])->name('users.lock-edit');
+        Route::post('/users/{user}/reset-edit-mode', [
+            UserController::class,
+            'resetEditMode',
+        ])->name('users.reset-edit-mode');
     });
 });
 
@@ -170,7 +174,15 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
     Route::get('/emr/dashboard/export', [
         EmrDashboardController::class,
         'export',
-    ])->name('emr.export');
+    ])->name('emr.export')->middleware('can:export-emr-report');
+    Route::get('/emr/dashboard/export/excel', [
+        EmrDashboardController::class,
+        'exportExcel',
+    ])->name('emr.export.excel')->middleware('can:export-emr-report');
+    Route::get('/emr/dashboard/export/pdf', [
+        EmrDashboardController::class,
+        'exportPdf',
+    ])->name('emr.export.pdf')->middleware('can:export-emr-report');
 
     // GMR Report Configuration (RMEC / Administrator only)
     Route::get('/gmr/config', [GmrReportConfigController::class, 'edit'])->name('gmr.config.edit');
@@ -182,8 +194,8 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
     Route::delete('/gmr/config/signatories/{signatory}', [GmrReportConfigController::class, 'destroySignatory'])->name('gmr.config.signatories.destroy');
     Route::patch('/gmr/config/signatories/{signatory}/toggle', [GmrReportConfigController::class, 'toggleSignatory'])->name('gmr.config.signatories.toggle');
 
-    // GMR Report Print & Selection (ARMIC / general report print)
-    Route::match(['get', 'post'], '/gmr/report/print', [GmrReportPrintController::class, 'print'])->name('gmr.report.print');
+    // GMR Report Print & Selection (restricted — Staff cannot print the GMR report)
+    Route::match(['get', 'post'], '/gmr/report/print', [GmrReportPrintController::class, 'print'])->name('gmr.report.print')->middleware('can:print-gmr-report');
 
     Route::redirect('/amr', '/amr/report');
     Route::redirect('/reports/amr', '/amr/report');

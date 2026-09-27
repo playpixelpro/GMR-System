@@ -47,7 +47,32 @@
         </div>
 
         <div class="flex items-center gap-3">
-            <span class="badge badge-soft badge-primary text-xs font-medium hidden sm:inline-flex">GMR System</span>
+            <div class="dropdown relative inline-flex [--placement:bottom-end] [--offset:4]">
+                <button type="button" class="dropdown-toggle flex items-center gap-2 rounded-full py-1 pl-1 pr-2 transition-colors hover:bg-base-200" aria-haspopup="menu" aria-expanded="false" aria-label="Profile menu">
+                    <span class="hidden sm:inline text-sm font-medium text-base-content">Hello, {{ auth()->user()->name }}</span>
+                    @if (auth()->user()->profile_photo_path)
+                        <img src="{{ Storage::disk('public')->url(auth()->user()->profile_photo_path) }}" alt="{{ auth()->user()->name }}" class="size-8 rounded-full object-cover">
+                    @else
+                        <span class="grid size-8 place-items-center rounded-full bg-primary text-sm font-semibold text-primary-content">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
+                    @endif
+                    <span class="icon-[tabler--chevron-down] dropdown-open:rotate-180 size-4 text-base-content/50"></span>
+                </button>
+                <ul class="dropdown-menu dropdown-open:opacity-100 hidden mt-2 min-w-44 rounded-box shadow-lg shadow-base-300/30" role="menu" aria-orientation="vertical">
+                    <li>
+                        <a href="{{ route('profile.edit') }}" class="flex items-center gap-2">
+                            <span class="icon-[tabler--user-cog] size-4"></span>Edit Profile
+                        </a>
+                    </li>
+                    <li>
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit" class="flex w-full items-center gap-2 text-error">
+                                <span class="icon-[tabler--logout] size-4"></span>Logout
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
         </div>
     </header>
 

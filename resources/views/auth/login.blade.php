@@ -16,7 +16,7 @@
         <div class="mb-4 alert alert-error">{{ $errors->first() }}</div>
     @endif
 
-    <form method="POST" action="{{ route('login.store') }}" class="space-y-4">
+    <form method="POST" action="{{ route('login.submit') }}" class="space-y-4">
         @csrf
 
         <label class="block">

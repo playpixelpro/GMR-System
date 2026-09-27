@@ -14,13 +14,17 @@
         <h1 class="text-2xl font-bold leading-tight text-black sm:text-3xl">Expected Milling Recovery (EMR) Dashboard</h1>
         <p class="mt-2 text-sm leading-6 text-black">Summary of Expected Milling Recovery by Branch, Warehouse, and Pile</p>
     </div>
-    <div class="flex gap-2">
-        <a href="{{ route('emr.export', request()->query()) }}" class="btn btn-primary btn-sm">
-            <span class="icon-[tabler--download] size-4"></span> Export
-        </a>
-        <button type="button" class="btn btn-outline btn-sm" onclick="window.print()">
-            <span class="icon-[tabler--printer] size-4"></span> Print
-        </button>
+    <div class="flex flex-wrap items-center gap-2">
+        @if (auth()->user()?->hasRole('RMEC', 'ADMINISTRATOR'))
+            <a href="{{ route('emr.export.excel', request()->query()) }}" class="btn btn-outline btn-success btn-sm" title="Export EMR report to Excel (.xlsx)">
+                <span class="icon-[tabler--file-spreadsheet] size-4"></span>
+                Excel Export
+            </a>
+            <a href="{{ route('emr.export.pdf', request()->query()) }}" class="btn btn-outline btn-error btn-sm" title="Download EMR report as PDF">
+                <span class="icon-[tabler--file-type-pdf] size-4"></span>
+                PDF Download
+            </a>
+        @endif
     </div>
 </div>
 

@@ -53,9 +53,9 @@
 
 <div class="card w-full shadow-sm border border-base-content/10 bg-base-100 overflow-hidden">
   <div class="w-full overflow-x-auto">
-    <table class="table table-xs w-full text-xs">
+    <table class="table table-sm w-full text-sm">
       <thead>
-        <tr class="bg-base-200/60 text-base-content border-b border-base-content/15 text-[11px] font-semibold uppercase tracking-wider">
+        <tr class="bg-base-200/60 text-base-content border-b border-base-content/15 text-xs font-semibold uppercase tracking-wider">
           <th class="w-8 text-center px-2 py-2">NO.</th>
           <th class="px-2.5 py-2">BRANCH</th>
           <th class="px-2.5 py-2">WAREHOUSE NAME</th>
@@ -151,35 +151,35 @@
               <td rowspan="{{ $maxTrials }}" class="text-end font-mono align-middle border-e border-base-content/10 px-2.5 py-1">
                 <div class="flex flex-col items-end">
                   <span class="font-medium text-base-content">{{ $mean !== null ? number_format($mean, 2) : '—' }}</span>
-                  <span class="text-[10px] text-base-content/60">{{ $stdDev !== null ? 's = '.number_format($stdDev, 2) : '—' }}</span>
+                  <span class="text-xs text-base-content/60">{{ $stdDev !== null ? 's = '.number_format($stdDev, 2) : '—' }}</span>
                 </div>
               </td>
               <td rowspan="{{ $maxTrials }}" class="text-end font-mono align-middle border-e border-base-content/10 px-2.5 py-1">
                 <div class="flex flex-col items-end gap-0.5">
                   @if (! $hasPmrTrials)
                     <span class="font-medium text-base-content/50" title="No PMR trials recorded yet">—</span>
-                    <span class="text-[10px] text-base-content/50">0/3 trials</span>
+                    <span class="text-xs text-base-content/50">0/3 trials</span>
                   @elseif ($calculation->isHistoricalLegacy())
                     <span class="font-bold text-base-content/60 line-through" title="Historical legacy PMR ({{ count($calculation->trials) }} trials). Re-establishment required.">
                       {{ $mean !== null ? number_format($mean, 2).'%' : '—' }}
                     </span>
-                    <span class="badge badge-soft badge-neutral text-[10px] px-1 py-0 uppercase">Historical</span>
+                    <span class="badge badge-soft badge-neutral text-xs px-1 py-0 uppercase">Historical</span>
                   @elseif ($calculation->isValid)
                     <span class="font-bold text-primary text-sm" title="Recommended PMR of {{ $calculation->getFormattedPmrRate() }} computed from {{ $calculation->validTrialCount }} valid trials (CV: {{ $calculation->getFormattedCv() }})">
                       {{ $calculation->getFormattedPmrRate() }}
                     </span>
-                    <span class="text-[10px] text-primary/80 font-mono">CV {{ $calculation->getFormattedCv() }}</span>
+                    <span class="text-xs text-primary/80 font-mono">CV {{ $calculation->getFormattedCv() }}</span>
                   @elseif ($calculation->isIncomplete())
                     <span class="font-medium text-base-content/50" title="{{ $calculation->statusMessage }}">—</span>
-                    <span class="text-[10px] text-base-content/50">{{ count($calculation->trials) }}/3 trials</span>
+                    <span class="text-xs text-base-content/50">{{ count($calculation->trials) }}/3 trials</span>
                   @else
                     <span class="font-medium text-secondary" title="{{ $calculation->statusMessage }}">Invalid</span>
-                    <span class="text-[10px] text-secondary font-mono">{{ $calculation->isInvalidCv() ? 'CV > 5%' : 'Outliers' }}</span>
+                    <span class="text-xs text-secondary font-mono">{{ $calculation->isInvalidCv() ? 'CV > 5%' : 'Outliers' }}</span>
                   @endif
 
                   {{-- Trigger for computation breakdown modal --}}
                   <a href="javascript:void(0)"
-                     class="inline-flex items-center gap-1 text-[10px] text-primary bg-transparent hover:bg-primary/10 rounded px-1.5 py-0.5 mt-0.5 font-normal cursor-pointer"
+                     class="inline-flex items-center gap-1 text-xs text-primary bg-transparent hover:bg-primary/10 rounded px-1.5 py-0.5 mt-0.5 font-normal cursor-pointer"
                      data-open-modal="#{{ $modalId }}"
                      data-overlay="#{{ $modalId }}"
                      aria-haspopup="dialog"
@@ -194,13 +194,13 @@
               <td rowspan="{{ $maxTrials }}" class="text-center align-middle border-e border-base-content/10 px-2 py-1">
                 <div class="flex flex-col items-center gap-1">
                   @if (! $hasPmrTrials)
-                    <span class="badge badge-soft badge-neutral text-[11px] font-medium px-2 py-0.5 whitespace-nowrap"
+                    <span class="badge badge-soft badge-neutral text-xs font-medium px-2 py-0.5 whitespace-nowrap"
                           title="No PMR trials recorded yet. 3 laboratory test milling trials required.">
                       <span class="icon-[tabler--clock] size-3.5 mr-1"></span>
                       Pending PMR Trials (0/3)
                     </span>
                   @elseif ($calculation->isHistoricalLegacy())
-                    <span class="badge badge-soft badge-neutral text-[11px] font-medium px-1.5 py-0.5 whitespace-nowrap"
+                    <span class="badge badge-soft badge-neutral text-xs font-medium px-1.5 py-0.5 whitespace-nowrap"
                           title="Recorded with {{ count($calculation->trials) }} trials. Must be re-established under current 3-trial guidelines.">
                       Historical Legacy
                     </span>
@@ -211,31 +211,31 @@
                     @endphp
 
                     @if ($reest['is_pmr_below_60'])
-                      <span class="badge badge-soft badge-secondary text-[11px] font-medium px-1.5 py-0.5 whitespace-nowrap"
+                      <span class="badge badge-soft badge-secondary text-xs font-medium px-1.5 py-0.5 whitespace-nowrap"
                             title="PMR ({{ number_format($pmrRateValue, 2) }}%) is 60.0% or below. Requires re-establishment.">
                         Lower than 60%
                       </span>
                     @endif
                     @if ($reest['is_pmr_below_amr'])
-                      <span class="badge badge-soft badge-secondary text-[11px] font-medium px-1.5 py-0.5 whitespace-nowrap"
+                      <span class="badge badge-soft badge-secondary text-xs font-medium px-1.5 py-0.5 whitespace-nowrap"
                             title="PMR ({{ number_format($pmrRateValue, 2) }}%) is lower than AMR ({{ number_format($amrRateValue, 2) }}%). Requires re-establishment.">
                         PMR lower than AMR
                       </span>
                     @endif
                     @if ($reest['is_amr_divergent_from_pmr'])
-                      <span class="badge badge-soft badge-secondary text-[11px] font-medium px-1.5 py-0.5 whitespace-nowrap"
+                      <span class="badge badge-soft badge-secondary text-xs font-medium px-1.5 py-0.5 whitespace-nowrap"
                             title="AMR is less than PMR by more than 3 percentage points (difference: {{ number_format($reest['difference'], 2) }}%). Requires re-establishment.">
                         AMR &lt; PMR by &gt;3%
                       </span>
                     @endif
                     @if ($calculation->isInvalid() && ! $calculation->isHistoricalLegacy())
-                      <span class="badge badge-soft badge-secondary text-[11px] font-medium px-1.5 py-0.5 whitespace-nowrap"
+                      <span class="badge badge-soft badge-secondary text-xs font-medium px-1.5 py-0.5 whitespace-nowrap"
                             title="{{ $calculation->statusMessage }}">
                         {{ $calculation->isInvalidCv() ? 'CV > 5%' : 'Outlier Failure' }}
                       </span>
                     @endif
                     @if ($isPmrOk)
-                      <span class="badge badge-soft badge-primary text-[11px] font-medium px-1.5 py-0.5 whitespace-nowrap"
+                      <span class="badge badge-soft badge-primary text-xs font-medium px-1.5 py-0.5 whitespace-nowrap"
                             title="PMR ({{ number_format($pmrRateValue, 2) }}%) meets all NFA requirements">
                         OK
                       </span>
@@ -253,63 +253,72 @@
                         default => 'badge-primary',
                       };
                     @endphp
-                    <span class="badge badge-soft {{ $badgeClass }} text-[10px] uppercase px-1.5 py-0.5">{{ $pile->pmr_status }}</span>
+                    <span class="badge badge-soft {{ $badgeClass }} text-xs uppercase px-1.5 py-0.5">{{ $pile->pmr_status }}</span>
                   @endif
                 </div>
               </td>
               <td rowspan="{{ $maxTrials }}" class="align-middle text-center px-2 py-1">
                 <div class="flex items-center justify-center gap-1">
-                  @if (! $hasPmrTrials)
+                  @if ($pile && in_array($pile->pmr_status, ['recommended', 'retest', 'rejected'], true))
+                    {{-- File already tagged by RMEC/Admin (recommended/retest): no action available --}}
+                  @elseif (! $hasPmrTrials)
                     <a href="{{ route('records.create', ['type' => 'pmr', 'pile_id' => $pile?->id]) }}"
                        class="btn btn-secondary btn-xs inline-flex items-center gap-1"
                        title="Add PMR Trials for this Pile">
                       <span class="icon-[tabler--plus] size-3.5"></span>
                       <span>Add Trials</span>
                     </a>
-                  @endif
-
-                  @php
-                    $reestablishment = app(\App\Services\PmrCalculationService::class)->evaluateReestablishment($pmrRateValue, $amrRateValue);
-                    $pmrCanRecommend = $calculation->isValid && ! $reestablishment['requires_reestablishment'];
-                    $pmrNeedsRetest = $calculation->isInvalid() || $calculation->isHistoricalLegacy() || ($calculation->isValid && $reestablishment['requires_reestablishment']);
-                  @endphp
-                  @if ($pile && $hasPmrTrials && (in_array($pile->pmr_status, [null, 'pending'], true) || ($pile->pmr_status === 'recommended' && $pmrNeedsRetest)))
-                    <div class="dropdown relative inline-flex [--placement:bottom-end]">
-                      <button id="pmr-actions-{{ $pile->id }}" type="button" class="dropdown-toggle btn btn-primary btn-xs inline-flex items-center gap-1 cursor-pointer" aria-haspopup="menu" aria-expanded="false" aria-label="PMR actions" title="Choose PMR action">
-                        <span class="icon-[tabler--check] size-3.5"></span>
-                        <span>Actions</span>
-                      </button>
-                      <ul class="dropdown-menu dropdown-open:opacity-100 hidden min-w-36 shadow-md" role="menu" aria-labelledby="pmr-actions-{{ $pile->id }}">
-                        @php
-                          $statusActions = $pmrCanRecommend
-                            ? [
-                                'recommend' => ['label' => 'Recommend', 'icon' => 'icon-[tabler--thumb-up]', 'color' => 'text-primary'],
-                                'retest' => ['label' => 'Retest', 'icon' => 'icon-[tabler--refresh]', 'color' => 'text-secondary'],
-                              ]
-                            : ($pmrNeedsRetest
+                  @elseif (auth()->user()?->hasRole('STAFF'))
+                    <a href="{{ route('records.create', ['type' => 'pmr', 'pile_id' => $pile?->id]) }}"
+                       class="btn btn-outline btn-primary btn-xs inline-flex items-center gap-1"
+                       title="Edit PMR trials for this Pile">
+                      <span class="icon-[tabler--pencil] size-3.5"></span>
+                      <span>Edit</span>
+                    </a>
+                  @else
+                    @php
+                      $reestablishment = app(\App\Services\PmrCalculationService::class)->evaluateReestablishment($pmrRateValue, $amrRateValue);
+                      $pmrCanRecommend = $calculation->isValid && ! $reestablishment['requires_reestablishment'];
+                      $pmrNeedsRetest = $calculation->isInvalid() || $calculation->isHistoricalLegacy() || ($calculation->isValid && $reestablishment['requires_reestablishment']);
+                    @endphp
+                    @if ($pile && (in_array($pile->pmr_status, [null, 'pending'], true) || ($pile->pmr_status === 'recommended' && $pmrNeedsRetest)))
+                      <div class="dropdown relative inline-flex [--placement:bottom-end]">
+                        <button id="pmr-actions-{{ $pile->id }}" type="button" class="dropdown-toggle btn btn-primary btn-xs inline-flex items-center gap-1 cursor-pointer" aria-haspopup="menu" aria-expanded="false" aria-label="PMR actions" title="Choose PMR action">
+                          <span class="icon-[tabler--check] size-3.5"></span>
+                          <span>Actions</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-open:opacity-100 hidden min-w-36 shadow-md" role="menu" aria-labelledby="pmr-actions-{{ $pile->id }}">
+                          @php
+                            $statusActions = $pmrCanRecommend
                               ? [
+                                  'recommend' => ['label' => 'Recommend', 'icon' => 'icon-[tabler--thumb-up]', 'color' => 'text-primary'],
                                   'retest' => ['label' => 'Retest', 'icon' => 'icon-[tabler--refresh]', 'color' => 'text-secondary'],
                                 ]
-                              : []);
-                        @endphp
-                        @if ($statusActions)
-                          @foreach ($statusActions as $action => $opt)
-                            <li>
-                              <form method="POST" action="{{ route('piles.status', $pile) }}">
-                                @csrf
-                                <input type="hidden" name="form_type" value="pmr">
-                                <button type="submit" name="action" value="{{ $action }}" class="dropdown-item w-full {{ $opt['color'] }} cursor-pointer">
-                                  <span class="{{ $opt['icon'] }} size-4"></span>
-                                  {{ $opt['label'] }}
-                                </button>
-                              </form>
-                            </li>
-                          @endforeach
-                        @else
-                          <li class="dropdown-item text-base-content/60">Complete 3 trials first</li>
-                        @endif
-                      </ul>
-                    </div>
+                              : ($pmrNeedsRetest
+                                ? [
+                                    'retest' => ['label' => 'Retest', 'icon' => 'icon-[tabler--refresh]', 'color' => 'text-secondary'],
+                                  ]
+                                : []);
+                          @endphp
+                          @if ($statusActions)
+                            @foreach ($statusActions as $action => $opt)
+                              <li>
+                                <form method="POST" action="{{ route('piles.status', $pile) }}">
+                                  @csrf
+                                  <input type="hidden" name="form_type" value="pmr">
+                                  <button type="submit" name="action" value="{{ $action }}" class="dropdown-item w-full {{ $opt['color'] }} cursor-pointer">
+                                    <span class="{{ $opt['icon'] }} size-4"></span>
+                                    {{ $opt['label'] }}
+                                  </button>
+                                </form>
+                              </li>
+                            @endforeach
+                          @else
+                            <li class="dropdown-item text-base-content/60">Complete 3 trials first</li>
+                          @endif
+                        </ul>
+                      </div>
+                    @endif
                   @endif
                 </div>
               </td>
@@ -352,7 +361,7 @@
        tabindex="-1"
        aria-modal="true"
        aria-labelledby="{{ $modalId }}-title">
-    <div class="relative w-full max-w-xl rounded-xl border border-base-content/15 bg-base-100 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col my-auto">
+    <div class="relative w-full max-w-3xl rounded-xl border border-base-content/15 bg-base-100 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col my-auto">
 
       <!-- Modal Header -->
       <div class="flex items-center justify-between border-b border-base-content/10 px-4 py-3 bg-base-200/50 shrink-0">
@@ -361,13 +370,13 @@
             <span class="icon-[tabler--calculator] size-4.5 text-primary"></span>
             PMR Computation Breakdown (3 Trials - NFA Rules)
           </h3>
-          <p class="text-[11px] text-base-content/60 mt-0.5">
+          <p class="text-xs text-base-content/60 mt-0.5">
             Warehouse: <span class="font-medium text-base-content">{{ $warehouseName }}</span> •
             Pile: <span class="font-medium text-base-content">{{ $pileNumber }}</span> •
             Variety: <span class="font-medium text-base-content">{{ $variety }}</span>
           </p>
           @if ($pile?->pmr_status)
-            <p class="text-[11px] text-base-content/60 mt-1">
+            <p class="text-xs text-base-content/60 mt-1">
               Pile status: <span class="font-semibold uppercase text-secondary">{{ $pile->pmr_status }}</span>
             </p>
           @endif
@@ -388,7 +397,7 @@
             <span class="icon-[tabler--clock] size-4.5 text-base-content/60 shrink-0"></span>
             <div>
               <p class="font-semibold text-base-content">Pending PMR Trials (0/3)</p>
-              <p class="text-base-content/70 text-[11px] mt-0.5">No laboratory milling trials have been entered yet for this pile. Exactly 3 laboratory milling trials are required to establish the PMR.</p>
+              <p class="text-base-content/70 text-xs mt-0.5">No laboratory milling trials have been entered yet for this pile. Exactly 3 laboratory milling trials are required to establish the PMR.</p>
             </div>
           </div>
         @elseif ($calculation->isHistoricalLegacy())
@@ -396,7 +405,7 @@
             <span class="icon-[tabler--history] size-4.5 text-base-content/70 shrink-0"></span>
             <div>
               <p class="font-semibold text-base-content">Historical Legacy Record ({{ count($calculation->trials) }} Trials)</p>
-              <p class="text-base-content/70 text-[11px] mt-0.5">This PMR was recorded under a legacy requirement. Under current NFA guidelines, PMR requires 3 laboratory milling trials and must be re-established.</p>
+              <p class="text-base-content/70 text-xs mt-0.5">This PMR was recorded under a legacy requirement. Under current NFA guidelines, PMR requires 3 laboratory milling trials and must be re-established.</p>
             </div>
           </div>
         @elseif ($calculation->isValid)
@@ -404,7 +413,7 @@
             <span class="icon-[tabler--circle-check] size-4.5 text-primary shrink-0"></span>
             <div>
               <p class="font-semibold text-primary">Recommended PMR: {{ $calculation->getFormattedPmrRate() }}</p>
-              <p class="text-base-content/70 text-[11px] mt-0.5">{{ $calculation->statusMessage }}</p>
+              <p class="text-base-content/70 text-xs mt-0.5">{{ $calculation->statusMessage }}</p>
             </div>
           </div>
         @elseif ($calculation->isInvalid())
@@ -412,7 +421,7 @@
             <span class="icon-[tabler--alert-triangle] size-4.5 text-secondary shrink-0"></span>
             <div>
               <p class="font-semibold text-secondary">Retest Required: {{ $calculation->outlierCount }} Outliers / Rule Failure</p>
-              <p class="text-base-content/70 text-[11px] mt-0.5">{{ $calculation->statusMessage }}</p>
+              <p class="text-base-content/70 text-xs mt-0.5">{{ $calculation->statusMessage }}</p>
             </div>
           </div>
         @else
@@ -420,39 +429,39 @@
             <span class="icon-[tabler--clock] size-4.5 text-base-content/60 shrink-0"></span>
             <div>
               <p class="font-semibold text-base-content">Calculation Incomplete</p>
-              <p class="text-base-content/70 text-[11px] mt-0.5">{{ $calculation->statusMessage }}</p>
+              <p class="text-base-content/70 text-xs mt-0.5">{{ $calculation->statusMessage }}</p>
             </div>
           </div>
         @endif
 
         {{-- Statistical Boundary Cards (±2% of Median) --}}
         <div>
-          <h4 class="text-[11px] font-semibold uppercase tracking-wider text-base-content/60 mb-1.5">1. Outlier Boundary Parameters (±2% of Median)</h4>
+          <h4 class="text-xs font-semibold uppercase tracking-wider text-base-content/60 mb-1.5">1. Outlier Boundary Parameters (±2% of Median)</h4>
           <div class="grid grid-cols-3 gap-2">
             <div class="bg-base-200/50 p-2 rounded-lg border border-base-content/10 text-center">
-              <span class="text-[10px] text-base-content/60 block">Median Recovery</span>
+              <span class="text-xs text-base-content/60 block">Median Recovery</span>
               <span class="text-sm font-mono font-bold text-base-content mt-0.5 block">{{ $calculation->getFormattedMedian() }}</span>
-              <span class="text-[9px] text-base-content/50 block">Middle trial rate</span>
+              <span class="text-xs text-base-content/50 block">Middle trial rate</span>
             </div>
             <div class="bg-base-200/50 p-2 rounded-lg border border-base-content/10 text-center">
-              <span class="text-[10px] text-base-content/60 block">Lower Limit (-2%)</span>
+              <span class="text-xs text-base-content/60 block">Lower Limit (-2%)</span>
               <span class="text-sm font-mono font-bold text-base-content mt-0.5 block">{{ $calculation->getFormattedLowerLimit() }}</span>
-              <span class="text-[9px] text-base-content/50 block">Median Ã— 0.98</span>
+              <span class="text-xs text-base-content/50 block">Median Ã— 0.98</span>
             </div>
             <div class="bg-base-200/50 p-2 rounded-lg border border-base-content/10 text-center">
-              <span class="text-[10px] text-base-content/60 block">Upper Limit (+2%)</span>
+              <span class="text-xs text-base-content/60 block">Upper Limit (+2%)</span>
               <span class="text-sm font-mono font-bold text-base-content mt-0.5 block">{{ $calculation->getFormattedUpperLimit() }}</span>
-              <span class="text-[9px] text-base-content/50 block">Median Ã— 1.02</span>
+              <span class="text-xs text-base-content/50 block">Median Ã— 1.02</span>
             </div>
           </div>
         </div>
 
         {{-- Trials Analysis Table --}}
         <div>
-          <h4 class="text-[11px] font-semibold uppercase tracking-wider text-base-content/60 mb-1.5">2. Laboratory Trial Evaluation &amp; Outlier Status</h4>
+          <h4 class="text-xs font-semibold uppercase tracking-wider text-base-content/60 mb-1.5">2. Laboratory Trial Evaluation &amp; Outlier Status</h4>
           <div class="overflow-x-auto border border-base-content/10 rounded-lg">
-            <table class="table table-xs w-full text-xs">
-              <thead class="bg-base-200/60 text-[10px] uppercase font-semibold text-base-content">
+            <table class="table table-sm w-full text-sm">
+              <thead class="bg-base-200/60 text-xs uppercase font-semibold text-base-content">
                 <tr>
                   <th class="py-1 px-2">Trial</th>
                   <th class="text-end py-1 px-2">Palay Input (g/kg)</th>
@@ -470,17 +479,17 @@
                     <td class="text-end font-mono font-semibold py-1 px-2 text-primary">{{ number_format($trialRow['milling_recovery'], 2) }}%</td>
                     <td class="text-center py-1 px-2">
                       @if ($trialRow['status'] === 'VALID')
-                        <span class="badge badge-soft badge-primary text-[10px] font-medium inline-flex items-center gap-1 py-0 px-1.5">
+                        <span class="badge badge-soft badge-primary text-xs font-medium inline-flex items-center gap-1 py-0 px-1.5">
                           <span class="icon-[tabler--check] size-3"></span>
                           VALID
                         </span>
                       @elseif ($trialRow['status'] === 'OUTLIER')
-                        <span class="badge badge-soft badge-secondary text-[10px] font-medium inline-flex items-center gap-1 py-0 px-1.5">
+                        <span class="badge badge-soft badge-secondary text-xs font-medium inline-flex items-center gap-1 py-0 px-1.5">
                           <span class="icon-[tabler--alert-circle] size-3"></span>
                           OUTLIER (Excluded)
                         </span>
                       @else
-                        <span class="badge badge-soft badge-neutral text-[10px] font-medium py-0 px-1.5">PENDING</span>
+                        <span class="badge badge-soft badge-neutral text-xs font-medium py-0 px-1.5">PENDING</span>
                       @endif
                     </td>
                   </tr>
@@ -492,49 +501,49 @@
               </tbody>
             </table>
           </div>
-          <p class="text-[10px] text-base-content/60 mt-1">
+          <p class="text-xs text-base-content/60 mt-1">
             * PMR uses 3 laboratory milling trials. Outliers falling outside the ±2% limits are excluded from the PMR calculation, but preserved in the record.
           </p>
         </div>
 
         {{-- Statistical Quality Check (Coefficient of Variation) --}}
         <div>
-          <h4 class="text-[11px] font-semibold uppercase tracking-wider text-base-content/60 mb-1.5">3. Statistical Quality Check (CV Rule: CV ≤ 5.00%)</h4>
+          <h4 class="text-xs font-semibold uppercase tracking-wider text-base-content/60 mb-1.5">3. Statistical Quality Check (CV Rule: CV ≤ 5.00%)</h4>
           <div class="bg-base-200/40 p-2.5 rounded-lg border border-base-content/10 space-y-2">
             <div class="grid grid-cols-3 gap-2 text-center">
               <div class="bg-base-100 p-2 rounded border border-base-content/10">
-                <span class="text-[10px] text-base-content/60 block">Valid Mean</span>
+                <span class="text-xs text-base-content/60 block">Valid Mean</span>
                 <span class="text-sm font-mono font-bold text-base-content mt-0.5 block">{{ $calculation->getFormattedMean() }}</span>
-                <span class="text-[9px] text-base-content/50 block">Arithmetic mean</span>
+                <span class="text-xs text-base-content/50 block">Arithmetic mean</span>
               </div>
               <div class="bg-base-100 p-2 rounded border border-base-content/10">
-                <span class="text-[10px] text-base-content/60 block">Std Dev (s)</span>
+                <span class="text-xs text-base-content/60 block">Std Dev (s)</span>
                 <span class="text-sm font-mono font-bold text-base-content mt-0.5 block">{{ $calculation->getFormattedStandardDeviation() }}</span>
-                <span class="text-[9px] text-base-content/50 block">Sample SD (N-1)</span>
+                <span class="text-xs text-base-content/50 block">Sample SD (N-1)</span>
               </div>
               <div class="bg-base-100 p-2 rounded border border-base-content/10">
-                <span class="text-[10px] text-base-content/60 block">Coeff. of Variation</span>
+                <span class="text-xs text-base-content/60 block">Coeff. of Variation</span>
                 <span class="text-sm font-mono font-bold mt-0.5 block {{ $calculation->isCvValid ? 'text-primary' : ($calculation->coefficientOfVariation !== null ? 'text-secondary' : 'text-base-content') }}">
                   {{ $calculation->getFormattedCv() }}
                 </span>
-                <span class="text-[9px] text-base-content/50 block">(s / Mean) Ã— 100</span>
+                <span class="text-xs text-base-content/50 block">(s / Mean) Ã— 100</span>
               </div>
             </div>
 
-            <div class="flex items-center justify-between text-[11px] pt-1 border-t border-base-content/10">
+            <div class="flex items-center justify-between text-xs pt-1 border-t border-base-content/10">
               <span class="text-base-content/70">NFA Requirement: <strong class="text-base-content">CV ≤ 5.00%</strong></span>
               @if ($calculation->isCvValid)
-                <span class="badge badge-soft badge-primary text-[10px] font-semibold py-0.5 px-2">
+                <span class="badge badge-soft badge-primary text-xs font-semibold py-0.5 px-2">
                   <span class="icon-[tabler--circle-check] size-3.5 mr-1"></span>
                   PASSED (CV ≤ 5.00%)
                 </span>
               @elseif ($calculation->coefficientOfVariation !== null)
-                <span class="badge badge-soft badge-secondary text-[10px] font-semibold py-0.5 px-2">
+                <span class="badge badge-soft badge-secondary text-xs font-semibold py-0.5 px-2">
                   <span class="icon-[tabler--alert-circle] size-3.5 mr-1"></span>
                   FAILED (CV &gt; 5.00%)
                 </span>
               @else
-                <span class="badge badge-soft badge-neutral text-[10px] py-0.5 px-2">INSUFFICIENT DATA</span>
+                <span class="badge badge-soft badge-neutral text-xs py-0.5 px-2">INSUFFICIENT DATA</span>
               @endif
             </div>
           </div>
@@ -542,7 +551,7 @@
 
         {{-- Final PMR Calculation Result & Re-establishment Checks --}}
         <div class="bg-base-200/40 p-3 rounded-lg border border-base-content/10 space-y-2.5">
-          <h4 class="text-[11px] font-semibold uppercase tracking-wider text-base-content/60">4. Final PMR Establishment &amp; Re-establishment Criteria</h4>
+          <h4 class="text-xs font-semibold uppercase tracking-wider text-base-content/60">4. Final PMR Establishment &amp; Re-establishment Criteria</h4>
           <div class="flex items-center justify-between text-xs">
             <div>
               <p class="text-base-content/80">
@@ -551,35 +560,35 @@
                   <span class="text-secondary font-medium">({{ $calculation->outlierCount }} outlier excluded)</span>
                 @endif
               </p>
-              <p class="text-[11px] text-base-content/60">
+              <p class="text-xs text-base-content/60">
                 PMR = Arithmetic mean of valid laboratory milling results
               </p>
             </div>
             <div class="text-end">
-              <span class="text-[10px] text-base-content/60 block">Computed PMR</span>
+              <span class="text-xs text-base-content/60 block">Computed PMR</span>
               <span class="text-xl font-bold font-mono text-primary leading-tight">{{ $calculation->getFormattedPmrRate() }}</span>
             </div>
           </div>
 
-          <div class="pt-2 border-t border-base-content/10 space-y-2 text-[11px]">
+          <div class="pt-2 border-t border-base-content/10 space-y-2 text-xs">
             {{-- Check 1: 60.0% Benchmark --}}
             <div class="flex items-center justify-between">
               <div>
                 <span class="text-base-content/80 font-medium">Benchmark Rule (PMR &amp; AMR &gt; 60.0%):</span>
-                <p class="text-[10px] text-base-content/60">Flagged if PMR or AMR is 60.0% or below</p>
+                <p class="text-xs text-base-content/60">Flagged if PMR or AMR is 60.0% or below</p>
               </div>
               @if ($reestablishment['is_pmr_below_60'])
-                <span class="badge badge-soft badge-secondary text-[10px] font-semibold py-0.5 px-2">
+                <span class="badge badge-soft badge-secondary text-xs font-semibold py-0.5 px-2">
                   <span class="icon-[tabler--alert-circle] size-3.5 mr-1"></span>
                   PMR &le; 60.0% (Failed)
                 </span>
               @elseif ($pmrRateValue !== null)
-                <span class="badge badge-soft badge-primary text-[10px] font-semibold py-0.5 px-2">
+                <span class="badge badge-soft badge-primary text-xs font-semibold py-0.5 px-2">
                   <span class="icon-[tabler--circle-check] size-3.5 mr-1"></span>
                   OK (&gt; 60.0%)
                 </span>
               @else
-                <span class="badge badge-soft badge-neutral text-[10px] py-0.5 px-2">—</span>
+                <span class="badge badge-soft badge-neutral text-xs py-0.5 px-2">—</span>
               @endif
             </div>
 
@@ -588,20 +597,20 @@
               <div class="flex items-center justify-between">
                 <div>
                   <span class="text-base-content/80 font-medium">Recovery Relationship (PMR &ge; AMR):</span>
-                  <p class="text-[10px] text-base-content/60">AMR: {{ number_format($amrRateValue, 2) }}% • PMR: {{ $pmrRateValue !== null ? number_format($pmrRateValue, 2).'%' : '—' }}</p>
+                  <p class="text-xs text-base-content/60">AMR: {{ number_format($amrRateValue, 2) }}% • PMR: {{ $pmrRateValue !== null ? number_format($pmrRateValue, 2).'%' : '—' }}</p>
                 </div>
                 @if ($reestablishment['is_pmr_below_amr'])
-                  <span class="badge badge-soft badge-secondary text-[10px] font-semibold py-0.5 px-2">
+                  <span class="badge badge-soft badge-secondary text-xs font-semibold py-0.5 px-2">
                     <span class="icon-[tabler--alert-circle] size-3.5 mr-1"></span>
                     PMR &lt; AMR (Failed)
                   </span>
                 @elseif ($pmrRateValue !== null)
-                  <span class="badge badge-soft badge-primary text-[10px] font-semibold py-0.5 px-2">
+                  <span class="badge badge-soft badge-primary text-xs font-semibold py-0.5 px-2">
                     <span class="icon-[tabler--circle-check] size-3.5 mr-1"></span>
                     OK (PMR &ge; AMR)
                   </span>
                 @else
-                  <span class="badge badge-soft badge-neutral text-[10px] py-0.5 px-2">—</span>
+                  <span class="badge badge-soft badge-neutral text-xs py-0.5 px-2">—</span>
                 @endif
               </div>
 
@@ -612,20 +621,20 @@
                   @php
                     $diff = ($pmrRateValue !== null) ? round($pmrRateValue - $amrRateValue, 4) : null;
                   @endphp
-                  <p class="text-[10px] text-base-content/60">Spread (PMR - AMR): {{ $diff !== null ? number_format($diff, 2).' pts' : '—' }} (Max 3.0 pts)</p>
+                  <p class="text-xs text-base-content/60">Spread (PMR - AMR): {{ $diff !== null ? number_format($diff, 2).' pts' : '—' }} (Max 3.0 pts)</p>
                 </div>
                 @if ($reestablishment['is_amr_divergent_from_pmr'])
-                  <span class="badge badge-soft badge-secondary text-[10px] font-semibold py-0.5 px-2">
+                  <span class="badge badge-soft badge-secondary text-xs font-semibold py-0.5 px-2">
                     <span class="icon-[tabler--alert-circle] size-3.5 mr-1"></span>
                     AMR &lt; PMR by &gt; 3.0% (Failed)
                   </span>
                 @elseif ($pmrRateValue !== null)
-                  <span class="badge badge-soft badge-primary text-[10px] font-semibold py-0.5 px-2">
+                  <span class="badge badge-soft badge-primary text-xs font-semibold py-0.5 px-2">
                     <span class="icon-[tabler--circle-check] size-3.5 mr-1"></span>
                     OK (Spread &le; 3.0 pts)
                   </span>
                 @else
-                  <span class="badge badge-soft badge-neutral text-[10px] py-0.5 px-2">—</span>
+                  <span class="badge badge-soft badge-neutral text-xs py-0.5 px-2">—</span>
                 @endif
               </div>
             @endif
@@ -634,22 +643,22 @@
             <div class="pt-2 border-t border-base-content/10 flex items-center justify-between">
               <span class="font-semibold text-base-content">Re-establishment Status:</span>
               @if (! $hasPmrTrials)
-                <span class="badge badge-soft badge-neutral text-[11px] font-bold py-1 px-2.5">
+                <span class="badge badge-soft badge-neutral text-xs font-bold py-1 px-2.5">
                   <span class="icon-[tabler--clock] size-3.5 mr-1"></span>
                   PENDING PMR TRIALS (0/3)
                 </span>
               @elseif ($reestablishment['requires_reestablishment'])
-                <span class="badge badge-soft badge-secondary text-[11px] font-bold py-1 px-2.5">
+                <span class="badge badge-soft badge-secondary text-xs font-bold py-1 px-2.5">
                   <span class="icon-[tabler--refresh] size-3.5 mr-1"></span>
                   RE-ESTABLISHMENT REQUIRED
                 </span>
               @elseif ($calculation->isValid)
-                <span class="badge badge-soft badge-primary text-[11px] font-bold py-1 px-2.5">
+                <span class="badge badge-soft badge-primary text-xs font-bold py-1 px-2.5">
                   <span class="icon-[tabler--check] size-3.5 mr-1"></span>
                   ESTABLISHED / PASSED
                 </span>
               @else
-                <span class="badge badge-soft badge-neutral text-[11px] py-1 px-2.5">PENDING</span>
+                <span class="badge badge-soft badge-neutral text-xs py-1 px-2.5">PENDING</span>
               @endif
             </div>
           </div>

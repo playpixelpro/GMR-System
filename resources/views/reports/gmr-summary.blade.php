@@ -129,10 +129,12 @@
                         </select>
                     </div>
                     <span class="badge badge-neutral text-xs font-semibold" id="selection-counter">0 selected</span>
-                    <button type="submit" id="btn-print-report" class="btn btn-primary btn-sm gap-2" disabled>
-                        <span class="icon-[tabler--printer] size-4"></span>
-                        Print Report
-                    </button>
+                    @if (auth()->user()?->hasRole('RMEC', 'ADMINISTRATOR'))
+                        <button type="submit" id="btn-print-report" class="btn btn-primary btn-sm gap-2" disabled>
+                            <span class="icon-[tabler--printer] size-4"></span>
+                            Print Report
+                        </button>
+                    @endif
                     <span class="text-xs text-base-content/60">{{ $rows->count() }} total piles</span>
                 </div>
             </div>

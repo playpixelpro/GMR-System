@@ -15,22 +15,27 @@
 
     <form method="POST" action="{{ route('profile.update') }}" enctype="multipart/form-data" class="space-y-5 rounded-lg border border-base-content/10 bg-base-100 p-6">
         @csrf
-        @method('PUT')
+        @method('PATCH')
 
-        <div class="flex items-center gap-4">
-            @if ($user->profile_photo_path)
-                <img src="{{ Storage::disk('public')->url($user->profile_photo_path) }}" alt="Profile photo" class="size-20 rounded-full object-cover">
-            @else
-                <div class="grid size-20 place-items-center rounded-full bg-primary/10 text-2xl font-semibold text-primary" aria-label="Profile photo placeholder">
-                    {{ strtoupper(substr($user->name, 0, 1)) }}
-                </div>
-            @endif
-            <label class="form-control flex-1">
-                <span class="label-text mb-2 font-medium">Profile photo</span>
-                <input class="file-input file-input-bordered w-full" type="file" name="profile_photo" accept="image/jpeg,image/png,image/webp">
-                <span class="mt-1 text-xs text-base-content/60">JPG, PNG, or WebP; maximum 2 MB.</span>
-                @error('profile_photo') <span class="mt-1 text-sm text-error">{{ $message }}</span> @enderror
-            </label>
+        <div class="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+            <div class="relative">
+                <label for="profile-photo-input" class="group relative block size-24 cursor-pointer overflow-hidden rounded-full" aria-label="Upload profile photo">
+                    @if ($user->profile_photo_path)
+                        <img src="{{ Storage::disk('public')->url($user->profile_photo_path) }}" alt="Profile photo" class="size-full object-cover" data-profile-preview>
+                    @else
+                        <div class="grid size-full place-items-center bg-primary/10 text-3xl font-semibold text-primary" data-profile-preview aria-label="Profile photo placeholder">
+                            {{ strtoupper(substr($user->name, 0, 1)) }}
+                        </div>
+                    @endif
+                    <span class="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/30"></span>
+                    <span class="absolute bottom-0 right-0 grid size-8 place-items-center rounded-full border-2 border-base-100 bg-primary text-primary-content shadow">
+                        <span class="icon-[tabler--camera] size-4"></span>
+                    </span>
+                </label>
+                <p class="mt-2 text-center text-xs text-base-content/60">Click the camera to upload or change your photo</p>
+                @error('profile_photo') <p class="mt-1 text-sm text-error">{{ $message }}</p> @enderror
+            </div>
+            <input id="profile-photo-input" class="hidden" type="file" name="profile_photo" accept="image/jpeg,image/png,image/webp" data-profile-upload>
         </div>
 
         <label class="form-control">
@@ -93,4 +98,28 @@
         <button class="btn btn-primary" type="submit">Save profile</button>
     </form>
 </div>
+
+<script>
+    (function () {
+        const input = document.querySelector('[data-profile-upload]');
+        const wrapper = document.querySelector('[data-profile-preview]');
+        if (!input || !wrapper) return;
+
+        input.addEventListener('change', function () {
+            const file = input.files && input.files[0];
+            if (!file) return;
+
+            const url = URL.createObjectURL(file);
+            if (wrapper.tagName.toLowerCase() === 'img') {
+                wrapper.src = url;
+            } else {
+                const img = document.createElement('img');
+                img.src = url;
+                img.alt = 'Profile photo preview';
+                img.className = 'size-full object-cover';
+                wrapper.replaceWith(img);
+            }
+        });
+    })();
+</script>
 @endsection

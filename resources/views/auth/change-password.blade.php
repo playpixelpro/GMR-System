@@ -10,9 +10,8 @@
     <h1 class="text-2xl font-semibold">Change Password</h1>
     <p class="mt-2 text-sm">You must change your temporary password before continuing.</p>
     @if ($errors->any()) <div class="mt-4 alert alert-error">{{ $errors->first() }}</div> @endif
-    <form method="POST" action="{{ route('password.update') }}" class="mt-6 space-y-4">
+    <form method="POST" action="{{ route('password.change.submit') }}" class="mt-6 space-y-4">
         @csrf
-        @method('PUT')
         <label class="block">
             <span class="label-text mb-1 p-0 font-medium">New password</span>
             <div class="relative mt-1">

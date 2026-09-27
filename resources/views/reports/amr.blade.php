@@ -53,9 +53,9 @@
 
 <div class="card w-full shadow-sm border border-base-content/10 bg-base-100 overflow-hidden">
   <div class="w-full overflow-x-auto">
-    <table class="table table-xs w-full text-xs">
+    <table class="table table-sm w-full text-sm">
       <thead>
-        <tr class="bg-base-200/60 text-base-content border-b border-base-content/15 text-[11px] font-semibold uppercase tracking-wider">
+        <tr class="bg-base-200/60 text-base-content border-b border-base-content/15 text-xs font-semibold uppercase tracking-wider">
           <th class="w-8 text-center px-2 py-2">No.</th>
           <th class="px-2.5 py-2">Branch</th>
           <th class="px-2.5 py-2">Warehouse</th>
@@ -150,7 +150,7 @@
             @endif
 
             <td class="text-center align-middle px-2 py-1">
-              <span class="badge badge-soft badge-neutral text-[11px] font-semibold px-1.5 py-0.5">Trial {{ $trial }}</span>
+              <span class="badge badge-soft badge-neutral text-xs font-semibold px-1.5 py-0.5">Trial {{ $trial }}</span>
             </td>
             <td class="text-end font-mono align-middle px-2.5 py-1">
               {{ $record && $record->palay_input_kg !== null ? number_format((float) $record->palay_input_kg, 2) : '—' }}
@@ -208,33 +208,33 @@
                 @endphp
                 <div class="flex flex-col items-center justify-center gap-1">
                   @if (! $hasAmrTrials)
-                    <span class="badge badge-soft badge-neutral text-[11px] font-medium px-2 py-0.5 whitespace-nowrap">
+                    <span class="badge badge-soft badge-neutral text-xs font-medium px-2 py-0.5 whitespace-nowrap">
                       <span class="icon-[tabler--clock] size-3.5 mr-1"></span>
                       Pending AMR Trials (0/3)
                     </span>
                   @elseif ($records->count() < 3 && $amrRateValue === null)
-                    <span class="badge badge-soft badge-neutral text-[11px] px-1.5 py-0.5">{{ $records->count() }}/3 trials</span>
+                    <span class="badge badge-soft badge-neutral text-xs px-1.5 py-0.5">{{ $records->count() }}/3 trials</span>
                   @else
                     @if ($isAmrLowerThan60)
-                      <span class="badge badge-soft badge-secondary text-[11px] font-medium px-1.5 py-0.5 whitespace-nowrap"
+                      <span class="badge badge-soft badge-secondary text-xs font-medium px-1.5 py-0.5 whitespace-nowrap"
                             title="AMR ({{ number_format($amrRateValue, 2) }}%) is 60.0% or below">
                         Lower than 60%
                       </span>
                     @endif
                     @if ($isPmrLowerThanAmr)
-                      <span class="badge badge-soft badge-secondary text-[11px] font-medium px-1.5 py-0.5 whitespace-nowrap"
+                      <span class="badge badge-soft badge-secondary text-xs font-medium px-1.5 py-0.5 whitespace-nowrap"
                             title="PMR ({{ number_format($pmrRateValue, 2) }}%) is lower than AMR ({{ number_format($amrRateValue, 2) }}%)">
                         PMR lower than AMR
                       </span>
                     @endif
                     @if ($isAmrDivergent)
-                      <span class="badge badge-soft badge-secondary text-[11px] font-medium px-1.5 py-0.5 whitespace-nowrap"
+                      <span class="badge badge-soft badge-secondary text-xs font-medium px-1.5 py-0.5 whitespace-nowrap"
                             title="AMR ({{ number_format($amrRateValue, 2) }}%) is less than PMR ({{ number_format($pmrRateValue, 2) }}%) by more than 3 percentage points">
                         AMR &lt; PMR by &gt;3%
                       </span>
                     @endif
                     @if ($calculation->isValid && ! $requiresReestablishment)
-                      <span class="badge badge-soft badge-primary text-[11px] font-medium px-1.5 py-0.5 whitespace-nowrap"
+                      <span class="badge badge-soft badge-primary text-xs font-medium px-1.5 py-0.5 whitespace-nowrap"
                             title="AMR ({{ number_format($amrRateValue ?? 0, 2) }}%) meets all NFA requirements">
                         OK
                       </span>
@@ -251,22 +251,29 @@
                         default => 'badge-primary',
                       };
                     @endphp
-                    <span class="badge badge-soft {{ $badgeClass }} text-[10px] uppercase px-1.5 py-0.5">{{ $pile->amr_status }}</span>
+                    <span class="badge badge-soft {{ $badgeClass }} text-xs uppercase px-1.5 py-0.5">{{ $pile->amr_status }}</span>
                   @endif
                 </div>
               </td>
               <td rowspan="3" class="align-middle text-center px-2 py-1">
                 <div class="flex items-center justify-center gap-1">
-                  @if (! $hasAmrTrials)
+                  @if ($pile && in_array($pile->amr_status, ['recommended', 'retest', 'rejected'], true))
+                    {{-- File already tagged by RMEC/Admin (recommended/retest): no action available --}}
+                  @elseif (! $hasAmrTrials)
                     <a href="{{ route('records.create', ['type' => 'amr', 'pile_id' => $pile?->id]) }}"
                        class="btn btn-secondary btn-xs inline-flex items-center gap-1"
                        title="Add AMR Trials for this Pile">
                       <span class="icon-[tabler--plus] size-3.5"></span>
                       <span>Add Trials</span>
                     </a>
-                  @endif
-
-                  @if ($pile && $hasAmrTrials && (in_array($pile->amr_status, [null, 'pending'], true) || ($pile->amr_status === 'recommended' && $calculation->isInvalidOutliers())))
+                  @elseif (auth()->user()?->hasRole('STAFF'))
+                    <a href="{{ route('records.create', ['type' => 'amr', 'pile_id' => $pile?->id]) }}"
+                       class="btn btn-outline btn-primary btn-xs inline-flex items-center gap-1"
+                       title="Edit AMR trials for this Pile">
+                      <span class="icon-[tabler--pencil] size-3.5"></span>
+                      <span>Edit</span>
+                    </a>
+                  @elseif ($pile && (in_array($pile->amr_status, [null, 'pending'], true) || ($pile->amr_status === 'recommended' && $calculation->isInvalidOutliers())))
                     <div class="dropdown relative inline-flex [--placement:bottom-end]">
                       <button id="amr-actions-{{ $pile->id }}" type="button" class="dropdown-toggle btn btn-primary btn-xs inline-flex items-center gap-1 cursor-pointer" aria-haspopup="menu" aria-expanded="false" aria-label="AMR actions" title="Choose AMR action">
                         <span class="icon-[tabler--check] size-3.5"></span>
@@ -347,7 +354,7 @@
        tabindex="-1"
        aria-modal="true"
        aria-labelledby="{{ $modalId }}-title">
-    <div class="relative w-full max-w-lg rounded-xl border border-base-content/15 bg-base-100 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col my-auto">
+    <div class="relative w-full max-w-3xl rounded-xl border border-base-content/15 bg-base-100 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col my-auto">
 
       <!-- Modal Header -->
       <div class="flex items-center justify-between border-b border-base-content/10 px-4 py-3 bg-base-200/50 shrink-0">
@@ -400,32 +407,32 @@
 
         {{-- Statistical Summary Cards --}}
         <div>
-          <h4 class="text-[11px] font-semibold uppercase tracking-wider text-base-content/60 mb-1.5">1. Statistical Distribution (±2% Tolerance)</h4>
+          <h4 class="text-xs font-semibold uppercase tracking-wider text-base-content/60 mb-1.5">1. Statistical Distribution (±2% Tolerance)</h4>
           <div class="grid grid-cols-3 gap-2 text-center">
             <div class="bg-base-200/50 rounded-lg p-2 border border-base-content/10">
-              <span class="text-[10px] text-base-content/60 block">Lower Limit (–2%)</span>
+              <span class="text-xs text-base-content/60 block">Lower Limit (–2%)</span>
               <span class="font-mono font-semibold text-base-content text-sm">{{ $calculation->getFormattedLowerLimit() }}</span>
             </div>
             <div class="bg-base-200/50 rounded-lg p-2 border border-primary/20 bg-primary/5">
-              <span class="text-[10px] text-primary block font-medium">Median</span>
+              <span class="text-xs text-primary block font-medium">Median</span>
               <span class="font-mono font-bold text-primary text-sm">{{ $calculation->getFormattedMedian() }}</span>
             </div>
             <div class="bg-base-200/50 rounded-lg p-2 border border-base-content/10">
-              <span class="text-[10px] text-base-content/60 block">Upper Limit (+2%)</span>
+              <span class="text-xs text-base-content/60 block">Upper Limit (+2%)</span>
               <span class="font-mono font-semibold text-base-content text-sm">{{ $calculation->getFormattedUpperLimit() }}</span>
             </div>
           </div>
-          <p class="text-[10px] text-base-content/50 mt-1 italic text-center">
+          <p class="text-xs text-base-content/50 mt-1 italic text-center">
             Formula: Median = Trial 2 of 3 sorted recoveries &bull; Limits = Median &plusmn; 2%
           </p>
         </div>
 
         {{-- Trial Evaluation Breakdown Table --}}
         <div>
-          <h4 class="text-[11px] font-semibold uppercase tracking-wider text-base-content/60 mb-1.5">2. Trial Evaluation &amp; Outlier Status</h4>
+          <h4 class="text-xs font-semibold uppercase tracking-wider text-base-content/60 mb-1.5">2. Trial Evaluation &amp; Outlier Status</h4>
           <div class="overflow-x-auto border border-base-content/10 rounded-lg">
-            <table class="table table-xs w-full text-xs">
-              <thead class="bg-base-200/60 text-[10px] uppercase font-semibold text-base-content">
+            <table class="table table-sm w-full text-sm">
+              <thead class="bg-base-200/60 text-xs uppercase font-semibold text-base-content">
                 <tr>
                   <th class="py-1 px-2">Trial</th>
                   <th class="text-end py-1 px-2">Palay Input (kg)</th>
@@ -443,17 +450,17 @@
                     <td class="text-end font-mono font-semibold py-1 px-2 text-primary">{{ number_format($trialRow['milling_recovery'], 2) }}%</td>
                     <td class="text-center py-1 px-2">
                       @if ($trialRow['status'] === 'VALID')
-                        <span class="badge badge-soft badge-primary text-[10px] font-medium inline-flex items-center gap-1 py-0 px-1.5">
+                        <span class="badge badge-soft badge-primary text-xs font-medium inline-flex items-center gap-1 py-0 px-1.5">
                           <span class="icon-[tabler--check] size-3"></span>
                           VALID
                         </span>
                       @elseif ($trialRow['status'] === 'OUTLIER')
-                        <span class="badge badge-soft badge-secondary text-[10px] font-medium inline-flex items-center gap-1 py-0 px-1.5">
+                        <span class="badge badge-soft badge-secondary text-xs font-medium inline-flex items-center gap-1 py-0 px-1.5">
                           <span class="icon-[tabler--alert-circle] size-3"></span>
                           OUTLIER (Excluded)
                         </span>
                       @else
-                        <span class="badge badge-soft badge-neutral text-[10px] font-medium py-0 px-1.5">PENDING</span>
+                        <span class="badge badge-soft badge-neutral text-xs font-medium py-0 px-1.5">PENDING</span>
                       @endif
                     </td>
                   </tr>
@@ -469,7 +476,7 @@
 
         {{-- Final Result & Re-establishment Checks --}}
         <div class="bg-base-200/40 p-3 rounded-lg border border-base-content/10 space-y-2">
-          <h4 class="text-[11px] font-semibold uppercase tracking-wider text-base-content/60">3. Final AMR Establishment &amp; Re-establishment Criteria</h4>
+          <h4 class="text-xs font-semibold uppercase tracking-wider text-base-content/60">3. Final AMR Establishment &amp; Re-establishment Criteria</h4>
           <div class="flex items-center justify-between text-xs">
             <div>
               <p class="text-base-content/80">
@@ -478,35 +485,35 @@
                   <span class="text-secondary font-medium">({{ $calculation->outlierCount }} outlier excluded)</span>
                 @endif
               </p>
-              <p class="text-[11px] text-base-content/60">
+              <p class="text-xs text-base-content/60">
                 AMR = Arithmetic mean of valid commercial trials
               </p>
             </div>
             <div class="text-end">
-              <span class="text-[10px] text-base-content/60 block">Computed AMR</span>
+              <span class="text-xs text-base-content/60 block">Computed AMR</span>
               <span class="text-xl font-bold font-mono text-primary leading-tight">{{ $calculation->getFormattedAmrRate() }}</span>
             </div>
           </div>
 
-          <div class="pt-2 border-t border-base-content/10 space-y-1.5 text-[11px]">
+          <div class="pt-2 border-t border-base-content/10 space-y-1.5 text-xs">
             {{-- Check 1: 60.0% Benchmark --}}
             <div class="flex items-center justify-between">
               <div>
                 <span class="text-base-content/80 font-medium">Benchmark Rule (AMR &gt; 60.0%):</span>
-                <p class="text-[10px] text-base-content/60">Flagged if AMR is 60.0% or below</p>
+                <p class="text-xs text-base-content/60">Flagged if AMR is 60.0% or below</p>
               </div>
               @if ($amrRateValue !== null && $amrRateValue <= 60.0)
-                <span class="badge badge-soft badge-secondary text-[10px] font-semibold py-0.5 px-2">
+                <span class="badge badge-soft badge-secondary text-xs font-semibold py-0.5 px-2">
                   <span class="icon-[tabler--alert-circle] size-3.5 mr-1"></span>
                   AMR &le; 60.0% (Failed)
                 </span>
               @elseif ($amrRateValue !== null)
-                <span class="badge badge-soft badge-primary text-[10px] font-semibold py-0.5 px-2">
+                <span class="badge badge-soft badge-primary text-xs font-semibold py-0.5 px-2">
                   <span class="icon-[tabler--circle-check] size-3.5 mr-1"></span>
                   OK (&gt; 60.0%)
                 </span>
               @else
-                <span class="badge badge-soft badge-neutral text-[10px] py-0.5 px-2">—</span>
+                <span class="badge badge-soft badge-neutral text-xs py-0.5 px-2">—</span>
               @endif
             </div>
 
@@ -515,20 +522,20 @@
               <div class="flex items-center justify-between">
                 <div>
                   <span class="text-base-content/80 font-medium">Recovery Relationship (PMR &ge; AMR):</span>
-                  <p class="text-[10px] text-base-content/60">PMR: {{ number_format($pmrRateValue, 2) }}% &bull; AMR: {{ $amrRateValue !== null ? number_format($amrRateValue, 2).'%' : '—' }}</p>
+                  <p class="text-xs text-base-content/60">PMR: {{ number_format($pmrRateValue, 2) }}% &bull; AMR: {{ $amrRateValue !== null ? number_format($amrRateValue, 2).'%' : '—' }}</p>
                 </div>
                 @if ($reestablishment['is_pmr_below_amr'])
-                  <span class="badge badge-soft badge-secondary text-[10px] font-semibold py-0.5 px-2">
+                  <span class="badge badge-soft badge-secondary text-xs font-semibold py-0.5 px-2">
                     <span class="icon-[tabler--alert-circle] size-3.5 mr-1"></span>
                     PMR &lt; AMR (Failed)
                   </span>
                 @elseif ($amrRateValue !== null)
-                  <span class="badge badge-soft badge-primary text-[10px] font-semibold py-0.5 px-2">
+                  <span class="badge badge-soft badge-primary text-xs font-semibold py-0.5 px-2">
                     <span class="icon-[tabler--circle-check] size-3.5 mr-1"></span>
                     OK (PMR &ge; AMR)
                   </span>
                 @else
-                  <span class="badge badge-soft badge-neutral text-[10px] py-0.5 px-2">—</span>
+                  <span class="badge badge-soft badge-neutral text-xs py-0.5 px-2">—</span>
                 @endif
               </div>
 
@@ -539,20 +546,20 @@
                   @php
                     $diff = ($amrRateValue !== null) ? round($pmrRateValue - $amrRateValue, 4) : null;
                   @endphp
-                  <p class="text-[10px] text-base-content/60">Spread (PMR - AMR): {{ $diff !== null ? number_format($diff, 2).' pts' : '—' }} (Max 3.0 pts)</p>
+                  <p class="text-xs text-base-content/60">Spread (PMR - AMR): {{ $diff !== null ? number_format($diff, 2).' pts' : '—' }} (Max 3.0 pts)</p>
                 </div>
                 @if ($reestablishment['is_amr_divergent_from_pmr'])
-                  <span class="badge badge-soft badge-secondary text-[10px] font-semibold py-0.5 px-2">
+                  <span class="badge badge-soft badge-secondary text-xs font-semibold py-0.5 px-2">
                     <span class="icon-[tabler--alert-circle] size-3.5 mr-1"></span>
                     AMR &lt; PMR by &gt; 3.0% (Failed)
                   </span>
                 @elseif ($amrRateValue !== null)
-                  <span class="badge badge-soft badge-primary text-[10px] font-semibold py-0.5 px-2">
+                  <span class="badge badge-soft badge-primary text-xs font-semibold py-0.5 px-2">
                     <span class="icon-[tabler--circle-check] size-3.5 mr-1"></span>
                     OK (Spread &le; 3.0 pts)
                   </span>
                 @else
-                  <span class="badge badge-soft badge-neutral text-[10px] py-0.5 px-2">—</span>
+                  <span class="badge badge-soft badge-neutral text-xs py-0.5 px-2">—</span>
                 @endif
               </div>
             @endif
@@ -561,22 +568,22 @@
             <div class="pt-2 border-t border-base-content/10 flex items-center justify-between">
               <span class="font-semibold text-base-content">Re-establishment Status:</span>
               @if (! $hasAmrTrials)
-                <span class="badge badge-soft badge-neutral text-[11px] font-bold py-1 px-2.5">
+                <span class="badge badge-soft badge-neutral text-xs font-bold py-1 px-2.5">
                   <span class="icon-[tabler--clock] size-3.5 mr-1"></span>
                   PENDING AMR TRIALS (0/3)
                 </span>
               @elseif ($reestablishment['requires_reestablishment'] || ($amrRateValue !== null && $amrRateValue <= 60.0))
-                <span class="badge badge-soft badge-secondary text-[11px] font-bold py-1 px-2.5">
+                <span class="badge badge-soft badge-secondary text-xs font-bold py-1 px-2.5">
                   <span class="icon-[tabler--refresh] size-3.5 mr-1"></span>
                   RE-ESTABLISHMENT REQUIRED
                 </span>
               @elseif ($calculation->isValid)
-                <span class="badge badge-soft badge-primary text-[11px] font-bold py-1 px-2.5">
+                <span class="badge badge-soft badge-primary text-xs font-bold py-1 px-2.5">
                   <span class="icon-[tabler--check] size-3.5 mr-1"></span>
                   ESTABLISHED / PASSED
                 </span>
               @else
-                <span class="badge badge-soft badge-neutral text-[11px] py-1 px-2.5">PENDING</span>
+                <span class="badge badge-soft badge-neutral text-xs py-1 px-2.5">PENDING</span>
               @endif
             </div>
           </div>
