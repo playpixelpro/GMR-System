@@ -6,6 +6,7 @@ use App\Models\AmrRecord;
 use App\Models\Branch;
 use App\Models\Pile;
 use App\Models\PmrRecord;
+use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -14,6 +15,21 @@ use Tests\TestCase;
 class EmrDashboardTest extends TestCase
 {
     use RefreshDatabase;
+
+    private User $user;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->user = User::factory()->create([
+            'role' => 'staff',
+            'must_change_password' => false,
+            'temporary_password_expires_at' => null,
+            'is_active' => true,
+        ]);
+        $this->actingAs($this->user);
+    }
 
     public function test_dashboard_calculates_ranges_and_aggregates_from_filtered_piles(): void
     {
@@ -31,6 +47,7 @@ class EmrDashboardTest extends TestCase
 
         $response
             ->assertOk()
+            ->assertSee('Total Warehouses')
             ->assertSee('Total Piles')
             ->assertSee('2', false)
             ->assertSee('475.620')
@@ -50,6 +67,7 @@ class EmrDashboardTest extends TestCase
 
         $response
             ->assertOk()
+            ->assertSee('Total Warehouses')
             ->assertSee('63.50% – 62.90%')
             ->assertSee('QUESTIONABLE');
     }
@@ -132,6 +150,8 @@ class EmrDashboardTest extends TestCase
             'quality' => 'GQA',
             'aged_months' => 5,
             'volume_kg' => $volume,
+            'status' => 'RECOMMENDED',
+            'included_in_computation' => true,
         ];
 
         AmrRecord::create([
@@ -143,13 +163,16 @@ class EmrDashboardTest extends TestCase
             'milling_recovery' => $amr,
             'trial_number' => 1,
         ]);
+
         PmrRecord::create([
             ...$recordDetails,
             'pile_id' => $pile->id,
+            'sample_number' => 1,
+            'trial_number' => 1,
+            'rice_millers' => 'Test Miller',
             'palay_input_kg' => 1000,
             'rice_recovery_kg' => $pmr * 10,
             'milling_recovery' => $pmr,
-            'trial_number' => 1,
         ]);
 
         return $pile;

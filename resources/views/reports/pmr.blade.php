@@ -8,11 +8,21 @@
         <h1 class="text-xl font-semibold text-base-content">PMR Report</h1>
         <p class="text-xs text-base-content/60">Performance Milling Recovery (PMR) — 3 laboratory test milling trials under NFA recovery standards</p>
     </div>
-    <a href="{{ route('records.create', ['type' => 'pmr']) }}"
-        class="btn btn-secondary btn-sm">
-        <span class="icon-[tabler--plus] size-4"></span>
-        Add PMR Trial
-    </a>
+    <div class="flex flex-wrap items-center gap-2">
+        <a href="{{ route('pmr.export.excel', request()->query()) }}" class="btn btn-outline btn-success btn-sm" title="Export PMR report to Excel (.xlsx)">
+            <span class="icon-[tabler--file-spreadsheet] size-4"></span>
+            Excel Export
+        </a>
+        <a href="{{ route('pmr.export.pdf', request()->query()) }}" class="btn btn-outline btn-error btn-sm" title="Download PMR report as PDF">
+            <span class="icon-[tabler--file-type-pdf] size-4"></span>
+            PDF Download
+        </a>
+        <a href="{{ route('records.create', ['type' => 'pmr']) }}"
+            class="btn btn-secondary btn-sm">
+            <span class="icon-[tabler--plus] size-4"></span>
+            Add PMR Trial
+        </a>
+    </div>
 </div>
 
 <form method="GET" action="{{ route('pmr.index') }}" class="card mb-4 border border-base-content/10 bg-base-100 p-4 shadow-sm">
@@ -256,43 +266,48 @@
                       <span class="icon-[tabler--plus] size-3.5"></span>
                       <span>Add Trials</span>
                     </a>
-                  @else
-                    <a href="{{ route('records.create', ['type' => 'pmr', 'pile_id' => $pile?->id]) }}"
-                       class="btn btn-circle btn-text btn-xs"
-                       aria-label="Edit trial"
-                       title="Edit trial">
-                      <span class="icon-[tabler--pencil] size-4"></span>
-                    </a>
                   @endif
 
-                  @if ($pile && in_array($pile->pmr_status, [null, 'pending'], true) && $hasPmrTrials)
+                  @php
+                    $reestablishment = app(\App\Services\PmrCalculationService::class)->evaluateReestablishment($pmrRateValue, $amrRateValue);
+                    $pmrCanRecommend = $calculation->isValid && ! $reestablishment['requires_reestablishment'];
+                    $pmrNeedsRetest = $calculation->isInvalid() || $calculation->isHistoricalLegacy() || ($calculation->isValid && $reestablishment['requires_reestablishment']);
+                  @endphp
+                  @if ($pile && $hasPmrTrials && (in_array($pile->pmr_status, [null, 'pending'], true) || ($pile->pmr_status === 'recommended' && $pmrNeedsRetest)))
                     <div class="dropdown relative inline-flex [--placement:bottom-end]">
-                      <button id="pmr-actions-{{ $pile->id }}" type="button" class="dropdown-toggle btn btn-circle btn-text btn-xs cursor-pointer" aria-haspopup="menu" aria-expanded="false" aria-label="Pile actions" title="Update status">
-                        <span class="icon-[tabler--dots-vertical] size-4"></span>
+                      <button id="pmr-actions-{{ $pile->id }}" type="button" class="dropdown-toggle btn btn-primary btn-xs inline-flex items-center gap-1 cursor-pointer" aria-haspopup="menu" aria-expanded="false" aria-label="PMR actions" title="Choose PMR action">
+                        <span class="icon-[tabler--check] size-3.5"></span>
+                        <span>Actions</span>
                       </button>
                       <ul class="dropdown-menu dropdown-open:opacity-100 hidden min-w-36 shadow-md" role="menu" aria-labelledby="pmr-actions-{{ $pile->id }}">
                         @php
-                          $statusActions = $pile->pmr_status === 'pending'
+                          $statusActions = $pmrCanRecommend
                             ? [
                                 'recommend' => ['label' => 'Recommend', 'icon' => 'icon-[tabler--thumb-up]', 'color' => 'text-primary'],
                                 'retest' => ['label' => 'Retest', 'icon' => 'icon-[tabler--refresh]', 'color' => 'text-secondary'],
                               ]
-                            : [
-                                'confirm' => ['label' => 'Confirm', 'icon' => 'icon-[tabler--check]', 'color' => 'text-primary'],
-                              ];
+                            : ($pmrNeedsRetest
+                              ? [
+                                  'retest' => ['label' => 'Retest', 'icon' => 'icon-[tabler--refresh]', 'color' => 'text-secondary'],
+                                ]
+                              : []);
                         @endphp
-                        @foreach ($statusActions as $action => $opt)
-                          <li>
-                            <form method="POST" action="{{ route('piles.status', $pile) }}">
-                              @csrf
-                              <input type="hidden" name="form_type" value="pmr">
-                              <button type="submit" name="action" value="{{ $action }}" class="dropdown-item w-full {{ $opt['color'] }} cursor-pointer">
-                                <span class="{{ $opt['icon'] }} size-4"></span>
-                                {{ $opt['label'] }}
-                              </button>
-                            </form>
-                          </li>
-                        @endforeach
+                        @if ($statusActions)
+                          @foreach ($statusActions as $action => $opt)
+                            <li>
+                              <form method="POST" action="{{ route('piles.status', $pile) }}">
+                                @csrf
+                                <input type="hidden" name="form_type" value="pmr">
+                                <button type="submit" name="action" value="{{ $action }}" class="dropdown-item w-full {{ $opt['color'] }} cursor-pointer">
+                                  <span class="{{ $opt['icon'] }} size-4"></span>
+                                  {{ $opt['label'] }}
+                                </button>
+                              </form>
+                            </li>
+                          @endforeach
+                        @else
+                          <li class="dropdown-item text-base-content/60">Complete 3 trials first</li>
+                        @endif
                       </ul>
                     </div>
                   @endif
@@ -351,6 +366,11 @@
             Pile: <span class="font-medium text-base-content">{{ $pileNumber }}</span> •
             Variety: <span class="font-medium text-base-content">{{ $variety }}</span>
           </p>
+          @if ($pile?->pmr_status)
+            <p class="text-[11px] text-base-content/60 mt-1">
+              Pile status: <span class="font-semibold uppercase text-secondary">{{ $pile->pmr_status }}</span>
+            </p>
+          @endif
         </div>
         <button type="button"
                 class="btn btn-circle btn-text btn-xs text-base-content/70 hover:text-base-content cursor-pointer"
@@ -391,7 +411,7 @@
           <div class="alert alert-soft alert-secondary flex items-center gap-2.5 p-2.5 rounded-lg text-xs">
             <span class="icon-[tabler--alert-triangle] size-4.5 text-secondary shrink-0"></span>
             <div>
-              <p class="font-semibold text-secondary">Calculation Invalid: Retest / Re-establishment Required</p>
+              <p class="font-semibold text-secondary">Retest Required: {{ $calculation->outlierCount }} Outliers / Rule Failure</p>
               <p class="text-base-content/70 text-[11px] mt-0.5">{{ $calculation->statusMessage }}</p>
             </div>
           </div>

@@ -21,19 +21,29 @@ class DatabaseSeeder extends Seeder
         $adminEmail = env('NFA_ADMIN_EMAIL', 'admin@nfa-gmr.local');
         $temporaryPassword = env('NFA_ADMIN_PASSWORD', 'ChangeMe!2026');
 
-        User::updateOrCreate(
-            ['email' => $adminEmail],
-            [
+        $existingAdmin = User::where('email', $adminEmail)->first();
+        if ($existingAdmin && ! $existingAdmin->must_change_password) {
+            $existingAdmin->forceFill([
                 'name' => 'System Administrator',
-                'password' => $temporaryPassword,
                 'role' => 'ADMINISTRATOR',
                 'is_active' => true,
-                'must_change_password' => true,
-                'temporary_password_expires_at' => now()->addDay(),
-                'activated_at' => null,
-                'disabled_at' => null,
-            ],
-        );
+                'temporary_password_expires_at' => null,
+            ])->save();
+        } else {
+            User::updateOrCreate(
+                ['email' => $adminEmail],
+                [
+                    'name' => 'System Administrator',
+                    'password' => $temporaryPassword,
+                    'role' => 'ADMINISTRATOR',
+                    'is_active' => true,
+                    'must_change_password' => true,
+                    'temporary_password_expires_at' => now()->addDays(7),
+                    'activated_at' => null,
+                    'disabled_at' => null,
+                ],
+            );
+        }
 
         foreach (
             ['North Cotabato', 'South Cotabato', 'Sultan Kudarat'] as $branchName

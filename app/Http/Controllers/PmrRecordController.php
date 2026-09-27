@@ -9,13 +9,18 @@ use App\Models\Pile;
 use App\Models\PmrRecord;
 use App\Models\Warehouse;
 use App\Services\PmrCalculationService;
+use App\Services\PmrExportService;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PmrRecordController extends Controller
 {
     public function __construct(
         protected PmrCalculationService $calculationService,
+        protected PmrExportService $exportService,
     ) {}
 
     /**
@@ -24,6 +29,67 @@ class PmrRecordController extends Controller
     public function index(Request $request): View
     {
         $filters = $this->filters($request);
+        $groups = $this->getRecordGroups($filters);
+
+        return view('reports.pmr', [
+            'branches' => Branch::query()
+                ->orderBy('name')
+                ->get(['id', 'name']),
+            'warehouses' => Warehouse::query()
+                ->when(
+                    $filters['branch_id'],
+                    fn ($query, $branchId) => $query->where(
+                        'branch_id',
+                        $branchId,
+                    ),
+                )
+                ->orderBy('name')
+                ->get(['id', 'branch_id', 'name']),
+            'filters' => $filters,
+            'recordGroups' => $groups,
+        ]);
+    }
+
+    /**
+     * Export the filtered PMR report as Excel.
+     */
+    public function exportExcel(Request $request): StreamedResponse
+    {
+        $filters = $this->filters($request);
+        $groups = $this->getRecordGroups($filters);
+
+        $filterNames = [
+            'branch' => $filters['branch_id'] ? Branch::find($filters['branch_id'])?->name : 'All Branches',
+            'warehouse' => $filters['warehouse_id'] ? Warehouse::find($filters['warehouse_id'])?->name : 'All Warehouses',
+        ];
+
+        return $this->exportService->exportExcel($groups, $filterNames);
+    }
+
+    /**
+     * Download the filtered PMR report as PDF.
+     */
+    public function exportPdf(Request $request): Response
+    {
+        $filters = $this->filters($request);
+        $groups = $this->getRecordGroups($filters);
+
+        $filterNames = [
+            'branch' => $filters['branch_id'] ? Branch::find($filters['branch_id'])?->name : 'All Branches',
+            'warehouse' => $filters['warehouse_id'] ? Warehouse::find($filters['warehouse_id'])?->name : 'All Warehouses',
+        ];
+
+        return $this->exportService->exportPdf($groups, $filterNames);
+    }
+
+    /**
+     * Build the collection of record groups for PMR.
+     *
+     * @param  array{branch_id: ?int, warehouse_id: ?int}  $filters
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function getRecordGroups(array $filters): Collection
+    {
         $filterWarehouseNames = Warehouse::query()
             ->when(
                 $filters['branch_id'],
@@ -85,10 +151,17 @@ class PmrRecordController extends Controller
             $hasRecords = $records->isNotEmpty();
 
             if ($hasRecords) {
-                $calc = $this->calculationService->calculateForGroup(
-                    $records,
-                    'pile:'.$pile->id,
+                $latestConduct = $records->max('conduct_number');
+                $latestRecords = $records->filter(
+                    fn ($record): bool => (int) $record->conduct_number === (int) $latestConduct,
                 );
+                $shouldPreviewCurrentConduct = $pile->pmr_status !== 'recommended';
+                $calc = $shouldPreviewCurrentConduct
+                    ? $this->calculationService->calculate($latestRecords)
+                    : $this->calculationService->calculateForGroup(
+                        $records,
+                        'pile:'.$pile->id,
+                    );
                 $rates = $records
                     ->filter(
                         fn (
@@ -118,7 +191,7 @@ class PmrRecordController extends Controller
                         ): bool => $record->included_in_computation &&
                             $record->status === 'RECOMMENDED',
                     )
-                    ->filter(fn (AmrRecord $r) => (float) $r->palay_input_kg > 0)
+                    ->filter(fn (AmrRecord $r) => (float) $r->milling_recovery_percentage > 0)
                     ->map(
                         fn (
                             AmrRecord $r,
@@ -139,12 +212,12 @@ class PmrRecordController extends Controller
                 'mean' => $mean,
                 'standard_deviation' => $stdDev,
                 'amr_rate' => $amrRate,
-                'branch_name' => $pile->warehouse?->branch?->name ?? 'â€”',
+                'branch_name' => $pile->warehouse?->branch?->name ?? '—',
                 'warehouse_name' => $pile->warehouse?->name ??
-                    ($firstRecord?->warehouse_name ?? 'â€”'),
+                    ($firstRecord?->warehouse_name ?? '—'),
                 'pile_number' => $pile->pile_number ??
-                    ($pile->number ?? ($firstRecord?->pile_number ?? 'â€”')),
-                'variety' => $pile->variety ?? ($firstRecord?->variety ?? 'â€”'),
+                    ($pile->number ?? ($firstRecord?->pile_number ?? '—')),
+                'variety' => $pile->variety ?? ($firstRecord?->variety ?? '—'),
                 'purity' => $pile->purity ?? ($firstRecord?->purity ?? 0),
                 'mc' => $pile->mc ?? ($firstRecord?->mc ?? 0),
                 'quality' => $pile->quality ?? ($firstRecord?->quality ?? ''),
@@ -220,8 +293,7 @@ class PmrRecordController extends Controller
                     if ($matchingRecords->isNotEmpty()) {
                         $validRecoveries = $matchingRecords
                             ->filter(
-                                fn (AmrRecord $r) => (float) $r->palay_input_kg >
-                                    0,
+                                fn (AmrRecord $r) => (float) $r->milling_recovery_percentage > 0,
                             )
                             ->map(
                                 fn (
@@ -243,10 +315,10 @@ class PmrRecordController extends Controller
                 'mean' => $mean,
                 'standard_deviation' => $stdDev,
                 'amr_rate' => $amrRate,
-                'branch_name' => 'â€”',
-                'warehouse_name' => $firstRecord?->warehouse_name ?? 'â€”',
-                'pile_number' => $firstRecord?->pile_number ?? 'â€”',
-                'variety' => $firstRecord?->variety ?? 'â€”',
+                'branch_name' => '—',
+                'warehouse_name' => $firstRecord?->warehouse_name ?? '—',
+                'pile_number' => $firstRecord?->pile_number ?? '—',
+                'variety' => $firstRecord?->variety ?? '—',
                 'purity' => $firstRecord?->purity ?? 0,
                 'mc' => $firstRecord?->mc ?? 0,
                 'quality' => $firstRecord?->quality ?? '',
@@ -255,23 +327,29 @@ class PmrRecordController extends Controller
             ]);
         }
 
-        return view('reports.pmr', [
-            'branches' => Branch::query()
-                ->orderBy('name')
-                ->get(['id', 'name']),
-            'warehouses' => Warehouse::query()
-                ->when(
-                    $filters['branch_id'],
-                    fn ($query, $branchId) => $query->where(
-                        'branch_id',
-                        $branchId,
-                    ),
-                )
-                ->orderBy('name')
-                ->get(['id', 'branch_id', 'name']),
-            'filters' => $filters,
-            'recordGroups' => $groups,
-        ]);
+        return $groups;
+    }
+
+    /**
+     * @param  array<int, float|int>  $values
+     */
+    private function sampleStandardDeviation(array $values, float $mean): ?float
+    {
+        $count = count($values);
+        if ($count < 2) {
+            return null;
+        }
+
+        $variance =
+            array_sum(
+                array_map(
+                    fn ($val): float|int => pow(((float) $val) - $mean, 2),
+                    $values,
+                ),
+            ) /
+            ($count - 1);
+
+        return round(sqrt($variance), 4);
     }
 
     /**
@@ -283,26 +361,5 @@ class PmrRecordController extends Controller
             'branch_id' => $request->integer('branch_id') ?: null,
             'warehouse_id' => $request->integer('warehouse_id') ?: null,
         ];
-    }
-
-    /**
-     * Calculate sample standard deviation for a group of trial rates (fallback helper).
-     *
-     * @param  list<float>  $values
-     */
-    private function sampleStandardDeviation(array $values, float $mean): float
-    {
-        if (count($values) < 2) {
-            return 0.0;
-        }
-
-        $sumOfSquares = array_sum(
-            array_map(
-                fn (float $value): float => ($value - $mean) ** 2,
-                $values,
-            ),
-        );
-
-        return sqrt($sumOfSquares / (count($values) - 1));
     }
 }

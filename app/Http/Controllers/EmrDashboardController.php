@@ -111,8 +111,8 @@ class EmrDashboardController extends Controller
                 'warehouse:id,branch_id,name',
                 'amrCalculation',
                 'pmrCalculation',
-                'amrRecords:id,pile_id,palay_input_kg,rice_recovery_kg,milling_recovery',
-                'pmrRecords:id,pile_id,palay_input_kg,rice_recovery_kg,milling_recovery',
+                'amrRecords:id,pile_id,palay_input_kg,rice_recovery_kg,milling_recovery,status,included_in_computation',
+                'pmrRecords:id,pile_id,palay_input_kg,rice_recovery_kg,milling_recovery,status,included_in_computation',
             ])
             ->where(function ($query): void {
                 $query
@@ -224,12 +224,12 @@ class EmrDashboardController extends Controller
                 fn ($record): bool => $record->status === 'RECOMMENDED' &&
                     $record->included_in_computation,
             )
-            ->filter(fn ($record): bool => (float) $record->palay_input_kg > 0)
             ->map(
                 fn ($record): float => $recordClass === AmrRecord::class
                     ? (float) $record->milling_recovery_percentage
                     : (float) $record->recovery_rate_percentage,
-            );
+            )
+            ->filter(fn ($rate): bool => $rate > 0);
 
         return $validRates->isNotEmpty()
             ? round((float) $validRates->avg(), 2)
@@ -252,6 +252,7 @@ class EmrDashboardController extends Controller
             ->avg();
 
         return [
+            'warehouses' => $rows->pluck('warehouse')->unique()->filter(fn ($w): bool => ! empty($w) && $w !== '—')->count(),
             'piles' => $rows->count(),
             'volume' => $rows->sum(
                 fn (array $row): float => (float) $row['volume'],

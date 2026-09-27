@@ -4,6 +4,9 @@
 
 @section('content')
 <div class="mx-auto max-w-md rounded-lg border border-base-content/10 bg-base-100 p-6 shadow-sm">
+    <div class="mb-5 flex justify-center">
+        <img src="{{ asset('new-nfa-logo.webp') }}" alt="NFA logo" class="size-16 object-contain">
+    </div>
     <h1 class="text-2xl font-semibold">Reset Password</h1>
     @if (session('status')) <div class="mt-4 alert alert-success">{{ session('status') }}</div> @endif
     <form method="POST" action="{{ route('password.email') }}" class="mt-6 space-y-4">

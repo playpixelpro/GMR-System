@@ -57,8 +57,8 @@ class GmrSummaryController extends Controller
                 'warehouse.branch:id,name',
                 'amrCalculation',
                 'pmrCalculation',
-                'amrRecords:id,pile_id,palay_input_kg,rice_recovery_kg,milling_recovery',
-                'pmrRecords:id,pile_id,palay_input_kg,rice_recovery_kg,milling_recovery',
+                'amrRecords:id,pile_id,palay_input_kg,rice_recovery_kg,milling_recovery,status,included_in_computation',
+                'pmrRecords:id,pile_id,palay_input_kg,rice_recovery_kg,milling_recovery,status,included_in_computation',
             ])
             ->where(function ($query): void {
                 $query
@@ -153,6 +153,7 @@ class GmrSummaryController extends Controller
 
         return [
             'id' => $pile->id,
+            'branch_id' => $pile->branch_id ?? $pile->warehouse?->branch_id,
             'branch' => $pile->branch?->name ??
                 ($pile->warehouse?->branch?->name ?? '—'),
             'warehouse' => $pile->warehouse?->name ?? '—',
@@ -186,12 +187,13 @@ class GmrSummaryController extends Controller
                 fn ($record): bool => $record->status === 'RECOMMENDED' &&
                     $record->included_in_computation,
             )
-            ->filter(fn ($record): bool => (float) $record->palay_input_kg > 0)
+            ->filter(fn ($record): bool => (float) $record->palay_input_kg > 0 || $record->milling_recovery !== null)
             ->map(
                 fn ($record): float => $recordClass === AmrRecord::class
                     ? (float) $record->milling_recovery_percentage
                     : (float) $record->recovery_rate_percentage,
-            );
+            )
+            ->filter(fn ($rate): bool => $rate > 0);
 
         return $validRates->isNotEmpty()
             ? round((float) $validRates->avg(), 2)
@@ -212,16 +214,39 @@ class GmrSummaryController extends Controller
             ->pluck($key)
             ->avg();
 
+        $amrValues = $rows->pluck('amr')->filter(fn ($value) => $value !== null);
+        $pmrValues = $rows->pluck('pmr')->filter(fn ($value) => $value !== null);
+        $gmrValues = $rows->pluck('gmr')->filter(fn ($value) => $value !== null);
+
+        $warehouseCount = $rows->pluck('warehouse')->unique()->filter(fn ($w): bool => ! empty($w) && $w !== '—')->count();
+
         return [
+            'warehouses' => $warehouseCount,
+            'total_warehouses' => $warehouseCount,
             'piles' => $rows->count(),
+            'total_piles' => $rows->count(),
             'volume_bags' => $rows->sum(
                 fn (array $row): float => (float) ($row['volume_bags'] ?? 0),
             ),
+            'total_volume_bags' => $rows->sum(
+                fn (array $row): float => (float) ($row['volume_bags'] ?? 0),
+            ),
             'pmr' => $average('pmr'),
+            'average_pmr' => $pmrValues->isNotEmpty()
+                ? round((float) $pmrValues->avg(), 2)
+                : null,
             'amr' => $average('amr'),
+            'average_amr' => $amrValues->isNotEmpty()
+                ? round((float) $amrValues->avg(), 2)
+                : null,
             'gmr' => $average('gmr'),
+            'average_gmr' => $gmrValues->isNotEmpty()
+                ? round((float) $gmrValues->avg(), 2)
+                : null,
             'emr_lower' => $completeRows->min('amr'),
             'emr_upper' => $completeRows->max('pmr'),
+            'emr_min' => $completeRows->min('amr'),
+            'emr_max' => $completeRows->max('pmr'),
         ];
     }
 }

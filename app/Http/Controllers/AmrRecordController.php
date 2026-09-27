@@ -9,13 +9,18 @@ use App\Models\PmrCalculation;
 use App\Models\PmrRecord;
 use App\Models\Warehouse;
 use App\Services\AmrCalculationService;
+use App\Services\AmrExportService;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AmrRecordController extends Controller
 {
     public function __construct(
         protected AmrCalculationService $calculationService,
+        protected AmrExportService $exportService,
     ) {}
 
     /**
@@ -24,6 +29,67 @@ class AmrRecordController extends Controller
     public function index(Request $request): View
     {
         $filters = $this->filters($request);
+        $groups = $this->getRecordGroups($filters);
+
+        return view('reports.amr', [
+            'branches' => Branch::query()
+                ->orderBy('name')
+                ->get(['id', 'name']),
+            'warehouses' => Warehouse::query()
+                ->when(
+                    $filters['branch_id'],
+                    fn ($query, $branchId) => $query->where(
+                        'branch_id',
+                        $branchId,
+                    ),
+                )
+                ->orderBy('name')
+                ->get(['id', 'branch_id', 'name']),
+            'filters' => $filters,
+            'recordGroups' => $groups,
+        ]);
+    }
+
+    /**
+     * Export the filtered AMR report as Excel.
+     */
+    public function exportExcel(Request $request): StreamedResponse
+    {
+        $filters = $this->filters($request);
+        $groups = $this->getRecordGroups($filters);
+
+        $filterNames = [
+            'branch' => $filters['branch_id'] ? Branch::find($filters['branch_id'])?->name : 'All Branches',
+            'warehouse' => $filters['warehouse_id'] ? Warehouse::find($filters['warehouse_id'])?->name : 'All Warehouses',
+        ];
+
+        return $this->exportService->exportExcel($groups, $filterNames);
+    }
+
+    /**
+     * Download the filtered AMR report as PDF.
+     */
+    public function exportPdf(Request $request): Response
+    {
+        $filters = $this->filters($request);
+        $groups = $this->getRecordGroups($filters);
+
+        $filterNames = [
+            'branch' => $filters['branch_id'] ? Branch::find($filters['branch_id'])?->name : 'All Branches',
+            'warehouse' => $filters['warehouse_id'] ? Warehouse::find($filters['warehouse_id'])?->name : 'All Warehouses',
+        ];
+
+        return $this->exportService->exportPdf($groups, $filterNames);
+    }
+
+    /**
+     * Build the collection of record groups for AMR.
+     *
+     * @param  array{branch_id: ?int, warehouse_id: ?int}  $filters
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function getRecordGroups(array $filters): Collection
+    {
         $filterWarehouseNames = Warehouse::query()
             ->when(
                 $filters['branch_id'],
@@ -72,30 +138,38 @@ class AmrRecordController extends Controller
                     $warehouseId,
                 ),
             )
-            ->orderBy('branch_id')
             ->orderBy('warehouse_id')
             ->orderBy('pile_number')
-            ->orderBy('number')
             ->get();
 
         $groups = collect();
 
         foreach ($piles as $pile) {
             $records = $pile->amrRecords;
-            $hasRecords = $records->isNotEmpty();
 
-            if ($hasRecords) {
-                $calc = $this->calculationService->calculateForGroup(
-                    $records,
-                    'pile:'.$pile->id,
+            // Calculate or fetch calculation results
+            if ($records->isNotEmpty()) {
+                $latestConduct =
+                    $records->max('conduct_number') ??
+                    $records->first()->conduct_number ??
+                    1;
+                $latestRecords = $records->filter(
+                    fn ($record): bool => (int) $record->conduct_number === (int) $latestConduct,
                 );
+                $shouldPreviewCurrentConduct = $pile->amr_status !== 'recommended';
+                $calc = $shouldPreviewCurrentConduct
+                    ? $this->calculationService->calculate($latestRecords)
+                    : $this->calculationService->calculateForGroup(
+                        $records,
+                        'pile:'.$pile->id,
+                    );
                 $validRecoveries = $records
                     ->filter(
                         fn ($r): bool => $r->included_in_computation &&
                             $r->status === 'RECOMMENDED',
                     )
-                    ->filter(fn ($r) => (float) $r->palay_input_kg > 0)
-                    ->map(fn ($r) => (float) $r->milling_recovery_percentage);
+                    ->map(fn ($r) => (float) $r->milling_recovery_percentage)
+                    ->filter(fn ($rate) => $rate > 0);
                 $mean = $validRecoveries->isNotEmpty()
                     ? $validRecoveries->avg()
                     : null;
@@ -116,12 +190,12 @@ class AmrRecordController extends Controller
                         ): bool => $record->included_in_computation &&
                             $record->status === 'RECOMMENDED',
                     )
-                    ->filter(fn (PmrRecord $r) => (float) $r->palay_input_kg > 0)
                     ->map(
                         fn (
                             PmrRecord $r,
                         ) => (float) $r->recovery_rate_percentage,
-                    );
+                    )
+                    ->filter(fn ($rate) => $rate > 0);
                 $pmrRate = $validPmr->isNotEmpty()
                     ? (float) $validPmr->avg()
                     : null;
@@ -182,8 +256,8 @@ class AmrRecordController extends Controller
                 $key,
             );
             $validRecoveries = $standaloneGroup
-                ->filter(fn ($r) => (float) $r->palay_input_kg > 0)
-                ->map(fn ($r) => (float) $r->milling_recovery_percentage);
+                ->map(fn ($r) => (float) $r->milling_recovery_percentage)
+                ->filter(fn ($rate) => $rate > 0);
             $mean = $validRecoveries->isNotEmpty()
                 ? $validRecoveries->avg()
                 : null;
@@ -215,15 +289,12 @@ class AmrRecordController extends Controller
 
                     if ($matchingRecords->isNotEmpty()) {
                         $validRecoveriesPmr = $matchingRecords
-                            ->filter(
-                                fn (PmrRecord $r) => (float) $r->palay_input_kg >
-                                    0,
-                            )
                             ->map(
                                 fn (
                                     PmrRecord $r,
                                 ) => (float) $r->recovery_rate_percentage,
-                            );
+                            )
+                            ->filter(fn ($rate) => $rate > 0);
 
                         $pmrRate = $validRecoveriesPmr->isNotEmpty()
                             ? (float) $validRecoveriesPmr->avg()
@@ -251,23 +322,7 @@ class AmrRecordController extends Controller
             ]);
         }
 
-        return view('reports.amr', [
-            'branches' => Branch::query()
-                ->orderBy('name')
-                ->get(['id', 'name']),
-            'warehouses' => Warehouse::query()
-                ->when(
-                    $filters['branch_id'],
-                    fn ($query, $branchId) => $query->where(
-                        'branch_id',
-                        $branchId,
-                    ),
-                )
-                ->orderBy('name')
-                ->get(['id', 'branch_id', 'name']),
-            'filters' => $filters,
-            'recordGroups' => $groups,
-        ]);
+        return $groups;
     }
 
     /**

@@ -79,7 +79,32 @@
                             <li><a href="{{ route('amr.index') }}" class="{{ request()->routeIs('amr.*') ? 'menu-active' : '' }}"><span class="icon-[tabler--chart-bar] size-5"></span>AMR Report</a></li>
                             <li><a href="{{ route('pmr.index') }}" class="{{ request()->routeIs('pmr.*') ? 'menu-active' : '' }}"><span class="icon-[tabler--chart-dots] size-5"></span>PMR Report</a></li>
                             <li><a href="{{ route('emr.index') }}" class="{{ request()->routeIs('emr.*') ? 'menu-active' : '' }}"><span class="icon-[tabler--chart-arrows] size-5"></span>Expected Milling Recovery</a></li>
-                            <li><a href="{{ route('gmr.summary') }}" class="{{ request()->routeIs('gmr.*') ? 'menu-active' : '' }}"><span class="icon-[tabler--chart-dots] size-5"></span>GMR Summary</a></li>
+                            <li><a href="{{ route('gmr.summary') }}" class="{{ request()->routeIs('gmr.summary') ? 'menu-active' : '' }}"><span class="icon-[tabler--chart-dots] size-5"></span>GMR Summary</a></li>
+                            @if (auth()->user()?->hasRole('RMEC', 'ADMINISTRATOR'))
+                                <li><a href="{{ route('gmr.config.edit') }}" class="{{ request()->routeIs('gmr.config.*') ? 'menu-active' : '' }}"><span class="icon-[tabler--adjustments] size-5"></span>GMR Report Configuration</a></li>
+                            @endif
+                        </ul>
+                    </li>
+                    @php($isSettingActive = request()->routeIs('profile.*', 'users.*'))
+                    <li class="dropdown relative {{ $isSettingActive ? 'open' : '' }} [--adaptive:none] [--strategy:static] overlay-minified:[--adaptive:adaptive] overlay-minified:[--strategy:fixed] overlay-minified:[--offset:15] overlay-minified:[--trigger:hover] overlay-minified:[--placement:right-start]">
+                        <button id="settings-dropdown" type="button" class="dropdown-toggle {{ $isSettingActive ? 'menu-active' : '' }}" aria-haspopup="menu" aria-expanded="{{ $isSettingActive ? 'true' : 'false' }}" aria-label="Setting" title="Setting">
+                            <span class="icon-[tabler--settings] size-5"></span>
+                            <span class="overlay-minified:hidden">Setting</span>
+                            <span class="icon-[tabler--chevron-down] dropdown-open:rotate-180 size-4 overlay-minified:hidden"></span>
+                        </button>
+                        <ul class="dropdown-menu mt-0 shadow-none overlay-minified:shadow-md overlay-minified:shadow-base-300/20 dropdown-open:opacity-100 {{ $isSettingActive ? 'block' : 'hidden' }} min-w-60 overlay-minified:before:absolute overlay-minified:before:-start-4 overlay-minified:before:top-0 overlay-minified:before:h-full overlay-minified:before:w-4 before:bg-transparent" role="menu" aria-orientation="vertical" aria-labelledby="settings-dropdown">
+                            <li>
+                                <a href="{{ route('profile.edit') }}" class="{{ request()->routeIs('profile.*') ? 'menu-active' : '' }}">
+                                    <span class="icon-[tabler--user-cog] size-5"></span>Profile settings
+                                </a>
+                            </li>
+                            @if (auth()->user()?->hasRole('ADMINISTRATOR'))
+                                <li>
+                                    <a href="{{ route('users.index') }}" class="{{ request()->routeIs('users.*') ? 'menu-active' : '' }}">
+                                        <span class="icon-[tabler--users] size-5"></span>User management
+                                    </a>
+                                </li>
+                            @endif
                         </ul>
                     </li>
                 </ul>

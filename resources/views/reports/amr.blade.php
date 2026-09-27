@@ -8,18 +8,28 @@
         <h1 class="text-xl font-semibold text-base-content">AMR Report</h1>
         <p class="text-xs text-base-content/60">Actual Milling Recovery (AMR) — Commercial milling results and statistical analysis</p>
     </div>
-    <a href="{{ route('records.create', ['type' => 'amr']) }}"
-        class="btn btn-secondary btn-sm">
-        <span class="icon-[tabler--plus] size-4"></span>
-        Add AMR Trial
-    </a>
+    <div class="flex flex-wrap items-center gap-2">
+        <a href="{{ route('amr.export.excel', request()->query()) }}" class="btn btn-outline btn-success btn-sm" title="Export AMR report to Excel (.xlsx)">
+            <span class="icon-[tabler--file-spreadsheet] size-4"></span>
+            Excel Export
+        </a>
+        <a href="{{ route('amr.export.pdf', request()->query()) }}" class="btn btn-outline btn-error btn-sm" title="Download AMR report as PDF">
+            <span class="icon-[tabler--file-type-pdf] size-4"></span>
+            PDF Download
+        </a>
+        <a href="{{ route('records.create', ['type' => 'amr']) }}"
+            class="btn btn-secondary btn-sm">
+            <span class="icon-[tabler--plus] size-4"></span>
+            Add AMR Trial
+        </a>
+    </div>
 </div>
 
 <form method="GET" action="{{ route('amr.index') }}" class="card mb-4 border border-base-content/10 bg-base-100 p-4 shadow-sm">
     <div class="grid grid-cols-1 items-end gap-4 md:grid-cols-3">
         <label class="form-control">
             <span class="label-text mb-2 text-sm font-semibold text-black">Branch</span>
-            <select name="branch_id" class="select select-bordered min-h-11 w-full text-base text-black" onchange="this.form.submit()">
+            <select name="branch_id" class="select select-bordered min-h-11 w-full text-base text-black" onchange="this.form.submit() ">
                 <option value="">All Branches</option>
                 @foreach ($branches as $branch)
                     <option value="{{ $branch->id }}" @selected($filters['branch_id'] === $branch->id)>{{ $branch->name }}</option>
@@ -89,7 +99,7 @@
           $agedMonths = is_array($group) || $group instanceof \ArrayAccess ? ($group['aged_months'] ?? $pile?->aged_months ?? $firstRecord?->aged_months ?? 0) : ($pile?->aged_months ?? $firstRecord?->aged_months ?? 0);
           $volumeKg = is_array($group) || $group instanceof \ArrayAccess ? ($group['volume_kg'] ?? $pile?->volume_kg ?? $firstRecord?->volume_kg ?? 0) : ($pile?->volume_kg ?? $firstRecord?->volume_kg ?? 0);
           $riceMillers = is_array($group) || $group instanceof \ArrayAccess ? ($group['rice_millers'] ?? $firstRecord?->rice_millers ?? '—') : ($firstRecord?->rice_millers ?? '—');
-          $validRecoveries = $records->filter(fn($r) => (float) $r->palay_input_kg > 0)->map(fn($r) => $r->milling_recovery_percentage);
+          $validRecoveries = $records->map(fn($r) => (float) $r->milling_recovery_percentage)->filter(fn($val) => $val > 0);
           $mean = $validRecoveries->isNotEmpty() ? $validRecoveries->avg() : null;
           $amrRateValue = $calculation->amrRate ?? $mean;
           $pmrRateValue = is_array($group) || $group instanceof \ArrayAccess ? ($group['pmr_rate'] ?? null) : null;
@@ -143,13 +153,13 @@
               <span class="badge badge-soft badge-neutral text-[11px] font-semibold px-1.5 py-0.5">Trial {{ $trial }}</span>
             </td>
             <td class="text-end font-mono align-middle px-2.5 py-1">
-              {{ $record ? number_format((float) $record->palay_input_kg, 2) : '—' }}
+              {{ $record && $record->palay_input_kg !== null ? number_format((float) $record->palay_input_kg, 2) : '—' }}
             </td>
             <td class="text-end font-mono align-middle px-2.5 py-1">
-              {{ $record ? number_format((float) $record->rice_recovery_kg, 2) : '—' }}
+              {{ $record && $record->rice_recovery_kg !== null ? number_format((float) $record->rice_recovery_kg, 2) : '—' }}
             </td>
             <td class="text-end font-mono font-medium align-middle border-e border-base-content/20 px-2.5 py-1 {{ $record ? 'text-primary' : '' }}">
-              {{ $record ? number_format($record->milling_recovery_percentage, 2) . '%' : '—' }}
+              {{ $record && $record->milling_recovery_percentage > 0 ? number_format($record->milling_recovery_percentage, 2) . '%' : '—' }}
             </td>
 
             @if ($trial === 1)
@@ -235,7 +245,6 @@
                     @php
                       $status = strtolower($pile->amr_status);
                       $badgeClass = match($status) {
-
                         'retest' => 'badge-secondary',
                         'recommend', 'recommended' => 'badge-primary',
                         'rejected' => 'badge-secondary',
@@ -255,40 +264,43 @@
                       <span class="icon-[tabler--plus] size-3.5"></span>
                       <span>Add Trials</span>
                     </a>
-                  @else
-                    <a href="{{ route('records.create', ['type' => 'amr', 'pile_id' => $pile?->id]) }}" class="btn btn-circle btn-text btn-xs" aria-label="Edit trial" title="Edit trial">
-                      <span class="icon-[tabler--pencil] size-4"></span>
-                    </a>
                   @endif
 
-                  @if ($pile && in_array($pile->amr_status, [null, 'pending'], true) && $hasAmrTrials)
+                  @if ($pile && $hasAmrTrials && (in_array($pile->amr_status, [null, 'pending'], true) || ($pile->amr_status === 'recommended' && $calculation->isInvalidOutliers())))
                     <div class="dropdown relative inline-flex [--placement:bottom-end]">
-                      <button id="amr-actions-{{ $pile->id }}" type="button" class="dropdown-toggle btn btn-circle btn-text btn-xs cursor-pointer" aria-haspopup="menu" aria-expanded="false" aria-label="Pile actions" title="Update status">
-                        <span class="icon-[tabler--dots-vertical] size-4"></span>
+                      <button id="amr-actions-{{ $pile->id }}" type="button" class="dropdown-toggle btn btn-primary btn-xs inline-flex items-center gap-1 cursor-pointer" aria-haspopup="menu" aria-expanded="false" aria-label="AMR actions" title="Choose AMR action">
+                        <span class="icon-[tabler--check] size-3.5"></span>
+                        <span>Actions</span>
                       </button>
                       <ul class="dropdown-menu dropdown-open:opacity-100 hidden min-w-36 shadow-md" role="menu" aria-labelledby="amr-actions-{{ $pile->id }}">
                         @php
-                          $statusActions = $pile->amr_status === 'pending'
+                          $statusActions = $calculation->isValid
                             ? [
                                 'recommend' => ['label' => 'Recommend', 'icon' => 'icon-[tabler--thumb-up]', 'color' => 'text-primary'],
                                 'retest' => ['label' => 'Retest', 'icon' => 'icon-[tabler--refresh]', 'color' => 'text-secondary'],
                               ]
-                            : [
-                                'confirm' => ['label' => 'Confirm', 'icon' => 'icon-[tabler--check]', 'color' => 'text-primary'],
-                              ];
+                            : ($calculation->isInvalidOutliers()
+                              ? [
+                                  'retest' => ['label' => 'Retest', 'icon' => 'icon-[tabler--refresh]', 'color' => 'text-secondary'],
+                                ]
+                              : []);
                         @endphp
-                        @foreach ($statusActions as $action => $opt)
-                          <li>
-                            <form method="POST" action="{{ route('piles.status', $pile) }}">
-                              @csrf
-                              <input type="hidden" name="form_type" value="amr">
-                              <button type="submit" name="action" value="{{ $action }}" class="dropdown-item w-full {{ $opt['color'] }} cursor-pointer">
-                                <span class="{{ $opt['icon'] }} size-4"></span>
-                                {{ $opt['label'] }}
-                              </button>
-                            </form>
-                          </li>
-                        @endforeach
+                        @if ($statusActions)
+                          @foreach ($statusActions as $action => $opt)
+                            <li>
+                              <form method="POST" action="{{ route('piles.status', $pile) }}">
+                                @csrf
+                                <input type="hidden" name="form_type" value="amr">
+                                <button type="submit" name="action" value="{{ $action }}" class="dropdown-item w-full {{ $opt['color'] }} cursor-pointer">
+                                  <span class="{{ $opt['icon'] }} size-4"></span>
+                                  {{ $opt['label'] }}
+                                </button>
+                              </form>
+                            </li>
+                          @endforeach
+                        @else
+                          <li class="dropdown-item text-base-content/60">Complete 3 trials first</li>
+                        @endif
                       </ul>
                     </div>
                   @endif
@@ -322,7 +334,7 @@
     $warehouseName = is_array($group) || $group instanceof \ArrayAccess ? ($group['warehouse_name'] ?? $pile?->warehouse?->name ?? $firstRecord?->warehouse_name ?? '—') : ($firstRecord?->warehouse_name ?? $pile?->warehouse?->name ?? '—');
     $pileNumber = is_array($group) || $group instanceof \ArrayAccess ? ($group['pile_number'] ?? $pile?->pile_number ?? $pile?->number ?? $firstRecord?->pile_number ?? '—') : ($pile?->pile_number ?? $pile?->number ?? $firstRecord?->pile_number ?? '—');
     $variety = is_array($group) || $group instanceof \ArrayAccess ? ($group['variety'] ?? $pile?->variety ?? $firstRecord?->variety ?? '—') : ($pile?->variety ?? $firstRecord?->variety ?? '—');
-    $validRecoveries = $records->filter(fn($r) => (float) $r->palay_input_kg > 0)->map(fn($r) => $r->milling_recovery_percentage);
+    $validRecoveries = $records->map(fn($r) => (float) $r->milling_recovery_percentage)->filter(fn($val) => $val > 0);
     $mean = $validRecoveries->isNotEmpty() ? $validRecoveries->avg() : null;
     $amrRateValue = $calculation->amrRate ?? $mean;
     $pmrRateValue = is_array($group) || $group instanceof \ArrayAccess ? ($group['pmr_rate'] ?? null) : null;
@@ -340,84 +352,75 @@
       <!-- Modal Header -->
       <div class="flex items-center justify-between border-b border-base-content/10 px-4 py-3 bg-base-200/50 shrink-0">
         <div>
-          <h3 id="{{ $modalId }}-title" class="text-sm font-semibold text-base-content flex items-center gap-2">
-            <span class="icon-[tabler--calculator] size-4.5 text-primary"></span>
-            AMR Computation Breakdown
+          <h3 id="{{ $modalId }}-title" class="font-semibold text-base text-base-content flex items-center gap-1.5">
+            <span class="icon-[tabler--calculator] size-4 text-primary"></span>
+            AMR Statistical Evaluation
           </h3>
-          <p class="text-[11px] text-base-content/60 mt-0.5">
-            Warehouse: <span class="font-medium text-base-content">{{ $warehouseName }}</span> •
-            Pile: <span class="font-medium text-base-content">{{ $pileNumber }}</span> •
-            Variety: <span class="font-medium text-base-content">{{ $variety }}</span>
+          <p class="text-xs text-base-content/60">
+            {{ $warehouseName }} &bull; Pile {{ $pileNumber }} &bull; {{ $variety }}
           </p>
         </div>
         <button type="button"
-                class="btn btn-circle btn-text btn-xs text-base-content/70 hover:text-base-content cursor-pointer"
-                aria-label="Close modal"
-                data-close-modal="{{ $modalId }}">
+                class="btn btn-ghost btn-circle btn-xs text-base-content/70 hover:text-base-content cursor-pointer"
+                data-close-modal="{{ $modalId }}"
+                aria-label="Close modal">
           <span class="icon-[tabler--x] size-4"></span>
         </button>
       </div>
 
-      <!-- Modal Body (Scrollable if viewport is small) -->
-      <div class="p-4 space-y-3.5 overflow-y-auto flex-1 text-xs">
-        {{-- Status Summary Alert --}}
-        @if (! $hasAmrTrials)
-          <div class="alert alert-soft alert-neutral flex items-center gap-2.5 p-2.5 rounded-lg text-xs">
-            <span class="icon-[tabler--clock] size-4.5 text-base-content/60 shrink-0"></span>
+      <!-- Modal Body -->
+      <div class="p-4 space-y-4 overflow-y-auto text-xs">
+
+        {{-- Status Alert Banner --}}
+        @if ($calculation->isValid)
+          <div class="alert alert-soft alert-primary text-xs py-2 px-3 flex items-center gap-2">
+            <span class="icon-[tabler--circle-check] size-4 shrink-0"></span>
             <div>
-              <p class="font-semibold text-base-content">Pending AMR Trials (0/3)</p>
-              <p class="text-base-content/70 text-[11px] mt-0.5">No AMR commercial test milling trials have been entered yet for this pile.</p>
-            </div>
-          </div>
-        @elseif ($calculation->isValid)
-          <div class="alert alert-soft alert-primary flex items-center gap-2.5 p-2.5 rounded-lg text-xs">
-            <span class="icon-[tabler--circle-check] size-4.5 text-primary shrink-0"></span>
-            <div>
-              <p class="font-semibold text-primary">Recommended AMR: {{ $calculation->getFormattedAmrRate() }}</p>
-              <p class="text-base-content/70 text-[11px] mt-0.5">{{ $calculation->statusMessage }}</p>
+              <span class="font-semibold">Calculation Valid:</span>
+              {{ $calculation->statusMessage }}
             </div>
           </div>
         @elseif ($calculation->isInvalidOutliers())
-          <div class="alert alert-soft alert-secondary flex items-center gap-2.5 p-2.5 rounded-lg text-xs">
-            <span class="icon-[tabler--alert-triangle] size-4.5 text-secondary shrink-0"></span>
+          <div class="alert alert-soft alert-secondary text-xs py-2 px-3 flex items-center gap-2">
+            <span class="icon-[tabler--alert-triangle] size-4 shrink-0"></span>
             <div>
-              <p class="font-semibold text-secondary">Calculation Invalid: Retest Required</p>
-              <p class="text-base-content/70 text-[11px] mt-0.5">{{ $calculation->statusMessage }}</p>
+              <span class="font-semibold">Invalid — Outliers Detected:</span>
+              {{ $calculation->statusMessage }}
             </div>
           </div>
         @else
-          <div class="alert alert-soft alert-neutral flex items-center gap-2.5 p-2.5 rounded-lg text-xs">
-            <span class="icon-[tabler--clock] size-4.5 text-base-content/60 shrink-0"></span>
+          <div class="alert alert-soft alert-neutral text-xs py-2 px-3 flex items-center gap-2">
+            <span class="icon-[tabler--clock] size-4 shrink-0"></span>
             <div>
-              <p class="font-semibold text-base-content">Calculation Incomplete</p>
-              <p class="text-base-content/70 text-[11px] mt-0.5">{{ $calculation->statusMessage }}</p>
+              <span class="font-semibold">Incomplete Trials:</span>
+              {{ $calculation->statusMessage }}
             </div>
           </div>
         @endif
 
-        {{-- Statistical Boundary Cards --}}
+        {{-- Statistical Summary Cards --}}
         <div>
-          <h4 class="text-[11px] font-semibold uppercase tracking-wider text-base-content/60 mb-1.5">1. Outlier Boundary Parameters (&plusmn;2.00% of Median)</h4>
-          <div class="grid grid-cols-3 gap-2">
-            <div class="bg-base-200/50 p-2 rounded-lg border border-base-content/10 text-center">
-              <span class="text-[10px] text-base-content/60 block">Lower Limit (-2%)</span>
-              <span class="text-sm font-mono font-bold text-base-content mt-0.5 block">{{ $calculation->getFormattedLowerLimit() }}</span>
-              <span class="text-[9px] text-base-content/50 block">Median &times; 0.98</span>
+          <h4 class="text-[11px] font-semibold uppercase tracking-wider text-base-content/60 mb-1.5">1. Statistical Distribution (±2% Tolerance)</h4>
+          <div class="grid grid-cols-3 gap-2 text-center">
+            <div class="bg-base-200/50 rounded-lg p-2 border border-base-content/10">
+              <span class="text-[10px] text-base-content/60 block">Lower Limit (–2%)</span>
+              <span class="font-mono font-semibold text-base-content text-sm">{{ $calculation->getFormattedLowerLimit() }}</span>
             </div>
-            <div class="bg-base-200/50 p-2 rounded-lg border border-base-content/10 text-center">
-              <span class="text-[10px] text-base-content/60 block">Median Recovery</span>
-              <span class="text-sm font-mono font-bold text-base-content mt-0.5 block">{{ $calculation->getFormattedMedian() }}</span>
-              <span class="text-[9px] text-base-content/50 block">Middle Trial</span>
+            <div class="bg-base-200/50 rounded-lg p-2 border border-primary/20 bg-primary/5">
+              <span class="text-[10px] text-primary block font-medium">Median</span>
+              <span class="font-mono font-bold text-primary text-sm">{{ $calculation->getFormattedMedian() }}</span>
             </div>
-            <div class="bg-base-200/50 p-2 rounded-lg border border-base-content/10 text-center">
+            <div class="bg-base-200/50 rounded-lg p-2 border border-base-content/10">
               <span class="text-[10px] text-base-content/60 block">Upper Limit (+2%)</span>
-              <span class="text-sm font-mono font-bold text-base-content mt-0.5 block">{{ $calculation->getFormattedUpperLimit() }}</span>
-              <span class="text-[9px] text-base-content/50 block">Median &times; 1.02</span>
+              <span class="font-mono font-semibold text-base-content text-sm">{{ $calculation->getFormattedUpperLimit() }}</span>
             </div>
           </div>
+          <p class="text-[10px] text-base-content/50 mt-1 italic text-center">
+            Formula: Median = Trial 2 of 3 sorted recoveries &bull; Limits = Median &plusmn; 2%
+          </p>
         </div>
 
-        {{-- Trials Analysis Table --}}
+        {{-- Trial Evaluation Breakdown Table --}}
         <div>
           <h4 class="text-[11px] font-semibold uppercase tracking-wider text-base-content/60 mb-1.5">2. Trial Evaluation &amp; Outlier Status</h4>
           <div class="overflow-x-auto border border-base-content/10 rounded-lg">
@@ -435,8 +438,8 @@
                 @forelse ($calculation->trials as $trialRow)
                   <tr class="border-b border-base-content/10">
                     <td class="font-medium py-1 px-2">Trial {{ $trialRow['trial_number'] }}</td>
-                    <td class="text-end font-mono py-1 px-2">{{ number_format($trialRow['palay_input_kg'], 2) }}</td>
-                    <td class="text-end font-mono py-1 px-2">{{ number_format($trialRow['rice_recovery_kg'], 2) }}</td>
+                    <td class="text-end font-mono py-1 px-2">{{ $trialRow['palay_input_kg'] !== null ? number_format((float) $trialRow['palay_input_kg'], 2) : '—' }}</td>
+                    <td class="text-end font-mono py-1 px-2">{{ $trialRow['rice_recovery_kg'] !== null ? number_format((float) $trialRow['rice_recovery_kg'], 2) : '—' }}</td>
                     <td class="text-end font-mono font-semibold py-1 px-2 text-primary">{{ number_format($trialRow['milling_recovery'], 2) }}%</td>
                     <td class="text-center py-1 px-2">
                       @if ($trialRow['status'] === 'VALID')
@@ -512,7 +515,7 @@
               <div class="flex items-center justify-between">
                 <div>
                   <span class="text-base-content/80 font-medium">Recovery Relationship (PMR &ge; AMR):</span>
-                  <p class="text-[10px] text-base-content/60">PMR: {{ number_format($pmrRateValue, 2) }}% • AMR: {{ $amrRateValue !== null ? number_format($amrRateValue, 2).'%' : '—' }}</p>
+                  <p class="text-[10px] text-base-content/60">PMR: {{ number_format($pmrRateValue, 2) }}% &bull; AMR: {{ $amrRateValue !== null ? number_format($amrRateValue, 2).'%' : '—' }}</p>
                 </div>
                 @if ($reestablishment['is_pmr_below_amr'])
                   <span class="badge badge-soft badge-secondary text-[10px] font-semibold py-0.5 px-2">

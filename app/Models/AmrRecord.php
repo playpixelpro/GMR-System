@@ -143,12 +143,24 @@ class AmrRecord extends Model
 
     public function getMillingRecoveryPercentageAttribute(): float
     {
-        if ((float) $this->palay_input_kg === 0.0) {
+        if ($this->milling_recovery !== null) {
+            return (float) $this->milling_recovery;
+        }
+
+        if (
+            $this->palay_input_kg === null ||
+            (float) $this->palay_input_kg === 0.0
+        ) {
             return 0.0;
         }
 
         return ((float) $this->rice_recovery_kg /
             (float) $this->palay_input_kg) *
             100;
+    }
+
+    public function getRecoveryRatePercentageAttribute(): float
+    {
+        return $this->getMillingRecoveryPercentageAttribute();
     }
 }

@@ -29,36 +29,91 @@ class AmrCalculationService
                 (int) ($trial instanceof AmrRecord
                     ? $trial->trial_number
                     : (is_array($trial)
-                        ? $trial['trial_number'] ?? 0
-                        : $trial->trial_number ?? 0));
+                        ? $trial['trial_number'] ?? ($trial['no_of_trial'] ?? 0)
+                        : $trial->trial_number ?? ($trial->no_of_trial ?? 0)));
 
             $palayInput =
-                (float) ($trial instanceof AmrRecord
-                    ? $trial->palay_input_kg
+                $trial instanceof AmrRecord
+                    ? ($trial->palay_input_kg !== null
+                        ? (float) $trial->palay_input_kg
+                        : null)
                     : (is_array($trial)
-                        ? $trial['palay_input_kg'] ??
-                            ($trial['palay_input'] ?? 0)
-                        : $trial->palay_input_kg ??
-                            ($trial->palay_input ?? 0)));
+                        ? (isset($trial['palay_input_kg']) &&
+                        $trial['palay_input_kg'] !== '' &&
+                        $trial['palay_input_kg'] !== null
+                            ? (float) $trial['palay_input_kg']
+                            : (isset($trial['palay_input']) &&
+                            $trial['palay_input'] !== '' &&
+                            $trial['palay_input'] !== null
+                                ? (float) $trial['palay_input']
+                                : null))
+                        : (isset($trial->palay_input_kg) &&
+                        $trial->palay_input_kg !== null
+                            ? (float) $trial->palay_input_kg
+                            : null));
 
             $riceRecovery =
-                (float) ($trial instanceof AmrRecord
-                    ? $trial->rice_recovery_kg
+                $trial instanceof AmrRecord
+                    ? ($trial->rice_recovery_kg !== null
+                        ? (float) $trial->rice_recovery_kg
+                        : null)
                     : (is_array($trial)
-                        ? $trial['rice_recovery_kg'] ??
-                            ($trial['rice_recovery'] ?? 0)
-                        : $trial->rice_recovery_kg ??
-                            ($trial->rice_recovery ?? 0)));
+                        ? (isset($trial['rice_recovery_kg']) &&
+                        $trial['rice_recovery_kg'] !== '' &&
+                        $trial['rice_recovery_kg'] !== null
+                            ? (float) $trial['rice_recovery_kg']
+                            : (isset($trial['rice_recovery']) &&
+                            $trial['rice_recovery'] !== '' &&
+                            $trial['rice_recovery'] !== null
+                                ? (float) $trial['rice_recovery']
+                                : null))
+                        : (isset($trial->rice_recovery_kg) &&
+                        $trial->rice_recovery_kg !== null
+                            ? (float) $trial->rice_recovery_kg
+                            : null));
 
-            $millingRecovery =
+            $providedRecovery =
+                $trial instanceof AmrRecord
+                    ? ($trial->milling_recovery !== null
+                        ? (float) $trial->milling_recovery
+                        : null)
+                    : (is_array($trial)
+                        ? (isset($trial['recovery_rate']) &&
+                        $trial['recovery_rate'] !== '' &&
+                        $trial['recovery_rate'] !== null
+                            ? (float) $trial['recovery_rate']
+                            : (isset($trial['milling_recovery']) &&
+                            $trial['milling_recovery'] !== '' &&
+                            $trial['milling_recovery'] !== null
+                                ? (float) $trial['milling_recovery']
+                                : null))
+                        : (isset($trial->milling_recovery) &&
+                        $trial->milling_recovery !== null
+                            ? (float) $trial->milling_recovery
+                            : (isset($trial->recovery_rate) &&
+                            $trial->recovery_rate !== null
+                                ? (float) $trial->recovery_rate
+                                : null)));
+
+            if (
+                $palayInput !== null &&
+                $riceRecovery !== null &&
                 $palayInput > 0
-                    ? round(($riceRecovery / $palayInput) * 100, 2)
-                    : 0.0;
+            ) {
+                $millingRecovery = round(
+                    ($riceRecovery / $palayInput) * 100,
+                    2,
+                );
+            } elseif ($providedRecovery !== null) {
+                $millingRecovery = round($providedRecovery, 2);
+            } else {
+                $millingRecovery = 0.0;
+            }
 
             $normalizedTrials[$trialNumber] = [
                 'trial_number' => $trialNumber,
-                'palay_input_kg' => round($palayInput, 2),
-                'rice_recovery_kg' => round($riceRecovery, 2),
+                'palay_input_kg' => $palayInput !== null ? round($palayInput, 2) : null,
+                'rice_recovery_kg' => $riceRecovery !== null ? round($riceRecovery, 2) : null,
                 'milling_recovery' => $millingRecovery,
                 'is_outlier' => false,
                 'status' => 'PENDING',
@@ -143,9 +198,8 @@ class AmrCalculationService
             $status = 'INVALID_FEWER_VALID_TRIALS';
             $statusLabel = "Invalid ({$outlierCount} Outliers — Retest Required)";
             $statusMessage =
-                'Fewer than '.
-                self::MINIMUM_VALID_TRIALS.
-                " valid trials remain ({$validCount} valid, {$outlierCount} outliers). Outliers exceed tolerance (±2%). A re-trial is required.";
+                "Retest required: {$outlierCount} outliers detected; only {$validCount} valid trial remains. ".
+                'Outliers exceed the ±2% tolerance.';
             $amrRate = null;
             $isValid = false;
         } else {
@@ -204,14 +258,10 @@ class AmrCalculationService
     public function calculateAndStoreForPile(Pile $pile): AmrCalculationResult
     {
         $pile->loadMissing('amrRecords');
-        $result = $this->calculate(
-            $pile->amrRecords->filter(
-                fn (
-                    AmrRecord $record,
-                ): bool => $record->included_in_computation &&
-                    $record->status === 'RECOMMENDED',
-            ),
+        $recommended = $pile->amrRecords->filter(
+            fn (AmrRecord $r): bool => $r->included_in_computation && $r->status === 'RECOMMENDED',
         );
+        $result = $this->calculate($recommended->isNotEmpty() ? $recommended : $pile->amrRecords);
 
         // Update trial records with individual audit flags
         foreach ($result->trials as $trialData) {

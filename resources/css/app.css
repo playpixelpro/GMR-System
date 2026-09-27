@@ -70,9 +70,14 @@
     [data-trial-row] input,
     [data-trial-row] select {
         min-height: 2.5rem;
-        border: 1px solid var(--color-gray-300);
         background-color: var(--color-white);
     }
+}
+
+/* Data entry form: use a large, clearly visible shadow on every shadowed element.
+   Scoped to the form so other pages are unaffected; also covers trial rows cloned by JS. */
+form[data-entry-form] :is(.shadow-sm, .shadow, .shadow-md):not(:focus) {
+    box-shadow: var(--shadow-lg) !important;
 }
 
 /* Use solid black for neutral and muted text across the application. */

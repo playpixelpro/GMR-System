@@ -6,6 +6,7 @@ use App\Models\AmrRecord;
 use App\Models\Branch;
 use App\Models\Pile;
 use App\Models\PmrRecord;
+use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -13,6 +14,21 @@ use Tests\TestCase;
 class GmrSummaryDashboardTest extends TestCase
 {
     use RefreshDatabase;
+
+    private User $user;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->user = User::factory()->create([
+            'role' => 'staff',
+            'must_change_password' => false,
+            'temporary_password_expires_at' => null,
+            'is_active' => true,
+        ]);
+        $this->actingAs($this->user);
+    }
 
     public function test_summary_dashboard_computes_gmr_and_applies_filters(): void
     {
@@ -44,6 +60,8 @@ class GmrSummaryDashboardTest extends TestCase
 
         $response
             ->assertOk()
+            ->assertSee('Total Warehouses')
+            ->assertSee('Total Piles')
             ->assertSee('61.88%')
             ->assertSee('61.53%–62.22%')
             ->assertSee('GMR = (AMR + PMR) / 2')
@@ -70,6 +88,7 @@ class GmrSummaryDashboardTest extends TestCase
 
         $this->get(route('gmr.summary'))
             ->assertOk()
+            ->assertSee('Total Warehouses')
             ->assertSee('Re-establish')
             ->assertSee('GMR is 60% or lower');
     }
@@ -98,6 +117,8 @@ class GmrSummaryDashboardTest extends TestCase
             'rice_millers' => 'Test Miller',
             'palay_input_kg' => 1000,
             'rice_recovery_kg' => $rate * 10,
+            'status' => 'RECOMMENDED',
+            'included_in_computation' => true,
         ]);
     }
 
@@ -110,6 +131,8 @@ class GmrSummaryDashboardTest extends TestCase
             'trial_number' => 1,
             'palay_input_kg' => 1000,
             'rice_recovery_kg' => $rate * 10,
+            'status' => 'RECOMMENDED',
+            'included_in_computation' => true,
         ]);
     }
 }

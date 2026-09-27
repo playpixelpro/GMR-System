@@ -80,12 +80,12 @@ class AuthController extends Controller
             'password' => ['required', 'confirmed', 'min:12'],
         ]);
         $user = $request->user();
-        $user->update([
+        $user->forceFill([
             'password' => Hash::make($validated['password']),
             'must_change_password' => false,
             'activated_at' => $user->activated_at ?? now(),
             'temporary_password_expires_at' => null,
-        ]);
+        ])->save();
         AuditLog::record('PASSWORD_CHANGED', $user);
 
         return redirect()

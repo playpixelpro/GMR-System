@@ -375,7 +375,8 @@ class PmrCalculationService
         if (! $isOutlierValid) {
             $status = 'INVALID_FEWER_VALID_TRIALS';
             $statusLabel = 'Invalid / Requires Re-establishment';
-            $statusMessage = "Fewer than {$minimumValidTrials} valid trials remain after outlier exclusion ({$validTrialCount}/{$requiredTrials} valid). Requires re-establishment.";
+            $statusMessage = "Retest required: {$outlierCount} outliers detected; Fewer than {$minimumValidTrials} valid trials remain ({$validTrialCount}/{$requiredTrials} valid). ".
+                'Outliers exceed the ±2% tolerance and require re-establishment.';
             $pmrRate = null;
         } elseif (! $isCvValid) {
             $status = 'INVALID_CV_EXCEEDED';
@@ -658,17 +659,10 @@ class PmrCalculationService
         ?string $profile = null,
     ): PmrCalculationResult {
         $pile->loadMissing('pmrRecords');
-        $result = $this->calculate(
-            $pile->pmrRecords->filter(
-                fn (
-                    PmrRecord $record,
-                ): bool => $record->included_in_computation &&
-                    $record->status === 'RECOMMENDED',
-            ),
-            null,
-            null,
-            $profile,
+        $recommended = $pile->pmrRecords->filter(
+            fn (PmrRecord $r): bool => $r->included_in_computation && $r->status === 'RECOMMENDED',
         );
+        $result = $this->calculate($recommended->isNotEmpty() ? $recommended : $pile->pmrRecords, null, null, $profile);
 
         // Update trial records with individual audit flags
         foreach ($result->trials as $trialData) {

@@ -32,7 +32,7 @@
             <div class="max-w-sm">
                 <label for="form_type" class="block text-sm font-medium text-gray-700">Form Type</label>
                 <select name="form_type" id="form_type" required
-                        class="mt-1 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
                     <option value="" @selected(empty(old('form_type', $formType)))>Select Form Type</option>
                     <option value="amr" @selected(old('form_type', $formType) === 'amr')>AMR</option>
                     <option value="pmr" @selected(old('form_type', $formType) === 'pmr')>PMR</option>
@@ -47,7 +47,7 @@
                 <div>
                     <label for="branch_id" class="block text-sm font-medium text-gray-700">Branch</label>
                     <select name="branch_id" id="branch_id"
-                            class="mt-1 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
                         <option value="">Select branch</option>
                         @foreach ($branches as $branch)
                             <option value="{{ $branch->id }}" @selected((string) old('branch_id') === (string) $branch->id)>{{ $branch->name }}</option>
@@ -56,12 +56,12 @@
                     </select>
                     <input type="text" name="new_branch_name" id="new_branch_name" value="{{ old('new_branch_name') }}"
                            placeholder="Enter new branch name"
-                           class="{{ old('new_branch_name') ? '' : 'hidden' }} mt-2 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                           class="{{ old('new_branch_name') ? '' : 'hidden' }} mt-2 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
                 </div>
                 <div>
                     <label for="warehouse_id" class="block text-sm font-medium text-gray-700">Warehouse</label>
                     <select name="warehouse_id" id="warehouse_id"
-                            class="mt-1 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
                         <option value="">Select warehouse</option>
                         @foreach ($warehouses as $warehouse)
                             <option value="{{ $warehouse->id }}" data-branch-id="{{ $warehouse->branch_id }}" @selected((string) old('warehouse_id') === (string) $warehouse->id)>{{ $warehouse->name }}</option>
@@ -73,7 +73,7 @@
                 <div>
                     <label for="pile_id" class="block text-sm font-medium text-gray-700">Pile Number</label>
                     <select name="pile_id" id="pile_id"
-                            class="mt-1 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
                         <option value="">Select pile</option>
                         @foreach ($piles as $pile)
                             <option value="{{ $pile['id'] }}" data-warehouse-id="{{ $pile['warehouse_id'] }}" @selected((string) old('pile_id') === (string) $pile['id'])>{{ $pile['number'] }}</option>
@@ -82,7 +82,7 @@
                     </select>
                     <input type="hidden" name="new_pile_number" id="new_pile_number" value="{{ old('new_pile_number') }}">
                     <div data-retest-notice class="mt-2 hidden rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                        <strong>⚠ RETEST NOTICE</strong><br>
+                        <strong>⚠️ RETEST NOTICE</strong><br>
                         A previous AMR/PMR test for this pile was recommended for retest. Please conduct and encode the new test result.
                     </div>
                 </div>
@@ -90,27 +90,27 @@
                 <div>
                     <label for="variety" class="block text-sm font-medium text-gray-700">Variety</label>
                     <input type="text" name="variety" id="variety" value="{{ old('variety') }}" required data-pile-detail-field
-                           class="mt-1 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                           class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
                 </div>
                 <div>
                     <label for="purity" class="block text-sm font-medium text-gray-700">Purity (%)</label>
                     <input type="number" name="purity" id="purity" value="{{ old('purity') }}" min="0" max="100" step="any" required data-pile-detail-field
-                           class="mt-1 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                           class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
                 </div>
                 <div>
                     <label for="aged" class="block text-sm font-medium text-gray-700">Aged (in months)</label>
                     <input type="number" name="aged" id="aged" value="{{ old('aged') }}" min="0" step="1" required data-pile-detail-field
-                           class="mt-1 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                           class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
                 </div>
                 <div>
                     <label for="mc" class="block text-sm font-medium text-gray-700">MC (%)</label>
                     <input type="number" name="mc" id="mc" value="{{ old('mc') }}" min="0" max="100" step="any" required data-pile-detail-field
-                           class="mt-1 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                           class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
                 </div>
                 <div>
                     <label for="quality" class="block text-sm font-medium text-gray-700">Quality (Condition)</label>
                     <select name="quality" id="quality" required data-pile-detail-field
-                            class="mt-1 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
                         <option value="">Select condition</option>
                         <option value="good" @selected(strtolower((string) old('quality')) === 'good')>Good</option>
                         <option value="fair" @selected(strtolower((string) old('quality')) === 'fair')>Fair</option>
@@ -121,7 +121,7 @@
                 <div>
                     <label for="volume" class="block text-sm font-medium text-gray-700">Volume of Pile (kg)</label>
                     <input type="text" name="volume" id="volume" value="{{ old('volume') }}" inputmode="decimal" autocomplete="off" required data-pile-detail-field data-number-format
-                           class="mt-1 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                           class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
                 </div>
             </div>
             <div class="mt-4 flex justify-end">
@@ -135,12 +135,13 @@
             <h2 class="mb-4 text-base font-semibold text-gray-900">Test Milling Details</h2>
             <div data-trial-rows class="space-y-3">
                 <div data-trial-row class="grid grid-cols-1 gap-3 rounded-md border border-blue-200 bg-white p-3 sm:grid-cols-6">
-                    <div><label class="block text-sm font-medium text-gray-700">Trial</label><input type="hidden" name="trials[0][trial_number]" data-trial-value value="1"><span data-trial-label class="mt-1 block  px-3 py-2 text-sm text-gray-700">Trial 1</span></div>
-                    <div><label class="block text-sm font-medium text-gray-700">Test Milling Date</label><input type="text" name="trials[0][test_milling_date]" data-test-field data-flatpickr-date required class="input max-w-sm mt-1 block min-h-10 w-full" placeholder="Month DD, YYYY"></div>
-                    <div><label class="block text-sm font-medium text-gray-700">Rice Miller</label><input type="text" name="trials[0][rice_millers]" data-amr-required class="mt-1 block min-h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"></div>
-                    <div><label class="block text-sm font-medium text-gray-700">Palay Input (kg)</label><input type="text" name="trials[0][palay_input]" data-test-field data-number-format inputmode="decimal" autocomplete="off" required class="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 text-sm"></div>
-                    <div><label class="block text-sm font-medium text-gray-700">Rice Output (kg)</label><input type="text" name="trials[0][rice_recovery]" data-test-field data-number-format inputmode="decimal" autocomplete="off" required class="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 text-sm"></div>
-                    <div data-row-action class="flex items-end gap-2"><button type="button" disabled class="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm font-medium text-gray-400 disabled:cursor-not-allowed">Edit</button><button type="button" data-delete-trial aria-label="Delete trial" title="Delete trial" class="rounded-md border border-red-200 p-2 text-red-600 hover:bg-red-50"><span class="icon-[tabler--trash] h-5 w-5" aria-hidden="true"></span></button></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Trial</label><input type="hidden" name="trials[0][trial_number]" data-trial-value value="1"><span data-trial-label class="mt-1 block px-3 py-2 text-sm text-gray-700">Trial 1</span></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Test Milling Date</label><input type="text" name="trials[0][test_milling_date]" data-test-field data-flatpickr-date required class="input max-w-sm mt-1 block min-h-10 w-full border border-blue-500! focus:border-green-500! focus:ring-green-500!" placeholder="Month DD, YYYY"></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Rice Miller</label><input type="text" name="trials[0][rice_millers]" data-amr-required class="mt-1 block min-h-10 w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm"></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Palay Input (kg)</label><input type="text" name="trials[0][palay_input]" data-test-field data-number-format inputmode="decimal" autocomplete="off" required class="mt-1 block w-full rounded-md border border-blue-500! px-3 py-2 text-sm"></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Rice Output (kg)</label><input type="text" name="trials[0][rice_recovery]" data-test-field data-number-format inputmode="decimal" autocomplete="off" required class="mt-1 block w-full rounded-md border border-blue-500! px-3 py-2 text-sm"></div>
+                    <div data-amr-recovery-col class="hidden"><label class="block text-sm font-medium text-gray-700">Recovery Rate (%)</label><input type="number" name="trials[0][recovery_rate]" data-test-field min="0" max="100" step="any" disabled class="mt-1 block w-full rounded-md border border-blue-500! px-3 py-2 text-sm" placeholder="e.g. 63.00"></div>
+                    <div data-row-action class="flex items-end gap-2"><button type="button" disabled class="w-full rounded-md border border-blue-500! bg-gray-100 px-3 py-2 text-sm font-medium text-gray-400 disabled:cursor-not-allowed">Edit</button><button type="button" data-delete-trial aria-label="Delete trial" title="Delete trial" class="rounded-md border border-red-200 p-2 text-red-600 hover:bg-red-50"><span class="icon-[tabler--trash] h-5 w-5" aria-hidden="true"></span></button></div>
                 </div>
             </div>
             <button type="button" data-add-trial class="mt-3 rounded-md border border-blue-300 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100">Add AMR Trial</button>
@@ -152,11 +153,11 @@
             <div data-trial-rows class="space-y-3">
                 <div data-trial-row class="grid grid-cols-1 gap-3 rounded-md border border-red-200 bg-white p-3 sm:grid-cols-6">
                     <div><label class="block text-sm font-medium text-gray-700">Trial</label><input type="hidden" name="trials[0][trial_number]" data-trial-value value="1" disabled><span data-trial-label class="mt-1 block px-3 py-2 text-sm text-gray-700">Trial 1</span></div>
-                    <div><label class="block text-sm font-medium text-gray-700">Test Milling Date</label><input type="text" name="trials[0][test_milling_date]" data-test-field data-flatpickr-date required class="input max-w-sm mt-1 block min-h-10 w-full" placeholder="Month DD, YYYY"></div>
-                    <div><label class="block text-sm font-medium text-gray-700">Palay Input (kg)</label><input type="text" name="trials[0][palay_input]" data-test-field data-number-format inputmode="decimal" autocomplete="off" class="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 text-sm" placeholder="Optional"></div>
-                    <div><label class="block text-sm font-medium text-gray-700">Rice Output (kg)</label><input type="text" name="trials[0][rice_recovery]" data-test-field data-number-format inputmode="decimal" autocomplete="off" class="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 text-sm" placeholder="Optional"></div>
-                    <div><label class="block text-sm font-medium text-gray-700">RECOVERY RATE (%)</label><input type="number" name="trials[0][recovery_rate]" data-test-field min="0" max="100" step="any" class="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 text-sm" placeholder="e.g. 63.00"></div>
-                    <div data-row-action class="flex items-end gap-2"><button type="button" disabled class="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm font-medium text-gray-400 disabled:cursor-not-allowed">Edit</button><button type="button" data-delete-trial aria-label="Delete trial" title="Delete trial" class="rounded-md border border-red-200 p-2 text-red-600 hover:bg-red-50"><span class="icon-[tabler--trash] h-5 w-5" aria-hidden="true"></span></button></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Test Milling Date</label><input type="text" name="trials[0][test_milling_date]" data-test-field data-flatpickr-date required class="input max-w-sm mt-1 block min-h-10 w-full border border-blue-500! focus:border-green-500! focus:ring-green-500!" placeholder="Month DD, YYYY"></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Palay Input (kg)</label><input type="text" name="trials[0][palay_input]" data-test-field data-number-format inputmode="decimal" autocomplete="off" class="mt-1 block w-full rounded-md border border-blue-500! px-3 py-2 text-sm" placeholder="Optional"></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Rice Output (kg)</label><input type="text" name="trials[0][rice_recovery]" data-test-field data-number-format inputmode="decimal" autocomplete="off" class="mt-1 block w-full rounded-md border border-blue-500! px-3 py-2 text-sm" placeholder="Optional"></div>
+                    <div><label class="block text-sm font-medium text-gray-700">RECOVERY RATE (%)</label><input type="number" name="trials[0][recovery_rate]" data-test-field min="0" max="100" step="any" class="mt-1 block w-full rounded-md border border-blue-500! px-3 py-2 text-sm" placeholder="e.g. 63.00"></div>
+                    <div data-row-action class="flex items-end gap-2"><button type="button" disabled class="w-full rounded-md border border-blue-500! bg-gray-100 px-3 py-2 text-sm font-medium text-gray-400 disabled:cursor-not-allowed">Edit</button><button type="button" data-delete-trial aria-label="Delete trial" title="Delete trial" class="rounded-md border border-red-200 p-2 text-red-600 hover:bg-red-50"><span class="icon-[tabler--trash] h-5 w-5" aria-hidden="true"></span></button></div>
                 </div>
             </div>
             <button type="button" data-add-trial class="mt-3 rounded-md border border-red-300 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-100">Add Laboratory Trial</button>
@@ -164,7 +165,7 @@
         </div>
 
         <div class="flex items-center justify-end gap-3 pt-2">
-            <button type="reset" class="rounded-md border border-gray-300 bg-white px-5 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+            <button type="reset" class="rounded-md border border-blue-500! bg-white px-5 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
                 Cancel
             </button>
             <button type="submit" class="rounded-md bg-blue-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700">
@@ -186,7 +187,7 @@
                     <div>
                         <label for="new_warehouse_branch_id" class="block text-sm font-medium text-gray-700">Branch</label>
                         <select id="new_warehouse_branch_id" required
-                                class="mt-1 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
                             <option value="">Select branch</option>
                             @foreach ($branches as $branch)
                                 <option value="{{ $branch->id }}">{{ $branch->name }}</option>
@@ -196,12 +197,12 @@
                     <div>
                         <label for="new_warehouse_modal_name" class="block text-sm font-medium text-gray-700">Warehouse Name</label>
                         <input type="text" id="new_warehouse_modal_name" required
-                               class="mt-1 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                               class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
                     </div>
                     <p class="hidden text-sm text-red-600" data-warehouse-dialog-error></p>
                 </div>
                 <div class="mt-6 flex justify-end gap-3">
-                    <button type="button" data-close-warehouse-dialog class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                    <button type="button" data-close-warehouse-dialog class="rounded-md border border-blue-500! bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
                     <button type="button" data-save-warehouse-dialog class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Add Warehouse</button>
                 </div>
             </div>
@@ -220,7 +221,7 @@
                     <div>
                         <label for="new_pile_branch_id" class="block text-sm font-medium text-gray-700">Branch</label>
                         <select id="new_pile_branch_id" required
-                                class="mt-1 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm">
+                                class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
                             <option value="">Select branch</option>
                             @foreach ($branches as $branch)
                                 <option value="{{ $branch->id }}">{{ $branch->name }}</option>
@@ -230,52 +231,47 @@
                     <div>
                         <label for="new_pile_warehouse_id" class="block text-sm font-medium text-gray-700">Warehouse</label>
                         <select id="new_pile_warehouse_id" required
-                                class="mt-1 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm"></select>
+                                class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
+                            <option value="">Select warehouse</option>
+                        </select>
                     </div>
                     <div>
                         <label for="new_pile_modal_number" class="block text-sm font-medium text-gray-700">Pile Number</label>
                         <input type="text" id="new_pile_modal_number" required
-                               class="mt-1 block w-full rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm">
+                               class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
                     </div>
                     <p class="hidden text-sm text-red-600" data-pile-dialog-error></p>
                 </div>
                 <div class="mt-6 flex justify-end gap-3">
-                    <button type="button" data-close-pile-dialog class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                    <button type="button" data-close-pile-dialog class="rounded-md border border-blue-500! bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
                     <button type="button" data-save-pile-dialog class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Add Pile</button>
                 </div>
             </div>
         </dialog>
 
-
     <script>
+        const pileData = @json($piles);
+        let pileDetailsLocked = true;
+        let pileHasSavedDetails = false;
+        const pileDetailFields = Array.from(document.querySelectorAll('[data-pile-detail-field]'));
         const formType = document.querySelector('#form_type');
-        const testSections = document.querySelectorAll('[data-test-section]');
-        const trialValues = document.querySelectorAll('[data-trial-value]');
-        const testFields = document.querySelectorAll('[data-test-field]');
-        const trialHelp = document.querySelector('[data-trial-help]');
-        const amrRequiredFields = document.querySelectorAll('[data-amr-required]');
-        const oldTrial = @json(old('no_of_trial'));
-        const volumeInput = document.querySelector('#volume');
         const branchSelect = document.querySelector('#branch_id');
         const newBranchInput = document.querySelector('#new_branch_name');
         const warehouseSelect = document.querySelector('#warehouse_id');
         const newWarehouseInput = document.querySelector('#new_warehouse_name');
         const pileSelect = document.querySelector('#pile_id');
         const newPileInput = document.querySelector('#new_pile_number');
+        const testSections = document.querySelectorAll('[data-test-section]');
+        const editPileDetailsButton = document.querySelector('[data-edit-pile-details]');
+        const updateRoute = '{{ route('records.update', ['formType' => 'FORM_TYPE', 'record' => 'RECORD_ID']) }}';
+        const destroyRoute = '{{ route('records.destroy', ['formType' => 'FORM_TYPE', 'record' => 'RECORD_ID']) }}';
+        const updatePileDetailsRoute = '{{ route('piles.details.update', ['pile' => 'PILE_ID']) }}';
+        let pileOptions = Array.from(pileSelect.querySelectorAll('option[data-warehouse-id]'));
         const pileDialog = document.querySelector('#pile-dialog');
         const newPileBranchSelect = document.querySelector('#new_pile_branch_id');
         const newPileWarehouseSelect = document.querySelector('#new_pile_warehouse_id');
         const newPileModalNumber = document.querySelector('#new_pile_modal_number');
         const pileDialogError = document.querySelector('[data-pile-dialog-error]');
-        const pileOptions = Array.from(pileSelect.querySelectorAll('option[data-warehouse-id]'));
-        const pileData = @json($piles);
-        const pileDetailFields = document.querySelectorAll('[data-pile-detail-field]');
-        const editPileDetailsButton = document.querySelector('[data-edit-pile-details]');
-        let pileDetailsLocked = false;
-        let pileHasSavedDetails = false;
-        const updatePileDetailsRoute = @json(route('piles.details.update', ['pile' => 'PILE_ID']));
-        const updateRoute = @json(route('records.update', ['formType' => 'FORM_TYPE', 'record' => 'RECORD_ID']));
-        const destroyRoute = @json(route('records.destroy', ['formType' => 'FORM_TYPE', 'record' => 'RECORD_ID']));
         const warehouseDialog = document.querySelector('#warehouse-dialog');
         const warehouseDialogForm = document.querySelector('[data-warehouse-dialog-form]');
         const newWarehouseBranchSelect = document.querySelector('#new_warehouse_branch_id');
@@ -293,12 +289,117 @@
             return decimalPart ? `${formattedInteger}.${decimalPart}` : formattedInteger;
         }
 
-        function trialActionMarkup(isSaved = false) {
-            const editButton = isSaved
-                ? '<button type="button" data-edit-trial class="w-full rounded-md border border-blue-300 bg-white px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50">Edit</button>'
-                : '<button type="button" disabled class="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm font-medium text-gray-400 disabled:cursor-not-allowed">Edit</button>';
+        function getPileVolume() {
+            const volInput = document.querySelector('#volume');
+            if (!volInput) return null;
+            const clean = volInput.value.replace(/,/g, '').trim();
+            if (clean === '') return null;
+            const num = parseFloat(clean);
+            return isNaN(num) ? null : num;
+        }
 
-            return `${editButton}<button type="button" data-delete-trial aria-label="Delete trial" title="Delete trial" class="rounded-md border border-red-200 p-2 text-red-600 hover:bg-red-50"><span class="icon-[tabler--trash] h-5 w-5" aria-hidden="true"></span></button>`;
+        function isAmrLowVolume() {
+            const vol = getPileVolume();
+            return vol !== null && vol <= 50000;
+        }
+
+        function updateTrialRecoveryRate(row) {
+            const palayInput = row.querySelector('[name$="[palay_input]"]');
+            const riceRecovery = row.querySelector('[name$="[rice_recovery]"]');
+            const recRateInput = row.querySelector('[name$="[recovery_rate]"]');
+            if (!recRateInput) return;
+
+            const palayVal = palayInput ? palayInput.value.replace(/,/g, '').trim() : '';
+            const riceVal = riceRecovery ? riceRecovery.value.replace(/,/g, '').trim() : '';
+
+            const palayNum = parseFloat(palayVal);
+            const riceNum = parseFloat(riceVal);
+
+            // Automatic calculation: (Rice Output / Palay Input) * 100
+            if (palayVal !== '' && riceVal !== '' && !isNaN(palayNum) && !isNaN(riceNum) && palayNum > 0) {
+                const calculatedRate = (riceNum / palayNum) * 100;
+                recRateInput.value = calculatedRate.toFixed(2);
+                recRateInput.setCustomValidity('');
+            }
+        }
+
+        function updateAmrVolumeLayout() {
+            const isAmr = formType.value === 'amr';
+            const lowVol = isAmr && isAmrLowVolume();
+            const amrSection = document.querySelector('[data-test-section="amr"]');
+            if (!amrSection) return;
+
+            const rows = amrSection.querySelectorAll('[data-trial-row]');
+            rows.forEach((row) => {
+                const isExisting = row?.dataset.existing === 'true';
+                const isEditing = row?.dataset.editing === 'true';
+                const shouldDisable = isExisting && !isEditing;
+
+                const recCol = row.querySelector('[data-amr-recovery-col]');
+                const palayInput = row.querySelector('[name$="[palay_input]"]');
+                const riceRecovery = row.querySelector('[name$="[rice_recovery]"]');
+                const recRateInput = row.querySelector('[name$="[recovery_rate]"]');
+                const riceMillers = row.querySelector('[data-amr-required]');
+
+                if (lowVol) {
+                    if (recCol) recCol.classList.remove('hidden');
+                    row.classList.remove('sm:grid-cols-6');
+                    row.classList.add('sm:grid-cols-7');
+
+                    if (palayInput) {
+                        palayInput.required = false;
+                        palayInput.placeholder = 'Optional';
+                    }
+                    if (riceRecovery) {
+                        riceRecovery.required = false;
+                        riceRecovery.placeholder = 'Optional';
+                    }
+                    if (riceMillers) {
+                        riceMillers.required = false;
+                        riceMillers.placeholder = 'Optional';
+                    }
+                    if (recRateInput) {
+                        recRateInput.disabled = shouldDisable || !isAmr;
+                        if (!recRateInput.value && palayInput && riceRecovery) {
+                            updateTrialRecoveryRate(row);
+                        }
+                    }
+                } else {
+                    if (recCol) recCol.classList.add('hidden');
+                    row.classList.remove('sm:grid-cols-7');
+                    row.classList.add('sm:grid-cols-6');
+
+                    if (palayInput) {
+                        palayInput.required = isAmr && !isExisting;
+                        palayInput.placeholder = '';
+                    }
+                    if (riceRecovery) {
+                        riceRecovery.required = isAmr && !isExisting;
+                        riceRecovery.placeholder = '';
+                    }
+                    if (riceMillers) {
+                        riceMillers.required = isAmr && !isExisting;
+                        riceMillers.placeholder = '';
+                    }
+                    if (recRateInput) {
+                        recRateInput.disabled = true;
+                    }
+                }
+            });
+        }
+
+        function trialActionMarkup(isSaved = false, canEdit = true) {
+            const editButton = isSaved
+                ? (canEdit
+                    ? '<button type="button" data-edit-trial class="w-full rounded-md border border-blue-300 bg-white px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50">Edit</button>'
+                    : '<button type="button" disabled title="Editing is locked" class="w-full rounded-md border border-blue-500! bg-gray-100 px-3 py-2 text-sm font-medium text-gray-400 disabled:cursor-not-allowed">Locked</button>')
+                : '<button type="button" disabled class="w-full rounded-md border border-blue-500! bg-gray-100 px-3 py-2 text-sm font-medium text-gray-400 disabled:cursor-not-allowed">Edit</button>';
+
+            const deleteButton = isSaved && !canEdit
+                ? '<button type="button" disabled aria-label="Delete trial" title="Deleting is locked" class="rounded-md border border-gray-200 p-2 text-gray-300 disabled:cursor-not-allowed"><span class="icon-[tabler--trash] h-5 w-5" aria-hidden="true"></span></button>'
+                : '<button type="button" data-delete-trial aria-label="Delete trial" title="Delete trial" class="rounded-md border border-red-200 p-2 text-red-600 hover:bg-red-50"><span class="icon-[tabler--trash] h-5 w-5" aria-hidden="true"></span></button>';
+
+            return `${editButton}${deleteButton}`;
         }
 
         function initializeNumberFormatting(container = document) {
@@ -334,13 +435,14 @@
                 altInput: true,
                 altFormat: 'F j, Y',
                 dateFormat: 'Y-m-d',
-                altInputClass: 'input max-w-sm mt-1 block min-h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm',
+                altInputClass: 'input max-w-sm mt-1 block min-h-10 w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm',
                 allowInput: true,
             });
         }
 
         function updateTrialOptions() {
             const isAmr = formType.value === 'amr';
+            const isLowVolAmr = isAmr && isAmrLowVolume();
             const maximumTrial = 3;
             const selectedPile = pileData.find((pile) => String(pile.id) === pileSelect.value);
             const retestNotice = document.querySelector('[data-retest-notice]');
@@ -383,20 +485,22 @@
                             if (field._flatpickr.altInput) {
                                 field._flatpickr.altInput.required = !isExisting;
                             }
-                        } else if (!isAmr) {
+                        } else if (!isAmr || isLowVolAmr) {
                             field.required = false;
                         } else {
                             field.required = !isExisting;
                         }
                     });
                     row.querySelectorAll('[data-amr-required]').forEach((field) => {
-                        field.required = isAmr && !isExisting;
+                        field.required = isAmr && !isLowVolAmr && !isExisting;
                         if (!isAmr) {
                             field.disabled = true;
                         }
                     });
                 });
             });
+
+            updateAmrVolumeLayout();
 
             if (!activeSection) {
                 if (helpTextElement) {
@@ -482,6 +586,7 @@
             }
 
             if (update) updateTrialOptions();
+            updateAmrVolumeLayout();
         }
 
         function resetTrialRows(section) {
@@ -526,6 +631,7 @@
                 }
             }
             firstRow.querySelector('[data-row-action]').innerHTML = trialActionMarkup();
+            updateAmrVolumeLayout();
         }
 
         function populateExistingTrialRows(section, records) {
@@ -579,8 +685,9 @@
                     }
                     recRateField.value = (rateVal !== '' && rateVal !== null) ? parseFloat(rateVal).toFixed(2) : '';
                 }
-                row.querySelector('[data-row-action]').innerHTML = trialActionMarkup(true);
+                row.querySelector('[data-row-action]').innerHTML = trialActionMarkup(true, record.can_edit !== false);
             });
+            updateAmrVolumeLayout();
         }
 
         function setPileDetailsLocked(locked, hasSavedDetails = pileHasSavedDetails) {
@@ -612,6 +719,7 @@
                     resetTrialRows(document.querySelector(`[data-test-section="${formType.value}"]`));
                 }
                 updateTrialOptions();
+                updateAmrVolumeLayout();
                 return;
             }
 
@@ -632,6 +740,7 @@
             document.querySelector('#quality').value = normalizedQuality;
             document.querySelector('#volume').value = details.volume ? formatVolume(String(details.volume)) : '';
             updateTrialOptions();
+            updateAmrVolumeLayout();
         }
 
         function populatePileWarehouseOptions() {
@@ -671,6 +780,7 @@
                 setPileDetailsLocked(false, false);
                 resetTrialRows(document.querySelector(`[data-test-section="${formType.value}"]`));
                 updateTrialOptions();
+                updateAmrVolumeLayout();
                 if (openDialog) {
                     openPileDialog();
                 }
@@ -907,6 +1017,7 @@
                         reindexTrialRows(section);
                     }
                     updateTrialOptions();
+                    updateAmrVolumeLayout();
                     return;
                 }
 
@@ -945,7 +1056,7 @@
                     payload.set('rice_millers', riceMiller.value);
                 }
                 const recoveryRateInput = row.querySelector('[name$="[recovery_rate]"]');
-                if (recoveryRateInput && formType.value === 'pmr') {
+                if (recoveryRateInput && (formType.value === 'pmr' || isAmrLowVolume())) {
                     payload.set('recovery_rate', recoveryRateInput.value);
                 }
 
@@ -1004,7 +1115,17 @@
         formType.addEventListener('change', () => {
             fillPileDetails();
             updateTrialOptions();
+            updateAmrVolumeLayout();
         });
+
+        const volumeInputField = document.querySelector('#volume');
+        if (volumeInputField) {
+            volumeInputField.addEventListener('input', () => {
+                updateAmrVolumeLayout();
+                updateTrialOptions();
+            });
+        }
+
         editPileDetailsButton.addEventListener('click', async () => {
             if (pileDetailsLocked) {
                 setPileDetailsLocked(false);
@@ -1047,29 +1168,30 @@
                     }
                 });
                 setPileDetailsLocked(true, true);
+                updateAmrVolumeLayout();
+                updateTrialOptions();
             } catch (error) {
                 window.alert(error.message);
                 editPileDetailsButton.disabled = false;
             }
         });
-        function updatePmrRecoveryRate(row) {
-            const palayInput = row.querySelector('[name$="[palay_input]"]');
-            const riceRecovery = row.querySelector('[name$="[rice_recovery]"]');
-            const recRateInput = row.querySelector('[name$="[recovery_rate]"]');
-            if (!recRateInput) return;
 
-    const palayVal = palayInput ? palayInput.value.replace(/,/g, '').trim() : '';
-            const riceVal = riceRecovery ? riceRecovery.value.replace(/,/g, '').trim() : '';
+        const amrSection = document.querySelector('[data-test-section="amr"]');
+        if (amrSection) {
+            amrSection.addEventListener('input', (event) => {
+                const target = event.target;
+                const row = target.closest('[data-trial-row]');
+                if (!row) return;
 
-            const palayNum = parseFloat(palayVal);
-            const riceNum = parseFloat(riceVal);
-
-            // Automatic calculation: (Rice Output / Palay Input) * 100
-            if (palayVal !== '' && riceVal !== '' && !isNaN(palayNum) && !isNaN(riceNum) && palayNum > 0) {
-                const calculatedRate = (riceNum / palayNum) * 100;
-                recRateInput.value = calculatedRate.toFixed(2);
-                recRateInput.setCustomValidity('');
-            }
+                if (target.matches('[name$="[palay_input]"], [name$="[rice_recovery]"]')) {
+                    if (isAmrLowVolume()) {
+                        updateTrialRecoveryRate(row);
+                    }
+                }
+                if (target.matches('[name$="[recovery_rate]"]')) {
+                    target.setCustomValidity('');
+                }
+            });
         }
 
         const pmrSection = document.querySelector('[data-test-section="pmr"]');
@@ -1080,7 +1202,7 @@
                 if (!row) return;
 
                 if (target.matches('[name$="[palay_input]"], [name$="[rice_recovery]"]')) {
-                    updatePmrRecoveryRate(row);
+                    updateTrialRecoveryRate(row);
                 }
                 if (target.matches('[name$="[recovery_rate]"]')) {
                     target.setCustomValidity('');
@@ -1089,9 +1211,12 @@
         }
 
         document.querySelector('[data-entry-form]').addEventListener('submit', (event) => {
-            if (formType.value === 'pmr') {
-                const pmrRows = document.querySelectorAll('[data-test-section="pmr"] [data-trial-row]');
-                for (const row of pmrRows) {
+            const isPmr = formType.value === 'pmr';
+            const isAmrLow = formType.value === 'amr' && isAmrLowVolume();
+            if (isPmr || isAmrLow) {
+                const activeSection = document.querySelector(`[data-test-section="${formType.value}"]`);
+                const rows = activeSection ? activeSection.querySelectorAll('[data-trial-row]') : [];
+                for (const row of rows) {
                     if (row.dataset.existing === 'true' && row.dataset.editing !== 'true') continue;
                     const palay = row.querySelector('[name$="[palay_input]"]')?.value.trim() ?? '';
                     const rice = row.querySelector('[name$="[rice_recovery]"]')?.value.trim() ?? '';
@@ -1126,6 +1251,7 @@
                     resetTrialRows(section);
                 });
                 updateTrialOptions();
+                updateAmrVolumeLayout();
             }, 0);
         });
         branchSelect.addEventListener('change', toggleNewBranch);
@@ -1147,6 +1273,7 @@
         window.addEventListener('load', initAllDatePickers);
         initAllDatePickers();
         updateTrialOptions();
+        updateAmrVolumeLayout();
         toggleNewBranch();
         const preselectedPileId = '{{ request('pile_id', '') }}';
         if (preselectedPileId) {

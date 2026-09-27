@@ -37,13 +37,13 @@ return [
     'mailers' => [
         'smtp' => [
             'transport' => 'smtp',
-            'scheme' => env('MAIL_SCHEME'),
+            'scheme' => env('MAIL_SCHEME', env('BREVO_SMTP_SCHEME', 'smtp')),
             'url' => env('MAIL_URL'),
-            'host' => env('MAIL_HOST', '127.0.0.1'),
-            'port' => env('MAIL_PORT', 2525),
-            'username' => env('MAIL_USERNAME'),
-            'password' => env('MAIL_PASSWORD'),
-            'timeout' => null,
+            'host' => env('MAIL_HOST', env('BREVO_SMTP_HOST', '127.0.0.1')),
+            'port' => env('MAIL_PORT', env('BREVO_SMTP_PORT', 587)),
+            'username' => env('MAIL_USERNAME', env('BREVO_SMTP_USERNAME')),
+            'password' => env('MAIL_PASSWORD', env('BREVO_SMTP_PASSWORD')),
+            'timeout' => env('MAIL_TIMEOUT', env('BREVO_SMTP_TIMEOUT')),
             'local_domain' => env(
                 'MAIL_EHLO_DOMAIN',
                 parse_url(
@@ -55,12 +55,12 @@ return [
 
         'brevo' => [
             'transport' => 'smtp',
-            'scheme' => env('BREVO_SMTP_SCHEME', 'tls'),
-            'host' => env('BREVO_SMTP_HOST', 'smtp-relay.brevo.com'),
-            'port' => env('BREVO_SMTP_PORT', 587),
-            'username' => env('BREVO_SMTP_USERNAME'),
-            'password' => env('BREVO_SMTP_PASSWORD'),
-            'timeout' => env('BREVO_SMTP_TIMEOUT'),
+            'scheme' => env('BREVO_SMTP_SCHEME', env('MAIL_SCHEME', 'smtp')),
+            'host' => env('BREVO_SMTP_HOST', env('MAIL_HOST', 'smtp-relay.brevo.com')),
+            'port' => env('BREVO_SMTP_PORT', env('MAIL_PORT', 587)),
+            'username' => env('BREVO_SMTP_USERNAME', env('MAIL_USERNAME')),
+            'password' => env('BREVO_SMTP_PASSWORD', env('MAIL_PASSWORD')),
+            'timeout' => env('BREVO_SMTP_TIMEOUT', env('MAIL_TIMEOUT')),
             'local_domain' => env(
                 'BREVO_SMTP_EHLO_DOMAIN',
                 parse_url(
