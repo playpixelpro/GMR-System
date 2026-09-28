@@ -205,7 +205,9 @@ class AmrRecordController extends Controller
 
             $groups->push([
                 'pile' => $pile,
-                'records' => $records,
+                'records' => $records->isNotEmpty() ? $latestRecords : collect(),
+                'all_records' => $records,
+                'conduct_number' => $latestConduct ?? 1,
                 'calculation' => $calc,
                 'mean' => $mean,
                 'pmr_rate' => $pmrRate,

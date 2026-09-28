@@ -109,30 +109,43 @@ class GmrSummaryDashboardTest extends TestCase
 
     private function createAmrRecord(Pile $pile, float $rate): void
     {
-        AmrRecord::create([
-            'pile_id' => $pile->id,
-            'warehouse_name' => $pile->warehouse->name,
-            'pile_number' => $pile->pile_number,
-            'trial_number' => 1,
-            'rice_millers' => 'Test Miller',
-            'palay_input_kg' => 1000,
-            'rice_recovery_kg' => $rate * 10,
-            'status' => 'RECOMMENDED',
-            'included_in_computation' => true,
-        ]);
+        for ($trial = 1; $trial <= 3; $trial++) {
+            AmrRecord::create([
+                'pile_id' => $pile->id,
+                'warehouse_name' => $pile->warehouse->name,
+                'pile_number' => $pile->pile_number,
+                'trial_number' => $trial,
+                'conduct_number' => 1,
+                'rice_millers' => 'Test Miller',
+                'palay_input_kg' => 1000,
+                'rice_recovery_kg' => $rate * 10,
+                'milling_recovery' => $rate,
+                'status' => 'RECOMMENDED',
+                'action' => 'RECOMMEND',
+                'is_locked' => true,
+                'included_in_computation' => true,
+            ]);
+        }
     }
 
     private function createPmrRecord(Pile $pile, float $rate): void
     {
-        PmrRecord::create([
-            'pile_id' => $pile->id,
-            'warehouse_name' => $pile->warehouse->name,
-            'pile_number' => $pile->pile_number,
-            'trial_number' => 1,
-            'palay_input_kg' => 1000,
-            'rice_recovery_kg' => $rate * 10,
-            'status' => 'RECOMMENDED',
-            'included_in_computation' => true,
-        ]);
+        for ($trial = 1; $trial <= 3; $trial++) {
+            PmrRecord::create([
+                'pile_id' => $pile->id,
+                'warehouse_name' => $pile->warehouse->name,
+                'pile_number' => $pile->pile_number,
+                'sample_number' => $trial,
+                'trial_number' => $trial,
+                'conduct_number' => 1,
+                'palay_input_kg' => 1000,
+                'rice_recovery_kg' => $rate * 10,
+                'milling_recovery' => $rate,
+                'status' => 'RECOMMENDED',
+                'action' => 'RECOMMEND',
+                'is_locked' => true,
+                'included_in_computation' => true,
+            ]);
+        }
     }
 }

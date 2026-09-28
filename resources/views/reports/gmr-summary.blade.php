@@ -170,24 +170,30 @@
                                 <td class="text-end font-mono">{{ $formatPercentage($row['amr']) }}</td>
                                 <td class="font-mono">{{ $formatRange($row['amr'], $row['pmr']) }}</td>
                                 <td class="text-end font-mono text-lg font-bold text-secondary">
-                                    <button type="button" class="cursor-pointer underline decoration-secondary/40 underline-offset-2 hover:decoration-secondary" data-gmr-open="gmr-breakdown-{{ $row['id'] }}" aria-haspopup="dialog" title="Show GMR computation">
-                                        {{ $formatPercentage($row['gmr']) }}
-                                    </button>
+                                    @if ($row['gmr'] !== null)
+                                        <button type="button" class="cursor-pointer underline decoration-secondary/40 underline-offset-2 hover:decoration-secondary" data-gmr-open="gmr-breakdown-{{ $row['id'] }}" aria-haspopup="dialog" title="Show GMR computation">
+                                            {{ $formatPercentage($row['gmr']) }}
+                                        </button>
+                                    @else
+                                        <span class="text-base-content/50 font-mono text-sm">N/A</span>
+                                    @endif
                                 </td>
                                 <td>
                                     @if ($row['status'] === 'Re-establish')
                                         <span class="badge badge-soft badge-secondary text-xs font-medium" title="{{ implode('; ', $row['review_reasons']) }}">Re-establish</span>
                                     @elseif ($row['status'] === 'Review')
                                         <span class="badge badge-soft badge-warning text-xs font-medium" title="{{ implode('; ', $row['review_reasons']) }}">Review</span>
+                                    @elseif ($row['status'] === 'Validated')
+                                        <span class="badge badge-soft badge-primary text-xs font-medium">Validated</span>
                                     @elseif ($row['status'] === 'Incomplete')
                                         <span class="badge badge-soft badge-neutral text-xs font-medium">Incomplete</span>
                                     @else
-                                        <span class="badge badge-soft badge-primary text-xs font-medium">Validated</span>
+                                        <span class="badge badge-soft {{ str_contains($row['status'], 'Blocked') ? 'badge-error' : 'badge-neutral' }} text-xs font-medium" title="{{ implode('; ', $row['review_reasons'] ?? []) }}">{{ $row['status'] }}</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
-                                    @if ($row['status'] === 'Incomplete')
-                                        <input type="checkbox" class="checkbox checkbox-sm pile-checkbox" disabled title="Incomplete records cannot be included" />
+                                    @if ($row['gmr'] === null || $row['status'] === 'Incomplete')
+                                        <input type="checkbox" class="checkbox checkbox-sm pile-checkbox" disabled title="Uncomputed records cannot be included in report" />
                                     @else
                                         <input type="checkbox" name="selected_piles[]" value="{{ $row['id'] }}" data-branch-id="{{ $row['branch_id'] }}" data-status="{{ $row['status'] }}" class="checkbox checkbox-primary checkbox-sm pile-checkbox" aria-label="Include pile {{ $row['pile'] }} in report" disabled />
                                     @endif

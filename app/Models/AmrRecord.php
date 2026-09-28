@@ -41,6 +41,11 @@ class AmrRecord extends Model
         'actioned_by',
         'confirmed_at',
         'actioned_at',
+        'action_remarks',
+        'reset_by',
+        'reset_at',
+        'reset_reason',
+        'previous_action',
     ];
 
     /**
@@ -66,6 +71,7 @@ class AmrRecord extends Model
             'is_locked' => 'boolean',
             'confirmed_at' => 'datetime',
             'actioned_at' => 'datetime',
+            'reset_at' => 'datetime',
         ];
     }
 
@@ -87,6 +93,11 @@ class AmrRecord extends Model
     public function actionedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'actioned_by');
+    }
+
+    public function resetBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reset_by');
     }
 
     public function scopeEligible($query)

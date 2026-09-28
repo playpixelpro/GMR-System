@@ -5,14 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\AmrRecord;
 use App\Models\Branch;
 use App\Models\Pile;
-use App\Models\PmrRecord;
 use App\Models\Warehouse;
+use App\Services\EmrGmrGateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class GmrSummaryController extends Controller
 {
+    public function __construct(
+        protected EmrGmrGateService $gateService,
+    ) {}
+
     /**
      * Display the GMR summary dashboard.
      */
@@ -57,26 +61,14 @@ class GmrSummaryController extends Controller
                 'warehouse.branch:id,name',
                 'amrCalculation',
                 'pmrCalculation',
-                'amrRecords:id,pile_id,palay_input_kg,rice_recovery_kg,milling_recovery,status,included_in_computation',
-                'pmrRecords:id,pile_id,palay_input_kg,rice_recovery_kg,milling_recovery,status,included_in_computation',
+                'amrRecords',
+                'pmrRecords',
             ])
             ->where(function ($query): void {
                 $query
                     ->whereHas('amrRecords')
                     ->orWhereHas('pmrRecords')
-                    ->whereNotNull('variety')
-                    ->whereHas(
-                        'amrRecords',
-                        fn ($query) => $query
-                            ->where('status', 'RECOMMENDED')
-                            ->where('included_in_computation', true),
-                    )
-                    ->whereHas(
-                        'pmrRecords',
-                        fn ($query) => $query
-                            ->where('status', 'RECOMMENDED')
-                            ->where('included_in_computation', true),
-                    );
+                    ->orWhereNotNull('variety');
             })
             ->when($filters['branch_id'], function ($query, $branchId): void {
                 $query->where(function ($branchQuery) use ($branchId): void {
@@ -112,18 +104,39 @@ class GmrSummaryController extends Controller
      */
     private function mapPile(Pile $pile): array
     {
-        $amr = $this->rate(
-            $pile->amrCalculation?->amr_rate,
-            $pile->amrRecords,
-            AmrRecord::class,
-        );
-        $pmr = $this->rate(
-            $pile->pmrCalculation?->pmr_rate,
-            $pile->pmrRecords,
-            PmrRecord::class,
-        );
-        $gmr =
-            $amr !== null && $pmr !== null ? round(($amr + $pmr) / 2, 2) : null;
+        $gate = $this->gateService->evaluateGate($pile);
+
+        if (! $gate['can_compute']) {
+            return [
+                'id' => $pile->id,
+                'branch_id' => $pile->branch_id ?? $pile->warehouse?->branch_id,
+                'branch' => $pile->branch?->name ??
+                    ($pile->warehouse?->branch?->name ?? '—'),
+                'warehouse' => $pile->warehouse?->name ?? '—',
+                'pile' => $pile->pile_number ?? ($pile->number ?? '—'),
+                'variety' => $pile->variety ?? '—',
+                'age' => $pile->aged_months,
+                'volume' => $pile->volume_kg,
+                'volume_bags' => $pile->volume_kg !== null
+                        ? round((float) $pile->volume_kg / 50, 3)
+                        : null,
+                'quality' => ! empty($pile->quality) ? strtoupper($pile->quality) : 'GQA',
+                'amr' => null,
+                'pmr' => null,
+                'emr' => 'N/A',
+                'gmr' => null,
+                'status' => $gate['status'],
+                'can_compute' => false,
+                'gate_message' => $gate['gate_message'],
+                'review_reasons' => [$gate['gate_message']],
+            ];
+        }
+
+        $amr = $gate['amr_rate'];
+        $pmr = $gate['pmr_rate'];
+        $gmr = $gate['gmr'];
+        $emr = $gate['emr_display'];
+
         $reviewReasons = [];
 
         if ($amr !== null && $amr <= 60) {
@@ -143,13 +156,11 @@ class GmrSummaryController extends Controller
         }
 
         $status =
-            $gmr === null
-                ? 'Incomplete'
-                : ($gmr <= 60
-                    ? 'Re-establish'
-                    : ($reviewReasons === []
-                        ? 'Validated'
-                        : 'Review'));
+            $gmr <= 60
+                ? 'Re-establish'
+                : ($reviewReasons === []
+                    ? 'Validated'
+                    : 'Review');
 
         return [
             'id' => $pile->id,
@@ -158,14 +169,20 @@ class GmrSummaryController extends Controller
                 ($pile->warehouse?->branch?->name ?? '—'),
             'warehouse' => $pile->warehouse?->name ?? '—',
             'pile' => $pile->pile_number ?? ($pile->number ?? '—'),
+            'variety' => $pile->variety ?? '—',
+            'age' => $pile->aged_months,
+            'volume' => $pile->volume_kg,
             'volume_bags' => $pile->volume_kg !== null
-                    ? (float) $pile->volume_kg / 50
+                    ? round((float) $pile->volume_kg / 50, 3)
                     : null,
+            'quality' => ! empty($pile->quality) ? strtoupper($pile->quality) : 'GQA',
             'amr' => $amr,
             'pmr' => $pmr,
+            'emr' => $emr,
             'gmr' => $gmr,
             'status' => $status,
-            'review' => $reviewReasons !== [],
+            'can_compute' => true,
+            'gate_message' => $gate['gate_message'],
             'review_reasons' => $reviewReasons,
         ];
     }

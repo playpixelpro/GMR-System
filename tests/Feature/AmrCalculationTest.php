@@ -6,6 +6,7 @@ use App\Models\AmrCalculation;
 use App\Models\AmrRecord;
 use App\Models\Branch;
 use App\Models\Pile;
+use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\AmrCalculationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,6 +22,13 @@ class AmrCalculationTest extends TestCase
     {
         parent::setUp();
         $this->service = app(AmrCalculationService::class);
+
+        $user = User::factory()->create([
+            'role' => 'staff',
+            'must_change_password' => false,
+            'is_active' => true,
+        ]);
+        $this->actingAs($user);
     }
 
     public function test_normal_results_without_outliers(): void

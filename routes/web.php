@@ -19,6 +19,9 @@ Route::middleware('guest')->group(function (): void {
     Route::post('/login', [AuthController::class, 'store'])->name(
         'login.submit',
     );
+    Route::post('/login/store', [AuthController::class, 'store'])->name(
+        'login.store',
+    );
 
     Route::get('/forgot-password', [
         AuthController::class,
@@ -33,11 +36,12 @@ Route::middleware('guest')->group(function (): void {
         AuthController::class,
         'editReset',
     ])->name('password.reset');
-    Route::post('/reset-password', [
-        AuthController::class,
-        'updateReset',
-    ])->name('password.update');
 });
+
+Route::match(['POST', 'PUT'], '/reset-password', [
+    AuthController::class,
+    'updateReset',
+])->name('password.update');
 
 Route::middleware('auth')->group(function (): void {
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
@@ -52,7 +56,7 @@ Route::middleware('auth')->group(function (): void {
     ])->name('password.change.submit');
 
     Route::get('/profile', [UserController::class, 'profile'])->name('profile.edit');
-    Route::patch('/profile', [
+    Route::match(['PATCH', 'PUT'], '/profile', [
         UserController::class,
         'updateProfile',
     ])->name('profile.update');
@@ -80,6 +84,10 @@ Route::middleware('auth')->group(function (): void {
             UserController::class,
             'resetPassword',
         ])->name('users.reset-password');
+        Route::post('/users/{user}/resend-temporary-password', [
+            UserController::class,
+            'resetPassword',
+        ])->name('users.resend-temporary-password');
         Route::post('/users/{user}/unlock-edit', [
             UserController::class,
             'unlockEdit',
@@ -208,10 +216,22 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
     Route::redirect('/gmr/report', '/gmr/summary');
 
     // Workflow transition actions
+    Route::post('/tests/{formType}/{record}/action', [
+        TestWorkflowController::class,
+        'action',
+    ])->name('tests.action');
     Route::post('/tests/workflow/action', [
         TestWorkflowController::class,
         'applyAction',
     ])->name('tests.workflow.action');
+    Route::post('/piles/{pile}/rmec-action', [
+        TestWorkflowController::class,
+        'pileAction',
+    ])->name('piles.rmec-action');
+    Route::post('/piles/{pile}/rmec-reset', [
+        TestWorkflowController::class,
+        'resetAction',
+    ])->name('piles.rmec-reset');
     Route::post('/piles/{pile}/retest', [
         TestWorkflowController::class,
         'requestRetest',

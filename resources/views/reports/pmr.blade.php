@@ -245,22 +245,54 @@
                   @if ($pile && $pile->pmr_status)
                     @php
                       $status = strtolower($pile->pmr_status);
+                      $isLocked = $records->isNotEmpty() && $records->every('is_locked');
+                      $statusLabel = match($status) {
+                        'recommend', 'recommended' => ($isLocked ? 'LOCKED - RECOMMENDED' : 'RECOMMENDED'),
+                        'retest' => ($isLocked ? 'LOCKED - RETEST REQUIRED' : 'RETEST REQUIRED'),
+                        default => strtoupper($pile->pmr_status),
+                      };
                       $badgeClass = match($status) {
-
                         'retest' => 'badge-secondary',
                         'recommend', 'recommended' => 'badge-primary',
-                        'rejected' => 'badge-secondary',
-                        default => 'badge-primary',
+                        default => 'badge-neutral',
                       };
                     @endphp
-                    <span class="badge badge-soft {{ $badgeClass }} text-xs uppercase px-1.5 py-0.5">{{ $pile->pmr_status }}</span>
+                    <span class="badge badge-soft {{ $badgeClass }} text-xs font-semibold px-2 py-0.5 whitespace-nowrap">{{ $statusLabel }}</span>
                   @endif
                 </div>
               </td>
               <td rowspan="{{ $maxTrials }}" class="align-middle text-center px-2 py-1">
                 <div class="flex items-center justify-center gap-1">
-                  @if ($pile && in_array($pile->pmr_status, ['recommended', 'retest', 'rejected'], true))
-                    {{-- File already tagged by RMEC/Admin (recommended/retest): no action available --}}
+                  @if ($pile && strtolower((string)$pile->pmr_status) === 'retest')
+                    @if (auth()->user()?->hasRole('STAFF', 'RMEC', 'ADMINISTRATOR'))
+                      <a href="{{ route('records.create', ['type' => 'pmr', 'pile_id' => $pile->id, 'retest' => 1]) }}"
+                         class="btn btn-secondary btn-xs inline-flex items-center gap-1 font-semibold"
+                         title="Create New PMR Laboratory Test Milling Data for this Pile">
+                        <span class="icon-[tabler--refresh] size-3.5"></span>
+                        <span>CREATE RETEST</span>
+                      </a>
+                    @endif
+                    @if (auth()->user()?->hasRole('ADMINISTRATOR'))
+                      <button type="button" class="btn btn-outline btn-warning btn-xs inline-flex items-center gap-1"
+                              data-open-modal="#reset-modal-pmr-{{ $pile->id }}"
+                              data-overlay="#reset-modal-pmr-{{ $pile->id }}"
+                              title="Administrator: Reset RMEC Action">
+                        <span class="icon-[tabler--rotate-clockwise] size-3.5"></span>
+                        <span>Reset</span>
+                      </button>
+                    @endif
+                  @elseif ($pile && strtolower((string)$pile->pmr_status) === 'recommended')
+                    @if (auth()->user()?->hasRole('ADMINISTRATOR'))
+                      <button type="button" class="btn btn-outline btn-warning btn-xs inline-flex items-center gap-1"
+                              data-open-modal="#reset-modal-pmr-{{ $pile->id }}"
+                              data-overlay="#reset-modal-pmr-{{ $pile->id }}"
+                              title="Administrator: Reset RMEC Action">
+                        <span class="icon-[tabler--rotate-clockwise] size-3.5"></span>
+                        <span>Reset</span>
+                      </button>
+                    @else
+                      <span class="text-xs text-base-content/60 font-medium">Locked</span>
+                    @endif
                   @elseif (! $hasPmrTrials)
                     <a href="{{ route('records.create', ['type' => 'pmr', 'pile_id' => $pile?->id]) }}"
                        class="btn btn-secondary btn-xs inline-flex items-center gap-1"
@@ -268,45 +300,45 @@
                       <span class="icon-[tabler--plus] size-3.5"></span>
                       <span>Add Trials</span>
                     </a>
-                  @elseif (auth()->user()?->hasRole('STAFF'))
-                    <a href="{{ route('records.create', ['type' => 'pmr', 'pile_id' => $pile?->id]) }}"
-                       class="btn btn-outline btn-primary btn-xs inline-flex items-center gap-1"
-                       title="Edit PMR trials for this Pile">
-                      <span class="icon-[tabler--pencil] size-3.5"></span>
-                      <span>Edit</span>
-                    </a>
                   @else
-                    @php
-                      $reestablishment = app(\App\Services\PmrCalculationService::class)->evaluateReestablishment($pmrRateValue, $amrRateValue);
-                      $pmrCanRecommend = $calculation->isValid && ! $reestablishment['requires_reestablishment'];
-                      $pmrNeedsRetest = $calculation->isInvalid() || $calculation->isHistoricalLegacy() || ($calculation->isValid && $reestablishment['requires_reestablishment']);
-                    @endphp
-                    @if ($pile && (in_array($pile->pmr_status, [null, 'pending'], true) || ($pile->pmr_status === 'recommended' && $pmrNeedsRetest)))
+                    @if (auth()->user()?->hasRole('STAFF') && $records->every(fn($r) => ! $r->is_locked))
+                      <a href="{{ route('records.create', ['type' => 'pmr', 'pile_id' => $pile?->id]) }}"
+                         class="btn btn-outline btn-primary btn-xs inline-flex items-center gap-1"
+                         title="Edit PMR trials for this Pile">
+                        <span class="icon-[tabler--pencil] size-3.5"></span>
+                        <span>Edit</span>
+                      </a>
+                    @endif
+                    @if (auth()->user()?->hasRole('RMEC', 'ADMINISTRATOR'))
+                      @php
+                        $reestablishment = app(\App\Services\PmrCalculationService::class)->evaluateReestablishment($pmrRateValue, $amrRateValue);
+                        $pmrCanRecommend = $calculation->isValid && ! $reestablishment['requires_reestablishment'];
+                        $pmrNeedsRetest = $calculation->isInvalid() || $calculation->isHistoricalLegacy() || ($calculation->isValid && $reestablishment['requires_reestablishment']);
+                        $statusActions = $pmrCanRecommend
+                          ? [
+                              'recommend' => ['label' => 'Recommend', 'icon' => 'icon-[tabler--thumb-up]', 'color' => 'text-primary'],
+                              'retest' => ['label' => 'Retest', 'icon' => 'icon-[tabler--refresh]', 'color' => 'text-secondary'],
+                            ]
+                          : ($pmrNeedsRetest || $records->count() >= 3
+                            ? [
+                                'retest' => ['label' => 'Retest', 'icon' => 'icon-[tabler--refresh]', 'color' => 'text-secondary'],
+                              ]
+                            : []);
+                      @endphp
                       <div class="dropdown relative inline-flex [--placement:bottom-end]">
                         <button id="pmr-actions-{{ $pile->id }}" type="button" class="dropdown-toggle btn btn-primary btn-xs inline-flex items-center gap-1 cursor-pointer" aria-haspopup="menu" aria-expanded="false" aria-label="PMR actions" title="Choose PMR action">
                           <span class="icon-[tabler--check] size-3.5"></span>
                           <span>Actions</span>
                         </button>
-                        <ul class="dropdown-menu dropdown-open:opacity-100 hidden min-w-36 shadow-md" role="menu" aria-labelledby="pmr-actions-{{ $pile->id }}">
-                          @php
-                            $statusActions = $pmrCanRecommend
-                              ? [
-                                  'recommend' => ['label' => 'Recommend', 'icon' => 'icon-[tabler--thumb-up]', 'color' => 'text-primary'],
-                                  'retest' => ['label' => 'Retest', 'icon' => 'icon-[tabler--refresh]', 'color' => 'text-secondary'],
-                                ]
-                              : ($pmrNeedsRetest
-                                ? [
-                                    'retest' => ['label' => 'Retest', 'icon' => 'icon-[tabler--refresh]', 'color' => 'text-secondary'],
-                                  ]
-                                : []);
-                          @endphp
+                        <ul class="dropdown-menu dropdown-open:opacity-100 hidden min-w-40 shadow-md p-1.5 space-y-1" role="menu" aria-labelledby="pmr-actions-{{ $pile->id }}">
                           @if ($statusActions)
                             @foreach ($statusActions as $action => $opt)
                               <li>
-                                <form method="POST" action="{{ route('piles.status', $pile) }}">
+                                <form method="POST" action="{{ route('piles.rmec-action', $pile) }}">
                                   @csrf
                                   <input type="hidden" name="form_type" value="pmr">
-                                  <button type="submit" name="action" value="{{ $action }}" class="dropdown-item w-full {{ $opt['color'] }} cursor-pointer">
+                                  <input type="hidden" name="action" value="{{ $action }}">
+                                  <button type="submit" class="dropdown-item w-full flex items-center gap-2 {{ $opt['color'] }} cursor-pointer text-xs font-semibold py-1.5">
                                     <span class="{{ $opt['icon'] }} size-4"></span>
                                     {{ $opt['label'] }}
                                   </button>
@@ -314,7 +346,7 @@
                               </li>
                             @endforeach
                           @else
-                            <li class="dropdown-item text-base-content/60">Complete 3 trials first</li>
+                            <li class="dropdown-item text-xs text-base-content/60">Complete 3 trials first</li>
                           @endif
                         </ul>
                       </div>
@@ -677,6 +709,35 @@
       </div>
     </div>
   </div>
+
+  @if (auth()->user()?->hasRole('ADMINISTRATOR') && $pile && in_array(strtolower((string)$pile->pmr_status), ['recommended', 'retest'], true))
+    <div id="reset-modal-pmr-{{ $pile->id }}" class="pmr-modal hidden fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs items-center justify-center p-4">
+      <div class="card bg-base-100 max-w-lg w-full shadow-2xl border border-warning/30 rounded-box p-6 relative">
+        <div class="flex items-center justify-between pb-3 border-b border-base-content/10 mb-4">
+          <div class="flex items-center gap-2">
+            <span class="icon-[tabler--alert-circle] size-6 text-warning"></span>
+            <h3 class="text-base font-bold text-base-content">Reset RMEC Action — Pile {{ $pile->pile_number ?? $pile->number }}</h3>
+          </div>
+          <button type="button" class="btn btn-ghost btn-circle btn-xs" data-close-modal="reset-modal-pmr-{{ $pile->id }}">✕</button>
+        </div>
+        <form method="POST" action="{{ route('piles.rmec-reset', $pile) }}">
+          @csrf
+          <input type="hidden" name="form_type" value="pmr">
+          <p class="text-sm text-base-content/80 mb-3">
+            This will mark the current RMEC action (<strong class="uppercase text-primary">{{ $pile->pmr_status }}</strong>) as <strong>RESET/SUPERSEDED</strong> and return the PMR laboratory test milling conduct to <strong>PENDING</strong> status. Historical test-milling data will remain preserved.
+          </p>
+          <div class="mb-4">
+            <label class="label label-text font-semibold text-xs mb-1" for="reason-pmr-{{ $pile->id }}">Reset Reason <span class="text-error">*</span></label>
+            <textarea id="reason-pmr-{{ $pile->id }}" name="reason" rows="3" required minlength="3" maxlength="1000" class="textarea textarea-bordered w-full text-sm" placeholder="State the reason why this RMEC action is being reset..."></textarea>
+          </div>
+          <div class="flex items-center justify-end gap-2">
+            <button type="button" class="btn btn-ghost btn-sm" data-close-modal="reset-modal-pmr-{{ $pile->id }}">Cancel</button>
+            <button type="submit" class="btn btn-warning btn-sm font-semibold">Confirm Reset</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  @endif
 @endforeach
 
 <script>
@@ -702,7 +763,7 @@
         const openTrigger = e.target.closest('[data-open-modal], [data-overlay]');
         if (openTrigger) {
             const selector = openTrigger.getAttribute('data-open-modal') || openTrigger.getAttribute('data-overlay');
-            if (selector && selector.startsWith('#pmr-calc-modal-')) {
+            if (selector && (selector.startsWith('#pmr-calc-modal-') || selector.startsWith('#reset-modal-pmr-'))) {
                 e.preventDefault();
                 e.stopPropagation();
                 const modal = document.querySelector(selector);

@@ -6,7 +6,6 @@ use App\Models\AmrRecord;
 use App\Models\GmrReportConfiguration;
 use App\Models\GmrReportSignatory;
 use App\Models\Pile;
-use App\Models\PmrRecord;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\Response;
@@ -14,6 +13,12 @@ use Illuminate\Support\Collection;
 
 class GmrReportService
 {
+    public function __construct(
+        protected ?EmrGmrGateService $gateService = null,
+    ) {
+        $this->gateService = $gateService ?? app(EmrGmrGateService::class);
+    }
+
     /**
      * Get the active report configuration.
      */
@@ -49,8 +54,8 @@ class GmrReportService
                 'warehouse.branch:id,name',
                 'amrCalculation',
                 'pmrCalculation',
-                'amrRecords:id,pile_id,palay_input_kg,rice_recovery_kg,milling_recovery,status,included_in_computation',
-                'pmrRecords:id,pile_id,palay_input_kg,rice_recovery_kg,milling_recovery,status,included_in_computation',
+                'amrRecords',
+                'pmrRecords',
             ])
             ->whereIn('id', $pileIds)
             ->orderBy('branch_id')
@@ -69,21 +74,12 @@ class GmrReportService
      */
     public function mapPileToRow(Pile $pile): array
     {
-        $amr = $this->calculateRate(
-            $pile->amrCalculation?->amr_rate,
-            $pile->amrRecords,
-            AmrRecord::class,
-        );
-        $pmr = $this->calculateRate(
-            $pile->pmrCalculation?->pmr_rate,
-            $pile->pmrRecords,
-            PmrRecord::class,
-        );
-        $gmr = ($amr !== null && $pmr !== null) ? round(($amr + $pmr) / 2, 2) : null;
+        $gate = $this->gateService->evaluateGate($pile);
 
-        $emr = ($amr !== null && $pmr !== null)
-            ? number_format($amr, 2).'-'.number_format($pmr, 2)
-            : 'N/A';
+        $amr = $gate['can_compute'] ? $gate['amr_rate'] : null;
+        $pmr = $gate['can_compute'] ? $gate['pmr_rate'] : null;
+        $gmr = $gate['can_compute'] ? $gate['gmr'] : null;
+        $emr = $gate['can_compute'] ? $gate['emr_display'] : 'N/A';
 
         return [
             'id' => $pile->id,
@@ -96,6 +92,8 @@ class GmrReportService
             'pmr' => $pmr,
             'emr' => $emr,
             'gmr' => $gmr,
+            'status' => $gate['status'],
+            'can_compute' => $gate['can_compute'],
         ];
     }
 

@@ -40,6 +40,11 @@ class GmrReportPrintController extends Controller
         // Require a branch selection to scope the report
         $branchId = $request->input('report_branch_id');
         if (empty($branchId)) {
+            $firstPile = Pile::with('warehouse')->whereIn('id', $pileIds)->first();
+            $branchId = $firstPile?->branch_id ?? $firstPile?->warehouse?->branch_id;
+        }
+
+        if (empty($branchId)) {
             return redirect()
                 ->route('gmr.summary')
                 ->with('error', 'Please select a branch before printing the report.');

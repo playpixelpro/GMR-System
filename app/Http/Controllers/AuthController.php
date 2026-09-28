@@ -119,6 +119,10 @@ class AuthController extends Controller
 
     public function updateReset(Request $request): RedirectResponse
     {
+        if ($request->isMethod('PUT') || $request->user()) {
+            return $this->updatePassword($request);
+        }
+
         $validated = $request->validate([
             'token' => ['required', 'string'],
             'email' => ['required', 'email'],

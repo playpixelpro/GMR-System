@@ -18,17 +18,19 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        $adminEmail = env('NFA_ADMIN_EMAIL', 'admin@nfa-gmr.local');
+        $adminEmail = env('NFA_ADMIN_EMAIL', 'admin@email.com');
         $temporaryPassword = env('NFA_ADMIN_PASSWORD', 'ChangeMe!2026');
 
         $existingAdmin = User::where('email', $adminEmail)->first();
         if ($existingAdmin && ! $existingAdmin->must_change_password) {
-            $existingAdmin->forceFill([
-                'name' => 'System Administrator',
-                'role' => 'ADMINISTRATOR',
-                'is_active' => true,
-                'temporary_password_expires_at' => null,
-            ])->save();
+            $existingAdmin
+                ->forceFill([
+                    'name' => 'System Administrator',
+                    'role' => 'ADMINISTRATOR',
+                    'is_active' => true,
+                    'temporary_password_expires_at' => null,
+                ])
+                ->save();
         } else {
             User::updateOrCreate(
                 ['email' => $adminEmail],

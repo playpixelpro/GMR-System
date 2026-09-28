@@ -6,6 +6,7 @@ use App\Models\AmrRecord;
 use App\Models\Branch;
 use App\Models\Pile;
 use App\Models\PmrRecord;
+use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -13,6 +14,18 @@ use Tests\TestCase;
 class PmrRecordTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $user = User::factory()->create([
+            'role' => 'staff',
+            'must_change_password' => false,
+            'is_active' => true,
+        ]);
+        $this->actingAs($user);
+    }
 
     public function test_a_pmr_trial_can_be_saved_from_the_shared_form(): void
     {

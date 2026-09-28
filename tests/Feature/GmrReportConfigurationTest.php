@@ -202,7 +202,7 @@ class GmrReportConfigurationTest extends TestCase
         [$branch, $warehouse] = $this->createHierarchy();
         $pile = $this->createPileWithRates($warehouse, '1', 5000, 61.53, 62.22);
 
-        $response = $this->actingAs($this->staffUser)->get(route('gmr.summary'));
+        $response = $this->actingAs($this->rmecUser)->get(route('gmr.summary'));
 
         $response->assertOk()
             ->assertSee('Include in Report')
@@ -213,7 +213,7 @@ class GmrReportConfigurationTest extends TestCase
 
     public function test_print_without_selection_redirects_with_error(): void
     {
-        $this->actingAs($this->staffUser)
+        $this->actingAs($this->rmecUser)
             ->post(route('gmr.report.print'), ['selected_piles' => []])
             ->assertRedirect(route('gmr.summary'))
             ->assertSessionHas('error');
@@ -225,7 +225,7 @@ class GmrReportConfigurationTest extends TestCase
         $pile1 = $this->createPileWithRates($warehouse, '1', 11522 * 50, 61.53, 62.22);
         $pile2 = $this->createPileWithRates($warehouse, '2', 12259 * 50, 62.66, 62.77);
 
-        $response = $this->actingAs($this->staffUser)->post(route('gmr.report.print'), [
+        $response = $this->actingAs($this->rmecUser)->post(route('gmr.report.print'), [
             'selected_piles' => [$pile1->id, $pile2->id],
         ]);
 
@@ -291,29 +291,35 @@ class GmrReportConfigurationTest extends TestCase
             'aged_months' => 5,
             'volume_kg' => $volume,
             'status' => 'RECOMMENDED',
+            'action' => 'RECOMMEND',
+            'is_locked' => true,
             'included_in_computation' => true,
         ];
 
-        AmrRecord::create([
-            ...$recordDetails,
-            'pile_id' => $pile->id,
-            'rice_millers' => 'Test Miller',
-            'palay_input_kg' => 1000,
-            'rice_recovery_kg' => $amr * 10,
-            'milling_recovery' => $amr,
-            'trial_number' => 1,
-        ]);
+        for ($trial = 1; $trial <= 3; $trial++) {
+            AmrRecord::create([
+                ...$recordDetails,
+                'pile_id' => $pile->id,
+                'rice_millers' => 'Test Miller',
+                'palay_input_kg' => 1000,
+                'rice_recovery_kg' => $amr * 10,
+                'milling_recovery' => $amr,
+                'trial_number' => $trial,
+                'conduct_number' => 1,
+            ]);
 
-        PmrRecord::create([
-            ...$recordDetails,
-            'pile_id' => $pile->id,
-            'sample_number' => 1,
-            'trial_number' => 1,
-            'rice_millers' => 'Test Miller',
-            'palay_input_kg' => 1000,
-            'rice_recovery_kg' => $pmr * 10,
-            'milling_recovery' => $pmr,
-        ]);
+            PmrRecord::create([
+                ...$recordDetails,
+                'pile_id' => $pile->id,
+                'sample_number' => $trial,
+                'trial_number' => $trial,
+                'conduct_number' => 1,
+                'rice_millers' => 'Test Miller',
+                'palay_input_kg' => 1000,
+                'rice_recovery_kg' => $pmr * 10,
+                'milling_recovery' => $pmr,
+            ]);
+        }
 
         return $pile;
     }

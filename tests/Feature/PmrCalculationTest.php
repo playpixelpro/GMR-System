@@ -6,6 +6,7 @@ use App\Models\Branch;
 use App\Models\Pile;
 use App\Models\PmrCalculation;
 use App\Models\PmrRecord;
+use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\PmrCalculationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,6 +22,13 @@ class PmrCalculationTest extends TestCase
     {
         parent::setUp();
         $this->service = app(PmrCalculationService::class);
+
+        $user = User::factory()->create([
+            'role' => 'staff',
+            'must_change_password' => false,
+            'is_active' => true,
+        ]);
+        $this->actingAs($user);
     }
 
     public function test_normal_3_trial_calculations_without_outliers(): void

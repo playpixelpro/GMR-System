@@ -244,21 +244,54 @@
                   @if ($pile && $pile->amr_status)
                     @php
                       $status = strtolower($pile->amr_status);
+                      $isLocked = $records->isNotEmpty() && $records->every('is_locked');
+                      $statusLabel = match($status) {
+                        'recommend', 'recommended' => ($isLocked ? 'LOCKED - RECOMMENDED' : 'RECOMMENDED'),
+                        'retest' => ($isLocked ? 'LOCKED - RETEST REQUIRED' : 'RETEST REQUIRED'),
+                        default => strtoupper($pile->amr_status),
+                      };
                       $badgeClass = match($status) {
                         'retest' => 'badge-secondary',
                         'recommend', 'recommended' => 'badge-primary',
-                        'rejected' => 'badge-secondary',
-                        default => 'badge-primary',
+                        default => 'badge-neutral',
                       };
                     @endphp
-                    <span class="badge badge-soft {{ $badgeClass }} text-xs uppercase px-1.5 py-0.5">{{ $pile->amr_status }}</span>
+                    <span class="badge badge-soft {{ $badgeClass }} text-xs font-semibold px-2 py-0.5 whitespace-nowrap">{{ $statusLabel }}</span>
                   @endif
                 </div>
               </td>
               <td rowspan="3" class="align-middle text-center px-2 py-1">
                 <div class="flex items-center justify-center gap-1">
-                  @if ($pile && in_array($pile->amr_status, ['recommended', 'retest', 'rejected'], true))
-                    {{-- File already tagged by RMEC/Admin (recommended/retest): no action available --}}
+                  @if ($pile && strtolower((string)$pile->amr_status) === 'retest')
+                    @if (auth()->user()?->hasRole('STAFF', 'RMEC', 'ADMINISTRATOR'))
+                      <a href="{{ route('records.create', ['type' => 'amr', 'pile_id' => $pile->id, 'retest' => 1]) }}"
+                         class="btn btn-secondary btn-xs inline-flex items-center gap-1 font-semibold"
+                         title="Create New AMR Test Milling Data for this Pile">
+                        <span class="icon-[tabler--refresh] size-3.5"></span>
+                        <span>CREATE RETEST</span>
+                      </a>
+                    @endif
+                    @if (auth()->user()?->hasRole('ADMINISTRATOR'))
+                      <button type="button" class="btn btn-outline btn-warning btn-xs inline-flex items-center gap-1"
+                              data-open-modal="#reset-modal-amr-{{ $pile->id }}"
+                              data-overlay="#reset-modal-amr-{{ $pile->id }}"
+                              title="Administrator: Reset RMEC Action">
+                        <span class="icon-[tabler--rotate-clockwise] size-3.5"></span>
+                        <span>Reset</span>
+                      </button>
+                    @endif
+                  @elseif ($pile && strtolower((string)$pile->amr_status) === 'recommended')
+                    @if (auth()->user()?->hasRole('ADMINISTRATOR'))
+                      <button type="button" class="btn btn-outline btn-warning btn-xs inline-flex items-center gap-1"
+                              data-open-modal="#reset-modal-amr-{{ $pile->id }}"
+                              data-overlay="#reset-modal-amr-{{ $pile->id }}"
+                              title="Administrator: Reset RMEC Action">
+                        <span class="icon-[tabler--rotate-clockwise] size-3.5"></span>
+                        <span>Reset</span>
+                      </button>
+                    @else
+                      <span class="text-xs text-base-content/60 font-medium">Locked</span>
+                    @endif
                   @elseif (! $hasAmrTrials)
                     <a href="{{ route('records.create', ['type' => 'amr', 'pile_id' => $pile?->id]) }}"
                        class="btn btn-secondary btn-xs inline-flex items-center gap-1"
@@ -266,50 +299,54 @@
                       <span class="icon-[tabler--plus] size-3.5"></span>
                       <span>Add Trials</span>
                     </a>
-                  @elseif (auth()->user()?->hasRole('STAFF'))
-                    <a href="{{ route('records.create', ['type' => 'amr', 'pile_id' => $pile?->id]) }}"
-                       class="btn btn-outline btn-primary btn-xs inline-flex items-center gap-1"
-                       title="Edit AMR trials for this Pile">
-                      <span class="icon-[tabler--pencil] size-3.5"></span>
-                      <span>Edit</span>
-                    </a>
-                  @elseif ($pile && (in_array($pile->amr_status, [null, 'pending'], true) || ($pile->amr_status === 'recommended' && $calculation->isInvalidOutliers())))
-                    <div class="dropdown relative inline-flex [--placement:bottom-end]">
-                      <button id="amr-actions-{{ $pile->id }}" type="button" class="dropdown-toggle btn btn-primary btn-xs inline-flex items-center gap-1 cursor-pointer" aria-haspopup="menu" aria-expanded="false" aria-label="AMR actions" title="Choose AMR action">
-                        <span class="icon-[tabler--check] size-3.5"></span>
-                        <span>Actions</span>
-                      </button>
-                      <ul class="dropdown-menu dropdown-open:opacity-100 hidden min-w-36 shadow-md" role="menu" aria-labelledby="amr-actions-{{ $pile->id }}">
-                        @php
-                          $statusActions = $calculation->isValid
-                            ? [
-                                'recommend' => ['label' => 'Recommend', 'icon' => 'icon-[tabler--thumb-up]', 'color' => 'text-primary'],
-                                'retest' => ['label' => 'Retest', 'icon' => 'icon-[tabler--refresh]', 'color' => 'text-secondary'],
-                              ]
-                            : ($calculation->isInvalidOutliers()
+                  @else
+                    @if (auth()->user()?->hasRole('STAFF') && $records->every(fn($r) => ! $r->is_locked))
+                      <a href="{{ route('records.create', ['type' => 'amr', 'pile_id' => $pile?->id]) }}"
+                         class="btn btn-outline btn-primary btn-xs inline-flex items-center gap-1"
+                         title="Edit AMR trials for this Pile">
+                        <span class="icon-[tabler--pencil] size-3.5"></span>
+                        <span>Edit</span>
+                      </a>
+                    @endif
+                    @if (auth()->user()?->hasRole('RMEC', 'ADMINISTRATOR'))
+                      <div class="dropdown relative inline-flex [--placement:bottom-end]">
+                        <button id="amr-actions-{{ $pile->id }}" type="button" class="dropdown-toggle btn btn-primary btn-xs inline-flex items-center gap-1 cursor-pointer" aria-haspopup="menu" aria-expanded="false" aria-label="AMR actions" title="Choose AMR action">
+                          <span class="icon-[tabler--check] size-3.5"></span>
+                          <span>Actions</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-open:opacity-100 hidden min-w-40 shadow-md p-1.5 space-y-1" role="menu" aria-labelledby="amr-actions-{{ $pile->id }}">
+                          @php
+                            $statusActions = $calculation->isValid
                               ? [
+                                  'recommend' => ['label' => 'Recommend', 'icon' => 'icon-[tabler--thumb-up]', 'color' => 'text-primary'],
                                   'retest' => ['label' => 'Retest', 'icon' => 'icon-[tabler--refresh]', 'color' => 'text-secondary'],
                                 ]
-                              : []);
-                        @endphp
-                        @if ($statusActions)
-                          @foreach ($statusActions as $action => $opt)
-                            <li>
-                              <form method="POST" action="{{ route('piles.status', $pile) }}">
-                                @csrf
-                                <input type="hidden" name="form_type" value="amr">
-                                <button type="submit" name="action" value="{{ $action }}" class="dropdown-item w-full {{ $opt['color'] }} cursor-pointer">
-                                  <span class="{{ $opt['icon'] }} size-4"></span>
-                                  {{ $opt['label'] }}
-                                </button>
-                              </form>
-                            </li>
-                          @endforeach
-                        @else
-                          <li class="dropdown-item text-base-content/60">Complete 3 trials first</li>
-                        @endif
-                      </ul>
-                    </div>
+                              : ($calculation->isInvalidOutliers() || $records->count() >= 3
+                                ? [
+                                    'retest' => ['label' => 'Retest', 'icon' => 'icon-[tabler--refresh]', 'color' => 'text-secondary'],
+                                  ]
+                                : []);
+                          @endphp
+                          @if ($statusActions)
+                            @foreach ($statusActions as $action => $opt)
+                              <li>
+                                <form method="POST" action="{{ route('piles.rmec-action', $pile) }}">
+                                  @csrf
+                                  <input type="hidden" name="form_type" value="amr">
+                                  <input type="hidden" name="action" value="{{ $action }}">
+                                  <button type="submit" class="dropdown-item w-full flex items-center gap-2 {{ $opt['color'] }} cursor-pointer text-xs font-semibold py-1.5">
+                                    <span class="{{ $opt['icon'] }} size-4"></span>
+                                    {{ $opt['label'] }}
+                                  </button>
+                                </form>
+                              </li>
+                            @endforeach
+                          @else
+                            <li class="dropdown-item text-xs text-base-content/60">Complete 3 trials first</li>
+                          @endif
+                        </ul>
+                      </div>
+                    @endif
                   @endif
                 </div>
               </td>
@@ -361,7 +398,7 @@
         <div>
           <h3 id="{{ $modalId }}-title" class="font-semibold text-base text-base-content flex items-center gap-1.5">
             <span class="icon-[tabler--calculator] size-4 text-primary"></span>
-            AMR Statistical Evaluation
+            AMR Statistical Evaluation &mdash; AMR Computation Breakdown
           </h3>
           <p class="text-xs text-base-content/60">
             {{ $warehouseName }} &bull; Pile {{ $pileNumber }} &bull; {{ $variety }}
@@ -410,11 +447,11 @@
           <h4 class="text-xs font-semibold uppercase tracking-wider text-base-content/60 mb-1.5">1. Statistical Distribution (±2% Tolerance)</h4>
           <div class="grid grid-cols-3 gap-2 text-center">
             <div class="bg-base-200/50 rounded-lg p-2 border border-base-content/10">
-              <span class="text-xs text-base-content/60 block">Lower Limit (–2%)</span>
+              <span class="text-xs text-base-content/60 block">Lower Limit (-2%)</span>
               <span class="font-mono font-semibold text-base-content text-sm">{{ $calculation->getFormattedLowerLimit() }}</span>
             </div>
             <div class="bg-base-200/50 rounded-lg p-2 border border-primary/20 bg-primary/5">
-              <span class="text-xs text-primary block font-medium">Median</span>
+              <span class="text-xs text-primary block font-medium">Median Recovery</span>
               <span class="font-mono font-bold text-primary text-sm">{{ $calculation->getFormattedMedian() }}</span>
             </div>
             <div class="bg-base-200/50 rounded-lg p-2 border border-base-content/10">
@@ -602,6 +639,35 @@
       </div>
     </div>
   </div>
+
+  @if (auth()->user()?->hasRole('ADMINISTRATOR') && $pile && in_array(strtolower((string)$pile->amr_status), ['recommended', 'retest'], true))
+    <div id="reset-modal-amr-{{ $pile->id }}" class="amr-modal hidden fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs items-center justify-center p-4">
+      <div class="card bg-base-100 max-w-lg w-full shadow-2xl border border-warning/30 rounded-box p-6 relative">
+        <div class="flex items-center justify-between pb-3 border-b border-base-content/10 mb-4">
+          <div class="flex items-center gap-2">
+            <span class="icon-[tabler--alert-circle] size-6 text-warning"></span>
+            <h3 class="text-base font-bold text-base-content">Reset RMEC Action — Pile {{ $pile->pile_number ?? $pile->number }}</h3>
+          </div>
+          <button type="button" class="btn btn-ghost btn-circle btn-xs" data-close-modal="reset-modal-amr-{{ $pile->id }}">✕</button>
+        </div>
+        <form method="POST" action="{{ route('piles.rmec-reset', $pile) }}">
+          @csrf
+          <input type="hidden" name="form_type" value="amr">
+          <p class="text-sm text-base-content/80 mb-3">
+            This will mark the current RMEC action (<strong class="uppercase text-primary">{{ $pile->amr_status }}</strong>) as <strong>RESET/SUPERSEDED</strong> and return the AMR test milling conduct to <strong>PENDING</strong> status. Historical test-milling data will remain preserved.
+          </p>
+          <div class="mb-4">
+            <label class="label label-text font-semibold text-xs mb-1" for="reason-amr-{{ $pile->id }}">Reset Reason <span class="text-error">*</span></label>
+            <textarea id="reason-amr-{{ $pile->id }}" name="reason" rows="3" required minlength="3" maxlength="1000" class="textarea textarea-bordered w-full text-sm" placeholder="State the reason why this RMEC action is being reset..."></textarea>
+          </div>
+          <div class="flex items-center justify-end gap-2">
+            <button type="button" class="btn btn-ghost btn-sm" data-close-modal="reset-modal-amr-{{ $pile->id }}">Cancel</button>
+            <button type="submit" class="btn btn-warning btn-sm font-semibold">Confirm Reset</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  @endif
 @endforeach
 
 <script>
@@ -627,7 +693,7 @@
         const openTrigger = e.target.closest('[data-open-modal], [data-overlay]');
         if (openTrigger) {
             const selector = openTrigger.getAttribute('data-open-modal') || openTrigger.getAttribute('data-overlay');
-            if (selector && selector.startsWith('#amr-calc-modal-')) {
+            if (selector && (selector.startsWith('#amr-calc-modal-') || selector.startsWith('#reset-modal-amr-'))) {
                 e.preventDefault();
                 e.stopPropagation();
                 const modal = document.querySelector(selector);

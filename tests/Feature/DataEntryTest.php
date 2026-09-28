@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Branch;
 use App\Models\Pile;
+use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -11,6 +12,18 @@ use Tests\TestCase;
 class DataEntryTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $user = User::factory()->create([
+            'role' => 'administrator',
+            'must_change_password' => false,
+            'is_active' => true,
+        ]);
+        $this->actingAs($user);
+    }
 
     public function test_the_shared_form_creates_the_branch_warehouse_and_pile_hierarchy(): void
     {

@@ -18,6 +18,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class DataEntryController extends Controller
@@ -140,7 +141,7 @@ class DataEntryController extends Controller
             'branches' => $branches,
             'warehouses' => $warehouses,
             'piles' => $piles,
-            'formType' => $request->query('form_type', 'amr'),
+            'formType' => $request->query('type') ?? $request->query('form_type'),
         ]);
     }
 
@@ -198,6 +199,10 @@ class DataEntryController extends Controller
         $recordModel =
             $formType === 'amr' ? AmrRecord::class : PmrRecord::class;
         $trial = $recordModel::findOrFail($recordId);
+
+        if ($trial->is_locked) {
+            abort(403, 'This test milling record is locked and cannot be edited.');
+        }
 
         if (! Auth::user()->canEditRecord($trial)) {
             abort(
@@ -305,6 +310,10 @@ class DataEntryController extends Controller
         $recordModel =
             $formType === 'amr' ? AmrRecord::class : PmrRecord::class;
         $trial = $recordModel::findOrFail($recordId);
+
+        if ($trial->is_locked) {
+            abort(403, 'This test milling record is locked and cannot be deleted.');
+        }
 
         if (! Auth::user()->canEditRecord($trial)) {
             abort(
@@ -423,11 +432,24 @@ class DataEntryController extends Controller
                 ->where('conduct_number', $currentConductNumber)
                 ->get();
             $latestIsRetest = $latestRecords->contains('status', 'RETEST');
+            $latestIsLocked = $latestRecords->isNotEmpty() && $latestRecords->every('is_locked');
 
-            $conductNumber =
-                $latestIsRetest || $currentConductNumber === 0
-                    ? $currentConductNumber + 1
-                    : $currentConductNumber;
+            if ($latestIsRetest) {
+                $conductNumber = $currentConductNumber + 1;
+            } elseif ($currentConductNumber === 0) {
+                $conductNumber = 1;
+            } else {
+                if ($latestIsLocked) {
+                    abort(403, 'The current test milling conduct is locked and finalized.');
+                }
+                $conductNumber = $currentConductNumber;
+            }
+
+            if ($conductNumber > $currentConductNumber) {
+                $pile->update([
+                    $validated['form_type'] === 'amr' ? 'amr_status' : 'pmr_status' => 'pending',
+                ]);
+            }
 
             // Update pile attributes
             $pile->update([
@@ -551,7 +573,9 @@ class DataEntryController extends Controller
 
         $message = "Saved {$createdCount} trial(s) successfully.";
 
-        return redirect()->route('home')->with('status', $message);
+        return redirect()
+            ->route('records.create', ['type' => $validated['form_type']])
+            ->with('status', $message);
     }
 
     public function warehouses(Branch $branch): JsonResponse
@@ -602,8 +626,31 @@ class DataEntryController extends Controller
         return response()->json($pile, 201);
     }
 
-    public function updatePileStatus(Request $request, Pile $pile): JsonResponse
+    public function updatePileStatus(Request $request, Pile $pile): JsonResponse|RedirectResponse
     {
+        if ($request->has('form_type')) {
+            $validated = $request->validate([
+                'form_type' => ['required', Rule::in(['amr', 'pmr'])],
+                'action' => ['required', Rule::in(['recommend', 'retest', 'approved', 'RECOMMEND', 'RETEST'])],
+            ]);
+
+            $pile->update([
+                strtolower($validated['form_type']).'_status' => strtolower($validated['action']),
+            ]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => strtoupper($validated['form_type']).' pile marked as '.$validated['action'].'.',
+                    'pile' => $pile,
+                ]);
+            }
+
+            return back()->with(
+                'status',
+                strtoupper($validated['form_type']).' pile marked as '.$validated['action'].'.',
+            );
+        }
+
         $validated = $request->validate([
             'status' => 'required|in:active,inactive',
         ]);

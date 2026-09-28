@@ -6,6 +6,7 @@ use App\Models\AmrRecord;
 use App\Models\Branch;
 use App\Models\Pile;
 use App\Models\PmrRecord;
+use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,6 +16,18 @@ use Tests\TestCase;
 class SharedPileDataTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $user = User::factory()->create([
+            'role' => 'administrator',
+            'must_change_password' => false,
+            'is_active' => true,
+        ]);
+        $this->actingAs($user);
+    }
 
     public function test_amr_and_pmr_share_pile_metadata_across_forms_and_reports(): void
     {

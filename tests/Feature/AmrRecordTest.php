@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AmrRecord;
 use App\Models\Branch;
 use App\Models\Pile;
+use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -12,6 +13,20 @@ use Tests\TestCase;
 class AmrRecordTest extends TestCase
 {
     use RefreshDatabase;
+
+    private User $user;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->user = User::factory()->create([
+            'role' => 'staff',
+            'must_change_password' => false,
+            'is_active' => true,
+        ]);
+        $this->actingAs($this->user);
+    }
 
     public function test_an_amr_trial_can_be_saved_from_the_shared_form(): void
     {
@@ -46,6 +61,7 @@ class AmrRecordTest extends TestCase
     public function test_amr_trial_can_be_updated_inline_from_the_data_entry_form(): void
     {
         $trial = AmrRecord::factory()->create([
+            'created_by' => $this->user->id,
             'rice_millers' => 'Old Miller',
             'palay_input_kg' => '100.00',
             'rice_recovery_kg' => '60.00',
@@ -120,7 +136,9 @@ class AmrRecordTest extends TestCase
 
     public function test_a_saved_amr_trial_can_be_deleted_from_the_data_entry_form(): void
     {
-        $trial = AmrRecord::factory()->create();
+        $trial = AmrRecord::factory()->create([
+            'created_by' => $this->user->id,
+        ]);
 
         $response = $this->deleteJson(
             route('records.destroy', [

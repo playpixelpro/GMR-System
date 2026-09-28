@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\AmrRecord;
 use App\Models\Branch;
 use App\Models\Pile;
-use App\Models\PmrRecord;
 use App\Models\Warehouse;
 use App\Services\EmrExportService;
+use App\Services\EmrGmrGateService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -20,6 +20,7 @@ class EmrDashboardController extends Controller
 {
     public function __construct(
         protected EmrExportService $exportService,
+        protected EmrGmrGateService $gateService,
     ) {}
 
     /**
@@ -151,28 +152,17 @@ class EmrDashboardController extends Controller
             ->with([
                 'branch:id,name',
                 'warehouse:id,branch_id,name',
+                'warehouse.branch:id,name',
                 'amrCalculation',
                 'pmrCalculation',
-                'amrRecords:id,pile_id,palay_input_kg,rice_recovery_kg,milling_recovery,status,included_in_computation',
-                'pmrRecords:id,pile_id,palay_input_kg,rice_recovery_kg,milling_recovery,status,included_in_computation',
+                'amrRecords',
+                'pmrRecords',
             ])
             ->where(function ($query): void {
                 $query
                     ->whereHas('amrRecords')
                     ->orWhereHas('pmrRecords')
-                    ->whereNotNull('variety')
-                    ->whereHas(
-                        'amrRecords',
-                        fn ($query) => $query
-                            ->where('status', 'RECOMMENDED')
-                            ->where('included_in_computation', true),
-                    )
-                    ->whereHas(
-                        'pmrRecords',
-                        fn ($query) => $query
-                            ->where('status', 'RECOMMENDED')
-                            ->where('included_in_computation', true),
-                    );
+                    ->orWhereNotNull('variety');
             })
             ->when(
                 $filters['branch_id'],
@@ -204,23 +194,13 @@ class EmrDashboardController extends Controller
             ->get();
 
         $rows = $piles->map(function (Pile $pile): array {
-            $amr = $this->rate(
-                $pile->amrCalculation?->amr_rate,
-                $pile->amrRecords,
-                AmrRecord::class,
-            );
-            $pmr = $this->rate(
-                $pile->pmrCalculation?->pmr_rate,
-                $pile->pmrRecords,
-                PmrRecord::class,
-            );
-            $hasBothRates = $amr !== null && $pmr !== null;
+            $gate = $this->gateService->evaluateGate($pile);
 
             return [
                 'id' => $pile->id,
                 'branch_id' => $pile->branch_id ?? $pile->warehouse?->branch_id,
                 'warehouse_id' => $pile->warehouse_id,
-                'branch' => $pile->branch?->name ?? '—',
+                'branch' => $pile->branch?->name ?? ($pile->warehouse?->branch?->name ?? '—'),
                 'warehouse' => $pile->warehouse?->name ?? '—',
                 'pile' => $pile->pile_number ?? ($pile->number ?? '—'),
                 'variety' => $pile->variety ?? '—',
@@ -231,18 +211,14 @@ class EmrDashboardController extends Controller
                         : null,
                 'purity' => $pile->purity,
                 'quality' => $pile->quality ?? '—',
-                'amr' => $amr,
-                'pmr' => $pmr,
-                'emr_lower' => $hasBothRates ? $amr : null,
-                'emr_upper' => $hasBothRates ? $pmr : null,
-                'emr_display' => $hasBothRates
-                    ? $this->range($amr, $pmr)
-                    : 'N/A',
-                'status' => ! $hasBothRates
-                    ? 'INCOMPLETE'
-                    : ($pmr >= $amr
-                        ? 'VALID'
-                        : 'QUESTIONABLE'),
+                'amr' => $gate['amr_rate'],
+                'pmr' => $gate['pmr_rate'],
+                'emr_lower' => $gate['emr_lower'],
+                'emr_upper' => $gate['emr_upper'],
+                'emr_display' => $gate['emr_display'],
+                'status' => $gate['status'],
+                'can_compute' => $gate['can_compute'],
+                'gate_message' => $gate['gate_message'],
             ];
         });
 
@@ -309,7 +285,7 @@ class EmrDashboardController extends Controller
             'emr_upper' => $completeRows->max('pmr'),
             'valid' => $rows->where('status', 'VALID')->count(),
             'questionable' => $rows->where('status', 'QUESTIONABLE')->count(),
-            'incomplete' => $rows->where('status', 'INCOMPLETE')->count(),
+            'incomplete' => $rows->filter(fn ($r): bool => ! in_array($r['status'], ['VALID', 'QUESTIONABLE'], true))->count(),
         ];
     }
 

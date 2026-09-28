@@ -119,7 +119,7 @@
                     </select>
                 </div>
                 <div>
-                    <label for="volume" class="block text-sm font-medium text-gray-700">Volume of Pile (kg)</label>
+                    <label for="volume" class="block text-sm font-medium text-gray-700">Volume of Pile (kg) - Net of test Milling</label>
                     <input type="text" name="volume" id="volume" value="{{ old('volume') }}" inputmode="decimal" autocomplete="off" required data-pile-detail-field data-number-format
                            class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
                 </div>

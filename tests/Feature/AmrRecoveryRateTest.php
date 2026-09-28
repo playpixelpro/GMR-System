@@ -297,6 +297,8 @@ class AmrRecoveryRateTest extends TestCase
                 'rice_recovery_kg' => null,
                 'milling_recovery' => 64.0,
                 'status' => 'RECOMMENDED',
+                'action' => 'RECOMMEND',
+                'is_locked' => true,
                 'included_in_computation' => true,
             ]);
         }
@@ -311,6 +313,8 @@ class AmrRecoveryRateTest extends TestCase
                 'rice_recovery_kg' => null,
                 'milling_recovery' => 66.0,
                 'status' => 'RECOMMENDED',
+                'action' => 'RECOMMEND',
+                'is_locked' => true,
                 'included_in_computation' => true,
             ]);
         }

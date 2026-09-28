@@ -23,7 +23,7 @@ class EmrDashboardTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create([
-            'role' => 'staff',
+            'role' => 'administrator',
             'must_change_password' => false,
             'temporary_password_expires_at' => null,
             'is_active' => true,
@@ -151,29 +151,35 @@ class EmrDashboardTest extends TestCase
             'aged_months' => 5,
             'volume_kg' => $volume,
             'status' => 'RECOMMENDED',
+            'action' => 'RECOMMEND',
+            'is_locked' => true,
             'included_in_computation' => true,
         ];
 
-        AmrRecord::create([
-            ...$recordDetails,
-            'pile_id' => $pile->id,
-            'rice_millers' => 'Test Miller',
-            'palay_input_kg' => 1000,
-            'rice_recovery_kg' => $amr * 10,
-            'milling_recovery' => $amr,
-            'trial_number' => 1,
-        ]);
+        for ($trial = 1; $trial <= 3; $trial++) {
+            AmrRecord::create([
+                ...$recordDetails,
+                'pile_id' => $pile->id,
+                'rice_millers' => 'Test Miller',
+                'palay_input_kg' => 1000,
+                'rice_recovery_kg' => $amr * 10,
+                'milling_recovery' => $amr,
+                'trial_number' => $trial,
+                'conduct_number' => 1,
+            ]);
 
-        PmrRecord::create([
-            ...$recordDetails,
-            'pile_id' => $pile->id,
-            'sample_number' => 1,
-            'trial_number' => 1,
-            'rice_millers' => 'Test Miller',
-            'palay_input_kg' => 1000,
-            'rice_recovery_kg' => $pmr * 10,
-            'milling_recovery' => $pmr,
-        ]);
+            PmrRecord::create([
+                ...$recordDetails,
+                'pile_id' => $pile->id,
+                'sample_number' => $trial,
+                'trial_number' => $trial,
+                'rice_millers' => 'Test Miller',
+                'palay_input_kg' => 1000,
+                'rice_recovery_kg' => $pmr * 10,
+                'milling_recovery' => $pmr,
+                'conduct_number' => 1,
+            ]);
+        }
 
         return $pile;
     }

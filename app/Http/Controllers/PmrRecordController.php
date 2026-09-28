@@ -184,14 +184,18 @@ class PmrRecordController extends Controller
             if ($pile->amrCalculation?->amr_rate !== null) {
                 $amrRate = (float) $pile->amrCalculation->amr_rate;
             } elseif ($pile->amrRecords->isNotEmpty()) {
-                $validAmrRecoveries = $pile->amrRecords
+                $recommendedAmr = $pile->amrRecords
                     ->filter(
                         fn (
                             AmrRecord $record,
                         ): bool => $record->included_in_computation &&
                             $record->status === 'RECOMMENDED',
-                    )
-                    ->filter(fn (AmrRecord $r) => (float) $r->milling_recovery_percentage > 0)
+                    );
+
+                $targetAmrRecords = $recommendedAmr->isNotEmpty() ? $recommendedAmr : $pile->amrRecords;
+
+                $validAmrRecoveries = $targetAmrRecords
+                    ->filter(fn (AmrRecord $r) => (float) $r->palay_input_kg > 0)
                     ->map(
                         fn (
                             AmrRecord $r,
@@ -207,7 +211,9 @@ class PmrRecordController extends Controller
 
             $groups->push([
                 'pile' => $pile,
-                'records' => $records,
+                'records' => $hasRecords ? $latestRecords : collect(),
+                'all_records' => $records,
+                'conduct_number' => $latestConduct ?? 1,
                 'calculation' => $calc,
                 'mean' => $mean,
                 'standard_deviation' => $stdDev,

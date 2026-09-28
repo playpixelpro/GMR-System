@@ -73,6 +73,10 @@ class User extends Authenticatable
 
     public function canEditRecord(Model $record): bool
     {
+        if ($record->getAttribute('is_locked')) {
+            return false;
+        }
+
         if ($this->hasRole('ADMINISTRATOR')) {
             return true;
         }
