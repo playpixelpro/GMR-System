@@ -33,6 +33,13 @@ class StoreDataEntryRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $user = $this->user();
+        if ($user?->hasRole('STAFF') && $user?->branch_id) {
+            $this->merge([
+                'branch_id' => $user->branch_id,
+            ]);
+        }
+
         if ($this->filled('volume')) {
             $this->merge([
                 'volume' => str_replace(
@@ -187,13 +194,23 @@ class StoreDataEntryRequest extends FormRequest
      */
     public function rules(): array
     {
+        $user = $this->user();
+        $isStaff = (bool) ($user?->hasRole('STAFF') && $user?->branch_id);
+        $userBranchId = $isStaff ? $user->branch_id : null;
+
         $warehouseExists = Rule::exists('warehouses', 'id');
         $pileExists = Rule::exists('piles', 'id');
         $maximumTrial = 3;
         $isPmr = $this->input('form_type') === 'pmr';
         $allowsOptionalInputs = $isPmr || $this->isAmrLowVolume();
 
-        if ($this->filled('branch_id')) {
+        if ($userBranchId) {
+            $warehouseExists->where('branch_id', $userBranchId);
+            $pileExists->where(function ($query) use ($userBranchId): void {
+                $query->where('branch_id', $userBranchId)
+                    ->orWhereHas('warehouse', fn ($w) => $w->where('branch_id', $userBranchId));
+            });
+        } elseif ($this->filled('branch_id')) {
             $warehouseExists->where('branch_id', $this->input('branch_id'));
         }
 
@@ -205,13 +222,13 @@ class StoreDataEntryRequest extends FormRequest
             'form_type' => ['required', Rule::in(['amr', 'pmr'])],
             'branch_id' => [
                 'nullable',
-                'required_without:new_branch_name',
-                'exists:branches,id',
+                $isStaff ? 'required' : 'required_without:new_branch_name',
+                $isStaff ? Rule::in([$userBranchId]) : 'exists:branches,id',
                 'prohibits:new_branch_name',
             ],
             'new_branch_name' => [
                 'nullable',
-                'required_without:branch_id',
+                $isStaff ? 'prohibited' : 'required_without:branch_id',
                 'string',
                 'max:100',
                 'prohibits:branch_id',

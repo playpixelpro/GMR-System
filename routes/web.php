@@ -8,6 +8,7 @@ use App\Http\Controllers\GmrReportConfigController;
 use App\Http\Controllers\GmrReportPrintController;
 use App\Http\Controllers\GmrSummaryController;
 use App\Http\Controllers\PmrRecordController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TestWorkflowController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -22,6 +23,19 @@ Route::middleware('guest')->group(function (): void {
     Route::post('/login/store', [AuthController::class, 'store'])->name(
         'login.store',
     );
+
+    Route::get('/register', [
+        AuthController::class,
+        'createRegistration',
+    ])->name('register');
+    Route::post('/register', [
+        AuthController::class,
+        'storeRegistration',
+    ])->name('register.store');
+    Route::get('/register/confirmation', [
+        AuthController::class,
+        'registerConfirmation',
+    ])->name('register.confirmation');
 
     Route::get('/forgot-password', [
         AuthController::class,
@@ -88,6 +102,10 @@ Route::middleware('auth')->group(function (): void {
             UserController::class,
             'resetPassword',
         ])->name('users.resend-temporary-password');
+        Route::post('/users/{user}/confirm-registration', [
+            UserController::class,
+            'confirmRegistration',
+        ])->name('users.confirm-registration');
         Route::post('/users/{user}/unlock-edit', [
             UserController::class,
             'unlockEdit',
@@ -100,6 +118,19 @@ Route::middleware('auth')->group(function (): void {
             UserController::class,
             'resetEditMode',
         ])->name('users.reset-edit-mode');
+        Route::patch('/users/{user}/branch', [
+            UserController::class,
+            'updateBranch',
+        ])->name('users.branch');
+
+        Route::get('/settings/blocked-ips', [
+            SettingsController::class,
+            'blockedIps',
+        ])->name('settings.blocked-ips');
+        Route::post('/settings/blocked-ips/{ip}/unlock', [
+            SettingsController::class,
+            'unlockIp',
+        ])->name('settings.blocked-ips.unlock');
     });
 });
 

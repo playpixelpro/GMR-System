@@ -1,0 +1,75 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: SSH Deploy to Production Server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Execute Remote SSH Commands
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            TARGET_DIR="${{ secrets.DEPLOY_PATH || '/home/playpixe5iHL/web/gmr.nfa12.top/public_html' }}"
+
+            if [ ! -d "$TARGET_DIR" ]; then
+              echo "❌ Error: Deployment directory $TARGET_DIR does not exist!"
+              exit 1
+            fi
+
+            cd "$TARGET_DIR" || exit 1
+            echo "🚀 Deployment started in: $TARGET_DIR at $(date)"
+
+            # 1. Sync latest code from main
+            echo "📥 Fetching and syncing latest code from origin/main..."
+            git fetch origin main
+            git reset --hard origin/main
+
+            # 2. Install PHP Composer Dependencies
+            if command -v composer >/dev/null 2>&1; then
+              echo "📦 Installing composer production dependencies..."
+              composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+            fi
+
+            # 3. Database Migrations
+            echo "🗄️ Running database migrations..."
+            php artisan migrate --force
+
+            # 4. Storage Symlink
+            php artisan storage:link || true
+
+            # 5. Build Frontend Assets (Vite & Tailwind)
+            if command -v npm >/dev/null 2>&1; then
+              echo "🎨 Compiling frontend assets..."
+              npm ci || npm install
+              npm run build
+            fi
+
+            # 6. Optimization & Caching
+            echo "⚡ Caching Laravel configurations, routes, and views..."
+            php artisan optimize:clear
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+
+            # 7. Apply Laravel Storage & Cache Permissions
+            echo "🔒 Ensuring Laravel storage and cache permissions..."
+            chmod -R 775 storage bootstrap/cache
+            chmod +x artisan 2>/dev/null || true
+
+            echo "✅ Deployment completed successfully at $(date)!"

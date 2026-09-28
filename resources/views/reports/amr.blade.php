@@ -29,12 +29,20 @@
     <div class="grid grid-cols-1 items-end gap-4 md:grid-cols-3">
         <label class="form-control">
             <span class="label-text mb-2 text-sm font-semibold text-black">Branch</span>
-            <select name="branch_id" class="select select-bordered min-h-11 w-full text-base text-black" onchange="this.form.submit() ">
-                <option value="">All Branches</option>
+            @php
+                $isStaffUser = auth()->user()?->hasRole('STAFF') && auth()->user()?->branch_id;
+            @endphp
+            <select name="branch_id" class="select select-bordered min-h-11 w-full text-base text-black @if($isStaffUser) bg-gray-100 text-gray-500 cursor-not-allowed @endif" onchange="this.form.submit()" @disabled($isStaffUser)>
+                @unless($isStaffUser)
+                    <option value="">All Branches</option>
+                @endunless
                 @foreach ($branches as $branch)
                     <option value="{{ $branch->id }}" @selected($filters['branch_id'] === $branch->id)>{{ $branch->name }}</option>
                 @endforeach
             </select>
+            @if($isStaffUser)
+                <input type="hidden" name="branch_id" value="{{ auth()->user()->branch_id }}">
+            @endif
         </label>
         <label class="form-control">
             <span class="label-text mb-2 text-sm font-semibold text-black">Warehouse</span>

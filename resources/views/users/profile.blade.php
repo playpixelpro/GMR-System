@@ -20,8 +20,12 @@
         <div class="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
             <div class="relative">
                 <label for="profile-photo-input" class="group relative block size-24 cursor-pointer overflow-hidden rounded-full" aria-label="Upload profile photo">
-                    @if ($user->profile_photo_path)
-                        <img src="{{ Storage::disk('public')->url($user->profile_photo_path) }}" alt="Profile photo" class="size-full object-cover" data-profile-preview>
+                    @if ($user->avatar_url)
+                        <img src="{{ $user->avatar_url }}" alt="Profile photo" class="size-full object-cover" data-profile-preview
+                             onerror="this.style.display='none';this.nextElementSibling.style.display='grid';">
+                        <div class="hidden size-full place-items-center bg-primary/10 text-3xl font-semibold text-primary" data-profile-initial aria-label="Profile photo placeholder">
+                            {{ strtoupper(substr($user->name, 0, 1)) }}
+                        </div>
                     @else
                         <div class="grid size-full place-items-center bg-primary/10 text-3xl font-semibold text-primary" data-profile-preview aria-label="Profile photo placeholder">
                             {{ strtoupper(substr($user->name, 0, 1)) }}
@@ -112,6 +116,11 @@
             const url = URL.createObjectURL(file);
             if (wrapper.tagName.toLowerCase() === 'img') {
                 wrapper.src = url;
+                wrapper.style.display = '';
+                const initial = wrapper.nextElementSibling;
+                if (initial && initial.hasAttribute('data-profile-initial')) {
+                    initial.style.display = 'none';
+                }
             } else {
                 const img = document.createElement('img');
                 img.src = url;

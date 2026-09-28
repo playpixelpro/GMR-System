@@ -22,14 +22,18 @@ class GmrSummaryController extends Controller
      */
     public function index(Request $request): View
     {
+        $user = $request->user();
+        $isStaff = $user && $user->hasRole('STAFF') && $user->branch_id;
+
         $filters = [
-            'branch_id' => $request->integer('branch_id') ?: null,
+            'branch_id' => $isStaff ? (int) $user->branch_id : ($request->integer('branch_id') ?: null),
             'warehouse_id' => $request->integer('warehouse_id') ?: null,
         ];
         $rows = $this->rows($filters);
 
         return view('reports.gmr-summary', [
             'branches' => Branch::query()
+                ->when($isStaff, fn ($query) => $query->whereKey($user->branch_id))
                 ->orderBy('name')
                 ->get(['id', 'name']),
             'warehouses' => Warehouse::query()

@@ -27,11 +27,14 @@ class WorkflowAccessTest extends TestCase
             'must_change_password' => false,
         ]);
 
+        $branch = Branch::create(['name' => 'Branch Test A']);
+
         $this->actingAs($administrator)
             ->post(route('users.store'), [
                 'name' => 'New Staff Member',
                 'email' => 'new.staff@example.com',
                 'role' => 'STAFF',
+                'branch_id' => $branch->id,
             ])
             ->assertRedirect();
 
@@ -455,11 +458,14 @@ class WorkflowAccessTest extends TestCase
             'must_change_password' => false,
         ]);
 
+        $branch = Branch::create(['name' => 'Branch Test B']);
+
         $this->actingAs($admin)
             ->post(route('users.store'), [
                 'name' => 'Custom Password Staff',
                 'email' => 'custom.staff@example.com',
                 'role' => 'STAFF',
+                'branch_id' => $branch->id,
                 'password' => 'CustomTempPass123!',
             ])
             ->assertRedirect()

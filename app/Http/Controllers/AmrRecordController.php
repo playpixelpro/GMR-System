@@ -30,9 +30,12 @@ class AmrRecordController extends Controller
     {
         $filters = $this->filters($request);
         $groups = $this->getRecordGroups($filters);
+        $user = $request->user();
+        $isStaff = $user && $user->hasRole('STAFF') && $user->branch_id;
 
         return view('reports.amr', [
             'branches' => Branch::query()
+                ->when($isStaff, fn ($query) => $query->whereKey($user->branch_id))
                 ->orderBy('name')
                 ->get(['id', 'name']),
             'warehouses' => Warehouse::query()
@@ -332,8 +335,13 @@ class AmrRecordController extends Controller
      */
     private function filters(Request $request): array
     {
+        $user = $request->user();
+        $branchId = ($user && $user->hasRole('STAFF') && $user->branch_id)
+            ? (int) $user->branch_id
+            : ($request->integer('branch_id') ?: null);
+
         return [
-            'branch_id' => $request->integer('branch_id') ?: null,
+            'branch_id' => $branchId,
             'warehouse_id' => $request->integer('warehouse_id') ?: null,
         ];
     }

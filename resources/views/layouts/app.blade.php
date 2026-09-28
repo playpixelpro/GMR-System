@@ -50,11 +50,7 @@
             <div class="dropdown relative inline-flex [--placement:bottom-end] [--offset:4]">
                 <button type="button" class="dropdown-toggle flex items-center gap-2 rounded-full py-1 pl-1 pr-2 transition-colors hover:bg-base-200" aria-haspopup="menu" aria-expanded="false" aria-label="Profile menu">
                     <span class="hidden sm:inline text-sm font-medium text-base-content">Hello, {{ auth()->user()->name }}</span>
-                    @if (auth()->user()->profile_photo_path)
-                        <img src="{{ Storage::disk('public')->url(auth()->user()->profile_photo_path) }}" alt="{{ auth()->user()->name }}" class="size-8 rounded-full object-cover">
-                    @else
-                        <span class="grid size-8 place-items-center rounded-full bg-primary text-sm font-semibold text-primary-content">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
-                    @endif
+                    <x-user-avatar :user="auth()->user()" size="size-8" />
                     <span class="icon-[tabler--chevron-down] dropdown-open:rotate-180 size-4 text-base-content/50"></span>
                 </button>
                 <ul class="dropdown-menu dropdown-open:opacity-100 hidden mt-2 min-w-44 rounded-box shadow-lg shadow-base-300/30" role="menu" aria-orientation="vertical">
@@ -94,13 +90,13 @@
                         </a>
                     </li>
                     @php($isReportActive = request()->routeIs('amr.*', 'pmr.*', 'emr.*', 'gmr.*'))
-                    <li class="dropdown relative {{ $isReportActive ? 'open' : '' }} [--adaptive:none] [--strategy:static] overlay-minified:[--adaptive:adaptive] overlay-minified:[--strategy:fixed] overlay-minified:[--offset:15] overlay-minified:[--trigger:hover] overlay-minified:[--placement:right-start]">
+                    <li class="dropdown relative {{ $isReportActive ? 'open' : '' }} [--adaptive:none] [--strategy:static]" data-flyout-title="Reports">
                         <button id="reports-dropdown" type="button" class="dropdown-toggle {{ $isReportActive ? 'menu-active' : '' }}" aria-haspopup="menu" aria-expanded="{{ $isReportActive ? 'true' : 'false' }}" aria-label="Reports" title="Reports">
                             <span class="icon-[tabler--report-analytics] size-5"></span>
                             <span class="overlay-minified:hidden">Reports</span>
                             <span class="icon-[tabler--chevron-down] dropdown-open:rotate-180 size-4 overlay-minified:hidden"></span>
                         </button>
-                        <ul class="dropdown-menu mt-0 shadow-none overlay-minified:shadow-md overlay-minified:shadow-base-300/20 dropdown-open:opacity-100 {{ $isReportActive ? 'block' : 'hidden' }} min-w-60 overlay-minified:before:absolute overlay-minified:before:-start-4 overlay-minified:before:top-0 overlay-minified:before:h-full overlay-minified:before:w-4 before:bg-transparent" role="menu" aria-orientation="vertical" aria-labelledby="reports-dropdown">
+                        <ul class="dropdown-menu mt-0 shadow-none dropdown-open:opacity-100 {{ $isReportActive ? 'block' : 'hidden' }} min-w-60" role="menu" aria-orientation="vertical" aria-labelledby="reports-dropdown">
                             <li><a href="{{ route('amr.index') }}" class="{{ request()->routeIs('amr.*') ? 'menu-active' : '' }}"><span class="icon-[tabler--chart-bar] size-5"></span>AMR Report</a></li>
                             <li><a href="{{ route('pmr.index') }}" class="{{ request()->routeIs('pmr.*') ? 'menu-active' : '' }}"><span class="icon-[tabler--chart-dots] size-5"></span>PMR Report</a></li>
                             <li><a href="{{ route('emr.index') }}" class="{{ request()->routeIs('emr.*') ? 'menu-active' : '' }}"><span class="icon-[tabler--chart-arrows] size-5"></span>Expected Milling Recovery</a></li>
@@ -110,14 +106,14 @@
                             @endif
                         </ul>
                     </li>
-                    @php($isSettingActive = request()->routeIs('profile.*', 'users.*'))
-                    <li class="dropdown relative {{ $isSettingActive ? 'open' : '' }} [--adaptive:none] [--strategy:static] overlay-minified:[--adaptive:adaptive] overlay-minified:[--strategy:fixed] overlay-minified:[--offset:15] overlay-minified:[--trigger:hover] overlay-minified:[--placement:right-start]">
+                    @php($isSettingActive = request()->routeIs('profile.*', 'users.*', 'settings.*'))
+                    <li class="dropdown relative {{ $isSettingActive ? 'open' : '' }} [--adaptive:none] [--strategy:static]" data-flyout-title="Setting">
                         <button id="settings-dropdown" type="button" class="dropdown-toggle {{ $isSettingActive ? 'menu-active' : '' }}" aria-haspopup="menu" aria-expanded="{{ $isSettingActive ? 'true' : 'false' }}" aria-label="Setting" title="Setting">
                             <span class="icon-[tabler--settings] size-5"></span>
                             <span class="overlay-minified:hidden">Setting</span>
                             <span class="icon-[tabler--chevron-down] dropdown-open:rotate-180 size-4 overlay-minified:hidden"></span>
                         </button>
-                        <ul class="dropdown-menu mt-0 shadow-none overlay-minified:shadow-md overlay-minified:shadow-base-300/20 dropdown-open:opacity-100 {{ $isSettingActive ? 'block' : 'hidden' }} min-w-60 overlay-minified:before:absolute overlay-minified:before:-start-4 overlay-minified:before:top-0 overlay-minified:before:h-full overlay-minified:before:w-4 before:bg-transparent" role="menu" aria-orientation="vertical" aria-labelledby="settings-dropdown">
+                        <ul class="dropdown-menu mt-0 shadow-none dropdown-open:opacity-100 {{ $isSettingActive ? 'block' : 'hidden' }} min-w-60" role="menu" aria-orientation="vertical" aria-labelledby="settings-dropdown">
                             <li>
                                 <a href="{{ route('profile.edit') }}" class="{{ request()->routeIs('profile.*') ? 'menu-active' : '' }}">
                                     <span class="icon-[tabler--user-cog] size-5"></span>Profile settings
@@ -129,12 +125,32 @@
                                         <span class="icon-[tabler--users] size-5"></span>User management
                                     </a>
                                 </li>
+                                <li>
+                                    <a href="{{ route('settings.blocked-ips') }}" class="{{ request()->routeIs('settings.*') ? 'menu-active' : '' }}">
+                                        <span class="icon-[tabler--shield-lock] size-5"></span>Blocked IPs
+                                    </a>
+                                </li>
                             @endif
                         </ul>
                     </li>
                 </ul>
             </div>
         </aside>
+
+        <!-- Floating Flyout Submenu (enabled ONLY when sidebar has been minified by user) -->
+        <div id="sidebar-floating-flyout"
+             class="hidden fixed z-50 min-w-64 max-w-xs rounded-xl border border-base-content/10 bg-base-100 text-base-content shadow-2xl transition-opacity duration-150 pointer-events-auto"
+             role="menu"
+             aria-orientation="vertical">
+            <div id="sidebar-floating-flyout-header" class="px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-base-content/60 border-b border-base-content/10 flex items-center justify-between">
+                <span id="sidebar-floating-flyout-title">Menu</span>
+            </div>
+            <div class="p-1.5 max-h-[calc(100vh-8rem)] overflow-y-auto">
+                <ul id="sidebar-floating-flyout-menu" class="menu p-0 gap-1 text-sm font-medium">
+                    <!-- Populated dynamically with the hovered item's existing submenu -->
+                </ul>
+            </div>
+        </div>
 
         <!-- Working Area (expands left when sidebar is minified) -->
         <div class="main-content-wrapper min-w-0 flex-1 pt-16 transition-all duration-300">
@@ -146,25 +162,190 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            const sidebar = document.querySelector('#collapsible-mini-sidebar');
+            const flyout = document.querySelector('#sidebar-floating-flyout');
+            const flyoutTitle = document.querySelector('#sidebar-floating-flyout-title');
+            const flyoutMenu = document.querySelector('#sidebar-floating-flyout-menu');
+            let activeParentLi = null;
+            let hideTimer = null;
+            const HIDE_DELAY = 180;
+
             if (localStorage.getItem('sidebar-minified') === 'true') {
                 document.body.classList.add('overlay-minified');
-                const sidebar = document.querySelector('#collapsible-mini-sidebar');
                 if (sidebar) {
                     sidebar.classList.add('minified');
                 }
             }
 
+            function isMinified() {
+                if (window.innerWidth < 640) return false;
+                return (
+                    document.documentElement.classList.contains('sidebar-is-minified') ||
+                    document.body.classList.contains('overlay-minified') ||
+                    (sidebar && sidebar.classList.contains('minified'))
+                );
+            }
+
+            function showFlyout(parentLi) {
+                if (!isMinified() || !flyout || !flyoutTitle || !flyoutMenu || !sidebar) {
+                    hideFlyout(true);
+                    return;
+                }
+
+                const originalSubmenu = parentLi.querySelector('.dropdown-menu');
+                if (!originalSubmenu) {
+                    hideFlyout(true);
+                    return;
+                }
+
+                clearTimeout(hideTimer);
+                activeParentLi = parentLi;
+
+                const title = parentLi.dataset.flyoutTitle ||
+                              parentLi.querySelector('.dropdown-toggle')?.getAttribute('aria-label') ||
+                              'Menu';
+                flyoutTitle.textContent = title;
+
+                // Clone exact submenu links to preserve active status, permissions, and URLs
+                flyoutMenu.innerHTML = originalSubmenu.innerHTML;
+
+                // Position flyout beside the collapsed sidebar
+                const parentRect = parentLi.getBoundingClientRect();
+                const sidebarRect = sidebar.getBoundingClientRect();
+
+                flyout.classList.remove('hidden');
+                flyout.style.visibility = 'hidden';
+                flyout.style.display = 'block';
+
+                const flyoutHeight = flyout.offsetHeight || 220;
+                let top = parentRect.top;
+
+                // Viewport bottom boundary clamp
+                if (top + flyoutHeight > window.innerHeight - 16) {
+                    top = Math.max(70, window.innerHeight - flyoutHeight - 16);
+                }
+
+                const left = Math.round(sidebarRect.right + 2);
+
+                flyout.style.top = top + 'px';
+                flyout.style.left = left + 'px';
+                flyout.style.visibility = 'visible';
+                flyout.style.opacity = '1';
+            }
+
+            function scheduleHide() {
+                clearTimeout(hideTimer);
+                hideTimer = setTimeout(function () {
+                    hideFlyout();
+                }, HIDE_DELAY);
+            }
+
+            function hideFlyout(immediate) {
+                clearTimeout(hideTimer);
+                activeParentLi = null;
+                if (!flyout) return;
+                if (immediate) {
+                    flyout.classList.add('hidden');
+                    flyout.style.display = 'none';
+                    flyout.style.opacity = '0';
+                } else {
+                    flyout.style.opacity = '0';
+                    hideTimer = setTimeout(function () {
+                        flyout.classList.add('hidden');
+                        flyout.style.display = 'none';
+                    }, 120);
+                }
+            }
+
+            if (sidebar && flyout) {
+                const menuItems = sidebar.querySelectorAll('ul.menu > li');
+                menuItems.forEach(function (li) {
+                    const hasSubmenu = li.classList.contains('dropdown') || !!li.querySelector('.dropdown-menu');
+
+                    li.addEventListener('mouseenter', function () {
+                        if (!isMinified()) return;
+                        if (hasSubmenu) {
+                            showFlyout(li);
+                        } else {
+                            hideFlyout(true);
+                        }
+                    });
+
+                    li.addEventListener('mouseleave', function () {
+                        if (!isMinified()) return;
+                        if (hasSubmenu) {
+                            scheduleHide();
+                        }
+                    });
+
+                    if (hasSubmenu) {
+                        const toggleBtn = li.querySelector('.dropdown-toggle');
+                        if (toggleBtn) {
+                            toggleBtn.addEventListener('click', function (e) {
+                                if (isMinified()) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    showFlyout(li);
+                                }
+                            });
+                        }
+                    }
+                });
+
+                flyout.addEventListener('mouseenter', function () {
+                    if (!isMinified()) return;
+                    clearTimeout(hideTimer);
+                    flyout.style.opacity = '1';
+                });
+
+                flyout.addEventListener('mouseleave', function () {
+                    if (!isMinified()) return;
+                    scheduleHide();
+                });
+
+                flyout.addEventListener('click', function (e) {
+                    const link = e.target.closest('a');
+                    if (link) {
+                        hideFlyout(true);
+                    }
+                });
+
+                window.addEventListener('scroll', function () {
+                    hideFlyout(true);
+                }, { passive: true });
+
+                sidebar.addEventListener('scroll', function () {
+                    hideFlyout(true);
+                }, { passive: true });
+
+                document.addEventListener('click', function (e) {
+                    if (!isMinified()) return;
+                    if (!flyout.contains(e.target) && !sidebar.contains(e.target)) {
+                        hideFlyout(true);
+                    }
+                });
+
+                document.addEventListener('keydown', function (e) {
+                    if (e.key === 'Escape') {
+                        hideFlyout(true);
+                    }
+                });
+            }
+
             document.querySelectorAll('[data-overlay-minifier="#collapsible-mini-sidebar"]').forEach(function (btn) {
                 btn.addEventListener('click', function () {
+                    hideFlyout(true);
                     setTimeout(function () {
-                        const isMinified = document.body.classList.contains('overlay-minified') ||
+                        const isMinifiedState = document.body.classList.contains('overlay-minified') ||
                                            document.querySelector('#collapsible-mini-sidebar')?.classList.contains('minified');
-                        localStorage.setItem('sidebar-minified', isMinified ? 'true' : 'false');
-                        if (isMinified) {
+                        localStorage.setItem('sidebar-minified', isMinifiedState ? 'true' : 'false');
+                        if (isMinifiedState) {
                             document.documentElement.classList.add('sidebar-is-minified');
                         } else {
                             document.documentElement.classList.remove('sidebar-is-minified');
                         }
+                        hideFlyout(true);
+                        window.dispatchEvent(new Event('resize'));
                     }, 50);
                 });
             });

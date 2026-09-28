@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\Branch;
 use App\Models\User;
 use App\Notifications\TemporaryPasswordNotification;
 use Illuminate\Http\RedirectResponse;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class UserController extends Controller
@@ -21,7 +23,10 @@ class UserController extends Controller
         $currentUser = Auth::user();
         abort_unless($currentUser?->hasRole('ADMINISTRATOR'), 403);
 
-        return view('users.index', ['users' => User::query()->latest()->get()]);
+        return view('users.index', [
+            'users' => User::query()->with('branch')->latest()->get(),
+            'branches' => Branch::query()->orderBy('name')->get(),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -33,6 +38,11 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:191'],
             'email' => ['required', 'email', 'max:191', 'unique:users,email'],
             'role' => ['required', 'in:STAFF,RMEC,ADMINISTRATOR'],
+            'branch_id' => [
+                'nullable',
+                Rule::requiredIf(fn () => $request->input('role') === 'STAFF'),
+                'exists:branches,id',
+            ],
             'password' => ['nullable', 'string', 'min:8', 'max:191'],
         ]);
 
@@ -44,11 +54,15 @@ class UserController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'role' => $validated['role'],
+            'branch_id' => $validated['role'] === 'STAFF' ? ($validated['branch_id'] ?? null) : null,
             'password' => $temporaryPassword,
             'must_change_password' => true,
             'temporary_password_expires_at' => now()->addDays(7),
         ]);
-        AuditLog::record('USER_CREATED', $user, ['role' => $user->role]);
+        AuditLog::record('USER_CREATED', $user, [
+            'role' => $user->role,
+            'branch_id' => $user->branch_id,
+        ]);
 
         $emailSent = false;
         try {
@@ -195,6 +209,30 @@ class UserController extends Controller
         return back()->with('status', 'User disabled.');
     }
 
+    public function confirmRegistration(User $user): RedirectResponse
+    {
+        /** @var User|null $currentUser */
+        $currentUser = Auth::user();
+        abort_unless($currentUser?->hasRole('ADMINISTRATOR'), 403);
+
+        if (! $user->isRegistrationPending()) {
+            return back()->withErrors([
+                'user' => 'This account does not have a pending registration to confirm.',
+            ]);
+        }
+
+        $user->forceFill([
+            'registration_confirmed_at' => now(),
+            'registration_expires_at' => null,
+        ])->save();
+
+        AuditLog::record('USER_REGISTRATION_CONFIRMED', $user, [
+            'confirmed_by' => $currentUser->id,
+        ]);
+
+        return back()->with('status', "Registration for {$user->name} has been confirmed as permanent.");
+    }
+
     public function unlockEdit(Request $request, User $user): RedirectResponse
     {
         /** @var User|null $currentUser */
@@ -290,5 +328,27 @@ class UserController extends Controller
         $user->delete();
 
         return back()->with('status', "User '{$userName}' ({$userEmail}) was permanently deleted.");
+    }
+
+    public function updateBranch(Request $request, User $user): RedirectResponse
+    {
+        /** @var User|null $currentUser */
+        $currentUser = Auth::user();
+        abort_unless($currentUser?->hasRole('ADMINISTRATOR'), 403);
+
+        $validated = $request->validate([
+            'branch_id' => ['nullable', 'exists:branches,id'],
+        ]);
+
+        $user->update([
+            'branch_id' => $validated['branch_id'] ?: null,
+        ]);
+
+        AuditLog::record('USER_BRANCH_UPDATED', $user, [
+            'branch_id' => $user->branch_id,
+            'branch_name' => $user->branch?->name,
+        ]);
+
+        return back()->with('status', "Branch updated for {$user->name}.");
     }
 }

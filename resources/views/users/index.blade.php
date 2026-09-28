@@ -29,7 +29,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('users.store') }}" class="grid gap-3 rounded-lg border border-base-content/10 bg-base-100 p-4 md:grid-cols-5 items-end">
+    <form method="POST" action="{{ route('users.store') }}" class="grid gap-3 rounded-lg border border-base-content/10 bg-base-100 p-4 md:grid-cols-6 items-end">
         @csrf
         <div class="space-y-1">
             <label class="text-xs font-semibold text-base-content/70">Name</label>
@@ -41,10 +41,21 @@
         </div>
         <div class="space-y-1">
             <label class="text-xs font-semibold text-base-content/70">Role</label>
-            <select class="select w-full" name="role" required>
-                <option value="STAFF" {{ old('role') === 'STAFF' ? 'selected' : '' }}>Staff</option>
+            <select class="select w-full" name="role" id="user-role-select" required>
+                <option value="STAFF" {{ old('role', 'STAFF') === 'STAFF' ? 'selected' : '' }}>Staff</option>
                 <option value="RMEC" {{ old('role') === 'RMEC' ? 'selected' : '' }}>RMEC</option>
                 <option value="ADMINISTRATOR" {{ old('role') === 'ADMINISTRATOR' ? 'selected' : '' }}>Administrator</option>
+            </select>
+        </div>
+        <div class="space-y-1" id="user-branch-wrapper">
+            <label class="text-xs font-semibold text-base-content/70">
+                Assigned Branch <span class="text-error" id="branch-star">*</span>
+            </label>
+            <select class="select w-full" name="branch_id" id="user-branch-select">
+                <option value="">Select branch</option>
+                @foreach ($branches as $branch)
+                    <option value="{{ $branch->id }}" {{ (string) old('branch_id') === (string) $branch->id ? 'selected' : '' }}>{{ $branch->name }}</option>
+                @endforeach
             </select>
         </div>
         <div class="space-y-1">
@@ -63,8 +74,8 @@
                 <span>Create user</span>
             </button>
         </div>
-        <div class="md:col-span-5 text-xs text-base-content/60">
-            * The user will be required to change this temporary password upon their first login.
+        <div class="md:col-span-6 text-xs text-base-content/60">
+            * The user will be required to change this temporary password upon their first login. Staff users are assigned per branch.
         </div>
     </form>
 
@@ -74,6 +85,7 @@
                 <tr>
                     <th>User</th>
                     <th>Role</th>
+                    <th>Assigned Branch</th>
                     <th>Status</th>
                     <th>Edit Mode (24h Window)</th>
                     <th>Edit Permissions</th>
@@ -93,7 +105,31 @@
                             </span>
                         </td>
                         <td>
-                            @if (! $user->is_active)
+                            @if ($user->role === 'STAFF')
+                                <form method="POST" action="{{ route('users.branch', $user) }}" class="flex items-center gap-1">
+                                    @csrf
+                                    @method('PATCH')
+                                    <select name="branch_id" class="select select-xs select-bordered w-36" onchange="this.form.submit()" title="Change staff branch">
+                                        <option value="">Unassigned</option>
+                                        @foreach ($branches as $branch)
+                                            <option value="{{ $branch->id }}" @selected($user->branch_id === $branch->id)>{{ $branch->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </form>
+                            @else
+                                <span class="text-xs text-base-content/50">All Branches</span>
+                            @endif
+                        </td>
+                        <td>
+                            @if ($user->isRegistrationPending())
+                                <div class="space-y-0.5">
+                                    <span class="badge badge-soft badge-warning text-xs font-semibold inline-flex items-center gap-1">
+                                        <span class="icon-[tabler--clock] size-3.5"></span>
+                                        <span>Pending confirmation</span>
+                                    </span>
+                                    <div class="text-[11px] text-warning/80">Expires {{ $user->registration_expires_at?->format('M d, Y h:i A') }}</div>
+                                </div>
+                            @elseif (! $user->is_active)
                                 <span class="badge badge-soft badge-error text-xs">Disabled</span>
                             @elseif ($user->isAwaitingActivation())
                                 <span class="badge badge-soft badge-warning text-xs">Awaiting activation</span>
@@ -201,6 +237,15 @@
                                         <span class="icon-[tabler--key] size-3.5"></span>
                                         <span>{{ $user->isAwaitingActivation() ? 'Resend' : 'Reset password' }}</span>
                                     </button>
+                                @endif
+                                @if ($user->isRegistrationPending() && $user->id !== auth()->id())
+                                    <form method="POST" action="{{ route('users.confirm-registration', $user) }}">
+                                        @csrf
+                                        <button class="btn btn-xs btn-outline btn-success inline-flex items-center gap-1" type="submit" title="Confirm this account as permanent">
+                                            <span class="icon-[tabler--shield-check] size-3.5"></span>
+                                            <span>Confirm permanent</span>
+                                        </button>
+                                    </form>
                                 @endif
                                 @if ($user->is_active && $user->id !== auth()->id())
                                     <form method="POST" action="{{ route('users.disable', $user) }}">
@@ -484,6 +529,21 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            const roleSelect = document.getElementById('user-role-select');
+            const branchSelect = document.getElementById('user-branch-select');
+            const branchStar = document.getElementById('branch-star');
+            if (roleSelect && branchSelect) {
+                const updateBranchRequirement = () => {
+                    const isStaff = roleSelect.value === 'STAFF';
+                    branchSelect.required = isStaff;
+                    if (branchStar) {
+                        branchStar.style.display = isStaff ? 'inline' : 'none';
+                    }
+                };
+                roleSelect.addEventListener('change', updateBranchRequirement);
+                updateBranchRequirement();
+            }
+
             document.querySelectorAll('[data-open-reset-modal]').forEach(btn => {
                 btn.addEventListener('click', function () {
                     const modalId = this.getAttribute('data-open-reset-modal');

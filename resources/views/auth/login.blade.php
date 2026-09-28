@@ -44,6 +44,11 @@
         </div>
 
         <button class="btn btn-primary w-full" type="submit">Sign in</button>
+
+        <p class="text-center text-sm">
+            Don't have an account?
+            <a class="link link-primary" href="{{ route('register') }}">Register</a>
+        </p>
     </form>
 </div>
 @endsection

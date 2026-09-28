@@ -35,4 +35,25 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Gravatar (optional external avatar service)
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, users without a locally uploaded avatar will have their
+    | profile image resolved from Gravatar using the SHA-256 hash of their
+    | email address. The email is never sent to Gravatar in plain text and the
+    | Gravatar image is never stored on this server. Set GRAVATAR_ENABLED=false
+    | to disable the feature entirely and always fall back to the default
+    | generated avatar.
+    |
+    */
+    'gravatar' => [
+        'enabled' => env('GRAVATAR_ENABLED', true),
+        'size' => (int) env('GRAVATAR_SIZE', 80),
+        // "404" makes Gravatar respond with a 404 when the email has no image,
+        // which the frontend uses to fall back to the app's default avatar.
+        'default' => env('GRAVATAR_DEFAULT', '404'),
+    ],
+
 ];

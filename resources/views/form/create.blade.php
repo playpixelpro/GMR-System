@@ -46,17 +46,25 @@
             <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
                 <div>
                     <label for="branch_id" class="block text-sm font-medium text-gray-700">Branch</label>
-                    <select name="branch_id" id="branch_id"
-                            class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
-                        <option value="">Select branch</option>
-                        @foreach ($branches as $branch)
-                            <option value="{{ $branch->id }}" @selected((string) old('branch_id') === (string) $branch->id)>{{ $branch->name }}</option>
-                        @endforeach
-                        <option value="__new__" @selected(old('new_branch_name'))>Add new branch...</option>
-                    </select>
-                    <input type="text" name="new_branch_name" id="new_branch_name" value="{{ old('new_branch_name') }}"
-                           placeholder="Enter new branch name"
-                           class="{{ old('new_branch_name') ? '' : 'hidden' }} mt-2 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
+                    @if ($isStaff && $assignedBranch)
+                        <select id="branch_id" disabled
+                                class="mt-1 block w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-500 shadow-sm cursor-not-allowed">
+                            <option value="{{ $assignedBranch->id }}" selected>{{ $assignedBranch->name }}</option>
+                        </select>
+                        <input type="hidden" name="branch_id" id="hidden_branch_id" value="{{ $assignedBranch->id }}">
+                    @else
+                        <select name="branch_id" id="branch_id"
+                                class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
+                            <option value="">Select branch</option>
+                            @foreach ($branches as $branch)
+                                <option value="{{ $branch->id }}" @selected((string) old('branch_id') === (string) $branch->id)>{{ $branch->name }}</option>
+                            @endforeach
+                            <option value="__new__" @selected(old('new_branch_name'))>Add new branch...</option>
+                        </select>
+                        <input type="text" name="new_branch_name" id="new_branch_name" value="{{ old('new_branch_name') }}"
+                               placeholder="Enter new branch name"
+                               class="{{ old('new_branch_name') ? '' : 'hidden' }} mt-2 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
+                    @endif
                 </div>
                 <div>
                     <label for="warehouse_id" class="block text-sm font-medium text-gray-700">Warehouse</label>
@@ -186,13 +194,20 @@
                 <div class="mt-5 space-y-4">
                     <div>
                         <label for="new_warehouse_branch_id" class="block text-sm font-medium text-gray-700">Branch</label>
-                        <select id="new_warehouse_branch_id" required
-                                class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
-                            <option value="">Select branch</option>
-                            @foreach ($branches as $branch)
-                                <option value="{{ $branch->id }}">{{ $branch->name }}</option>
-                            @endforeach
-                        </select>
+                        @if ($isStaff && $assignedBranch)
+                            <select id="new_warehouse_branch_id" disabled
+                                    class="mt-1 block w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-500 shadow-sm cursor-not-allowed">
+                                <option value="{{ $assignedBranch->id }}" selected>{{ $assignedBranch->name }}</option>
+                            </select>
+                        @else
+                            <select id="new_warehouse_branch_id" required
+                                    class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
+                                <option value="">Select branch</option>
+                                @foreach ($branches as $branch)
+                                    <option value="{{ $branch->id }}">{{ $branch->name }}</option>
+                                @endforeach
+                            </select>
+                        @endif
                     </div>
                     <div>
                         <label for="new_warehouse_modal_name" class="block text-sm font-medium text-gray-700">Warehouse Name</label>
@@ -220,13 +235,20 @@
                 <div class="mt-5 space-y-4">
                     <div>
                         <label for="new_pile_branch_id" class="block text-sm font-medium text-gray-700">Branch</label>
-                        <select id="new_pile_branch_id" required
-                                class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
-                            <option value="">Select branch</option>
-                            @foreach ($branches as $branch)
-                                <option value="{{ $branch->id }}">{{ $branch->name }}</option>
-                            @endforeach
-                        </select>
+                        @if ($isStaff && $assignedBranch)
+                            <select id="new_pile_branch_id" disabled
+                                    class="mt-1 block w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-500 shadow-sm cursor-not-allowed">
+                                <option value="{{ $assignedBranch->id }}" selected>{{ $assignedBranch->name }}</option>
+                            </select>
+                        @else
+                            <select id="new_pile_branch_id" required
+                                    class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
+                                <option value="">Select branch</option>
+                                @foreach ($branches as $branch)
+                                    <option value="{{ $branch->id }}">{{ $branch->name }}</option>
+                                @endforeach
+                            </select>
+                        @endif
                     </div>
                     <div>
                         <label for="new_pile_warehouse_id" class="block text-sm font-medium text-gray-700">Warehouse</label>
@@ -250,6 +272,8 @@
         </dialog>
 
     <script>
+        const isStaffUser = @json((bool) ($isStaff && $userBranchId));
+        const assignedBranchId = @json($userBranchId ? (string) $userBranchId : null);
         const pileData = @json($piles);
         let pileDetailsLocked = true;
         let pileHasSavedDetails = false;
@@ -590,6 +614,9 @@
         }
 
         function resetTrialRows(section) {
+            if (!section) {
+                return;
+            }
             const rows = section.querySelector('[data-trial-rows]');
             rows.querySelectorAll('[data-trial-row]').forEach((row, index) => {
                 if (index > 0) {
@@ -755,12 +782,16 @@
         }
 
         function openPileDialog() {
-            newPileBranchSelect.value = branchSelect.value !== '__new__' ? branchSelect.value : '';
+            newPileBranchSelect.value = isStaffUser ? assignedBranchId : (branchSelect.value !== '__new__' ? branchSelect.value : '');
             populatePileWarehouseOptions();
             newPileWarehouseSelect.value = warehouseSelect.value !== '__new__' ? warehouseSelect.value : '';
             newPileModalNumber.value = newPileInput.value || '';
             pileDialog.showModal();
-            newPileBranchSelect.focus();
+            if (!isStaffUser) {
+                newPileBranchSelect.focus();
+            } else {
+                newPileWarehouseSelect.focus();
+            }
         }
 
         function closePileDialog() {
@@ -809,15 +840,22 @@
         }
 
         function toggleNewBranch() {
+            if (isStaffUser) {
+                if (newBranchInput) newBranchInput.classList.add('hidden');
+                toggleWarehouses();
+                return;
+            }
             const isNewBranch = branchSelect.value === '__new__';
-            newBranchInput.classList.toggle('hidden', !isNewBranch);
-            newBranchInput.required = isNewBranch;
+            if (newBranchInput) {
+                newBranchInput.classList.toggle('hidden', !isNewBranch);
+                newBranchInput.required = isNewBranch;
+            }
             branchSelect.disabled = isNewBranch;
             toggleWarehouses();
         }
 
         function toggleWarehouses() {
-            const branchId = branchSelect.value;
+            const branchId = isStaffUser ? assignedBranchId : branchSelect.value;
             const isNewBranch = branchId === '__new__';
 
             warehouseOptions.forEach((option) => {
@@ -837,15 +875,19 @@
         function toggleNewWarehouse() {
             const isNewWarehouse = warehouseSelect.value === '__new__';
             newWarehouseInput.required = isNewWarehouse;
-            warehouseSelect.disabled = branchSelect.value === '__new__' || isNewWarehouse;
+            warehouseSelect.disabled = (!isStaffUser && branchSelect.value === '__new__') || isNewWarehouse;
         }
 
         function openWarehouseDialog() {
-            const selectedBranch = branchSelect.value;
+            const selectedBranch = isStaffUser ? assignedBranchId : branchSelect.value;
             newWarehouseBranchSelect.value = selectedBranch !== '__new__' ? selectedBranch : '';
             newWarehouseModalName.value = newWarehouseInput.value || '';
             warehouseDialog.showModal();
-            newWarehouseBranchSelect.focus();
+            if (!isStaffUser) {
+                newWarehouseBranchSelect.focus();
+            } else {
+                newWarehouseModalName.focus();
+            }
         }
 
         function closeWarehouseDialog() {
@@ -874,7 +916,7 @@
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                     },
                     body: JSON.stringify({
-                        branch_id: newWarehouseBranchSelect.value,
+                        branch_id: isStaffUser ? assignedBranchId : newWarehouseBranchSelect.value,
                         name: newWarehouseModalName.value.trim(),
                     }),
                 });
@@ -888,7 +930,9 @@
                 option.dataset.branchId = data.branch_id;
                 warehouseSelect.add(option);
                 warehouseOptions.push(option);
-                branchSelect.disabled = false;
+                if (!isStaffUser) {
+                    branchSelect.disabled = false;
+                }
                 branchSelect.value = data.branch_id;
                 newWarehouseInput.value = '';
                 warehouseDialog.close();
@@ -926,7 +970,7 @@
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                     },
                     body: JSON.stringify({
-                        branch_id: newPileBranchSelect.value,
+                        branch_id: isStaffUser ? assignedBranchId : newPileBranchSelect.value,
                         warehouse_id: newPileWarehouseSelect.value,
                         number: newPileModalNumber.value.trim(),
                     }),
@@ -941,7 +985,9 @@
                 option.dataset.warehouseId = data.warehouse_id;
                 pileSelect.add(option);
                 pileOptions.push(option);
-                branchSelect.disabled = false;
+                if (!isStaffUser) {
+                    branchSelect.disabled = false;
+                }
                 branchSelect.value = data.branch_id;
                 warehouseSelect.disabled = false;
                 warehouseSelect.value = data.warehouse_id;

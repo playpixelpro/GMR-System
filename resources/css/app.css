@@ -30,6 +30,13 @@
         width: 4.25rem !important;
     }
 
+    /* When sidebar is minified on desktop, hide inline dropdown menus inside the mini sidebar */
+    html.sidebar-is-minified #collapsible-mini-sidebar .dropdown-menu,
+    body.overlay-minified #collapsible-mini-sidebar .dropdown-menu,
+    #collapsible-mini-sidebar.minified .dropdown-menu {
+        display: none !important;
+    }
+
     .main-content-wrapper {
         margin-inline-start: 16.5rem;
         transition: margin-inline-start 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -39,6 +46,26 @@
     body.overlay-minified .main-content-wrapper {
         margin-inline-start: 4.25rem !important;
     }
+}
+
+/* Floating submenu panel positioned beside collapsed sidebar */
+#sidebar-floating-flyout {
+    position: fixed;
+    z-index: 60;
+    pointer-events: auto;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+/* Invisible hover bridge connecting parent icon and floating flyout panel */
+#sidebar-floating-flyout::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -14px;
+    width: 16px;
+    background: transparent;
+    pointer-events: auto;
 }
 
 @media (max-width: 639.98px) {

@@ -47,7 +47,6 @@ class EmrDashboardTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertSee('Total Warehouses')
             ->assertSee('Total Piles')
             ->assertSee('2', false)
             ->assertSee('475.620')
@@ -67,7 +66,6 @@ class EmrDashboardTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertSee('Total Warehouses')
             ->assertSee('63.50% – 62.90%')
             ->assertSee('QUESTIONABLE');
     }

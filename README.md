@@ -66,7 +66,23 @@ BREVO_SMTP_EHLO_DOMAIN=your-domain.example
 
 The sender address or domain must be verified in Brevo. Never commit `.env` or SMTP credentials.
 
-### 5. Run the database setup
+### 5. Gravatar avatars (optional)
+
+By default, users without a locally uploaded avatar will have their profile
+image resolved from **Gravatar** (an optional external avatar service), using
+the SHA-256 hash of their email address. The email is never sent to Gravatar in
+plain text and the Gravatar image is never stored on this server.
+
+To disable the feature entirely and always fall back to the default generated
+avatar, set the following in `.env`:
+
+```env
+GRAVATAR_ENABLED=false
+```
+
+Avatar resolution follows this priority: **local uploaded avatar → Gravatar → default generated avatar**.
+
+### 6. Run the database setup
 
 ```bash
 php artisan migrate --seed --no-interaction
@@ -78,7 +94,7 @@ To recreate a local database from scratch:
 php artisan migrate:fresh --seed --no-interaction
 ```
 
-### 6. Build frontend assets and start the application
+### 7. Build frontend assets and start the application
 
 ```bash
 npm run build

@@ -12,6 +12,17 @@ class UpdatePileDetailsRequest extends FormRequest
      */
     public function authorize(): bool
     {
+        $user = $this->user();
+        if ($user?->hasRole('STAFF') && $user?->branch_id) {
+            $pile = $this->route('pile');
+            if ($pile) {
+                $pileBranchId = $pile->branch_id ?? $pile->warehouse?->branch_id;
+                if ($pileBranchId !== $user->branch_id) {
+                    return false;
+                }
+            }
+        }
+
         return true;
     }
 

@@ -30,11 +30,28 @@ class DataEntryController extends Controller
 
     public function create(Request $request): View
     {
-        $branches = Branch::orderBy('name')->get();
-        $warehouses = Warehouse::orderBy('name')->get();
-        $piles = Pile::with(['amrRecords', 'pmrRecords', 'warehouse'])
-            ->orderBy('number')
-            ->get()
+        /** @var User|null $currentUser */
+        $currentUser = Auth::user();
+        $isStaff = (bool) $currentUser?->hasRole('STAFF');
+        $userBranchId = $isStaff ? $currentUser?->branch_id : null;
+        $assignedBranch = $userBranchId ? Branch::find($userBranchId) : null;
+
+        $branchesQuery = Branch::orderBy('name');
+        $warehousesQuery = Warehouse::orderBy('name');
+        $pilesQuery = Pile::with(['amrRecords', 'pmrRecords', 'warehouse'])->orderBy('number');
+
+        if ($userBranchId) {
+            $branchesQuery->where('id', $userBranchId);
+            $warehousesQuery->where('branch_id', $userBranchId);
+            $pilesQuery->where(function ($query) use ($userBranchId): void {
+                $query->where('branch_id', $userBranchId)
+                    ->orWhereHas('warehouse', fn ($w) => $w->where('branch_id', $userBranchId));
+            });
+        }
+
+        $branches = $branchesQuery->get();
+        $warehouses = $warehousesQuery->get();
+        $piles = $pilesQuery->get()
             ->map(function (Pile $pile): array {
                 $sharedData = [
                     'variety' => $pile->variety,
@@ -142,6 +159,9 @@ class DataEntryController extends Controller
             'warehouses' => $warehouses,
             'piles' => $piles,
             'formType' => $request->query('type') ?? $request->query('form_type'),
+            'isStaff' => $isStaff,
+            'userBranchId' => $userBranchId,
+            'assignedBranch' => $assignedBranch,
         ]);
     }
 
@@ -149,6 +169,13 @@ class DataEntryController extends Controller
         UpdatePileDetailsRequest $request,
         Pile $pile,
     ): JsonResponse {
+        /** @var User|null $currentUser */
+        $currentUser = Auth::user();
+        if ($currentUser?->hasRole('STAFF') && $currentUser?->branch_id) {
+            $pileBranchId = $pile->branch_id ?? $pile->warehouse?->branch_id;
+            abort_unless($pileBranchId === $currentUser->branch_id, 403, 'You can only edit piles in your assigned branch.');
+        }
+
         $validated = $request->validated();
 
         $updateData = [
@@ -199,6 +226,13 @@ class DataEntryController extends Controller
         $recordModel =
             $formType === 'amr' ? AmrRecord::class : PmrRecord::class;
         $trial = $recordModel::findOrFail($recordId);
+
+        /** @var User|null $currentUser */
+        $currentUser = Auth::user();
+        if ($currentUser?->hasRole('STAFF') && $currentUser?->branch_id) {
+            $pileBranchId = $trial->pile?->branch_id ?? $trial->pile?->warehouse?->branch_id;
+            abort_unless($pileBranchId === $currentUser->branch_id, 403, 'You can only modify records in your assigned branch.');
+        }
 
         if ($trial->is_locked) {
             abort(403, 'This test milling record is locked and cannot be edited.');
@@ -311,6 +345,13 @@ class DataEntryController extends Controller
             $formType === 'amr' ? AmrRecord::class : PmrRecord::class;
         $trial = $recordModel::findOrFail($recordId);
 
+        /** @var User|null $currentUser */
+        $currentUser = Auth::user();
+        if ($currentUser?->hasRole('STAFF') && $currentUser?->branch_id) {
+            $pileBranchId = $trial->pile?->branch_id ?? $trial->pile?->warehouse?->branch_id;
+            abort_unless($pileBranchId === $currentUser->branch_id, 403, 'You can only delete records in your assigned branch.');
+        }
+
         if ($trial->is_locked) {
             abort(403, 'This test milling record is locked and cannot be deleted.');
         }
@@ -366,6 +407,13 @@ class DataEntryController extends Controller
     public function store(StoreDataEntryRequest $request): RedirectResponse
     {
         $validated = $request->validated();
+
+        /** @var User|null $currentUser */
+        $currentUser = Auth::user();
+        if ($currentUser?->hasRole('STAFF') && $currentUser?->branch_id) {
+            $validated['branch_id'] = $currentUser->branch_id;
+            unset($validated['new_branch_name']);
+        }
 
         $recordClass =
             $validated['form_type'] === 'amr'
@@ -580,23 +628,45 @@ class DataEntryController extends Controller
 
     public function warehouses(Branch $branch): JsonResponse
     {
+        /** @var User|null $currentUser */
+        $currentUser = Auth::user();
+        if ($currentUser?->hasRole('STAFF') && $currentUser?->branch_id && $currentUser->branch_id !== $branch->id) {
+            return response()->json([]);
+        }
+
         return response()->json($branch->warehouses()->orderBy('name')->get());
     }
 
     public function piles(Warehouse $warehouse): JsonResponse
     {
+        /** @var User|null $currentUser */
+        $currentUser = Auth::user();
+        if ($currentUser?->hasRole('STAFF') && $currentUser?->branch_id && $currentUser->branch_id !== $warehouse->branch_id) {
+            return response()->json([]);
+        }
+
         return response()->json($warehouse->piles()->orderBy('number')->get());
     }
 
     public function createWarehouse(Request $request): JsonResponse
     {
+        /** @var User|null $currentUser */
+        $currentUser = Auth::user();
+        $isStaff = (bool) ($currentUser?->hasRole('STAFF') && $currentUser?->branch_id);
+
         $validated = $request->validate([
-            'branch_id' => 'required|exists:branches,id',
+            'branch_id' => [
+                'required',
+                'exists:branches,id',
+                $isStaff ? Rule::in([$currentUser->branch_id]) : 'nullable',
+            ],
             'name' => 'required|string|max:255',
         ]);
 
+        $branchId = $isStaff ? $currentUser->branch_id : (int) $validated['branch_id'];
+
         $warehouse = Warehouse::firstOrCreate([
-            'branch_id' => $validated['branch_id'],
+            'branch_id' => $branchId,
             'name' => trim($validated['name']),
         ]);
 
@@ -605,8 +675,16 @@ class DataEntryController extends Controller
 
     public function createPile(Request $request): JsonResponse
     {
+        /** @var User|null $currentUser */
+        $currentUser = Auth::user();
+        $isStaff = (bool) ($currentUser?->hasRole('STAFF') && $currentUser?->branch_id);
+
         $validated = $request->validate([
-            'warehouse_id' => 'required|exists:warehouses,id',
+            'warehouse_id' => [
+                'required',
+                'exists:warehouses,id',
+                $isStaff ? Rule::exists('warehouses', 'id')->where('branch_id', $currentUser->branch_id) : 'nullable',
+            ],
             'number' => 'required|string|max:255',
         ]);
 
@@ -628,6 +706,13 @@ class DataEntryController extends Controller
 
     public function updatePileStatus(Request $request, Pile $pile): JsonResponse|RedirectResponse
     {
+        /** @var User|null $currentUser */
+        $currentUser = Auth::user();
+        if ($currentUser?->hasRole('STAFF') && $currentUser?->branch_id) {
+            $pileBranchId = $pile->branch_id ?? $pile->warehouse?->branch_id;
+            abort_unless($pileBranchId === $currentUser->branch_id, 403);
+        }
+
         if ($request->has('form_type')) {
             $validated = $request->validate([
                 'form_type' => ['required', Rule::in(['amr', 'pmr'])],

@@ -27,12 +27,20 @@
     <div class="grid grid-cols-1 items-end gap-4 md:grid-cols-3">
         <label class="form-control">
             <span class="label-text mb-2 text-sm font-semibold text-black">Branch</span>
-            <select name="branch_id" class="select select-bordered min-h-11 w-full text-base text-black" onchange="this.form.submit()">
-                <option value="">All Branches</option>
+            @php
+                $isStaffUser = auth()->user()?->hasRole('STAFF') && auth()->user()?->branch_id;
+            @endphp
+            <select name="branch_id" class="select select-bordered min-h-11 w-full text-base text-black @if($isStaffUser) bg-gray-100 text-gray-500 cursor-not-allowed @endif" onchange="this.form.submit()" @disabled($isStaffUser)>
+                @unless($isStaffUser)
+                    <option value="">All Branches</option>
+                @endunless
                 @foreach ($branches as $branch)
                     <option value="{{ $branch->id }}" @selected($filters['branch_id'] === $branch->id)>{{ $branch->name }}</option>
                 @endforeach
             </select>
+            @if($isStaffUser)
+                <input type="hidden" name="branch_id" value="{{ auth()->user()->branch_id }}">
+            @endif
         </label>
         <label class="form-control">
             <span class="label-text mb-2 text-sm font-semibold text-black">Warehouse</span>
@@ -51,17 +59,16 @@
 
 <div class="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-7">
     @foreach ([
-        ['label' => 'Total Warehouses', 'value' => number_format($summary['warehouses'] ?? $summary['total_warehouses'] ?? 0), 'class' => 'text-primary'],
         ['label' => 'Total Piles', 'value' => number_format($summary['piles']), 'class' => 'text-primary'],
-        ['label' => 'Total Volume (50 kg bags)', 'value' => number_format($summary['volume_bags'], 3), 'class' => 'text-secondary'],
+        ['label' => 'Total Volume (50 kg Bags)', 'value' => number_format($summary['volume_bags'], 3), 'class' => 'text-secondary'],
         ['label' => 'Average PMR', 'value' => $formatPercentage($summary['pmr']), 'class' => 'text-secondary'],
         ['label' => 'Average AMR', 'value' => $formatPercentage($summary['amr']), 'class' => 'text-primary'],
         ['label' => 'Overall EMR Range', 'value' => $formatRange($summary['emr_lower'] ?? $summary['emr_min'] ?? null, $summary['emr_upper'] ?? $summary['emr_max'] ?? null), 'class' => 'text-accent'],
         ['label' => 'GMR', 'value' => $formatPercentage($summary['gmr']), 'class' => 'text-black'],
     ] as $card)
         <div class="card border border-base-content/10 bg-base-100 p-3 sm:p-4 text-black shadow-sm min-w-0 overflow-hidden">
-            <p class="text-xs sm:text-sm font-semibold leading-5 text-black truncate" title="{{ $card['label'] }}">{{ $card['label'] }}</p>
-            <p class="mt-2 truncate font-mono text-lg sm:text-xl xl:text-2xl font-bold {{ $card['class'] }}" title="{{ $card['value'] }}">{{ $card['value'] }}</p>
+            <p class="text-xs sm:text-sm font-semibold leading-5 text-black">{{ $card['label'] }}</p>
+            <p class="mt-2 font-mono text-lg sm:text-xl xl:text-2xl font-bold {{ $card['class'] }}">{{ $card['value'] }}</p>
         </div>
     @endforeach
 </div>
@@ -121,10 +128,12 @@
                 <div class="flex flex-wrap items-center gap-3">
                     <div class="flex items-center gap-2">
                         <span class="text-sm font-semibold text-black whitespace-nowrap">Print Branch:</span>
-                        <select id="report-branch-select" class="select select-bordered select-sm min-w-[180px] text-sm text-black">
-                            <option value="">Select branch</option>
+                        <select id="report-branch-select" class="select select-bordered select-sm min-w-[180px] text-sm text-black @if($isStaffUser) bg-gray-100 text-gray-500 cursor-not-allowed @endif" @disabled($isStaffUser)>
+                            @unless($isStaffUser)
+                                <option value="">Select branch</option>
+                            @endunless
                             @foreach ($branches as $branch)
-                                <option value="{{ $branch->id }}">{{ $branch->name }}</option>
+                                <option value="{{ $branch->id }}" @selected($isStaffUser && auth()->user()->branch_id === $branch->id)>{{ $branch->name }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -257,7 +266,11 @@
         const tableRows = document.querySelectorAll('[data-row-branch-id]');
 
         function getSelectedBranch() {
-            return reportBranchSelect ? reportBranchSelect.value : '';
+            @if($isStaffUser)
+                return "{{ auth()->user()->branch_id }}";
+            @else
+                return reportBranchSelect ? reportBranchSelect.value : '';
+            @endif
         }
 
         function updateCheckboxStates() {

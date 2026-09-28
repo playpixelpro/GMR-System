@@ -32,12 +32,20 @@
     <div class="grid grid-cols-1 items-end gap-4 md:grid-cols-3">
         <label class="form-control">
             <span class="label-text mb-2 text-sm font-semibold text-black">Branch</span>
-            <select name="branch_id" class="select select-bordered min-h-11 w-full text-base text-black" onchange="this.form.submit()">
-                <option value="">All Branches</option>
+            @php
+                $isStaffUser = auth()->user()?->hasRole('STAFF') && auth()->user()?->branch_id;
+            @endphp
+            <select name="branch_id" class="select select-bordered min-h-11 w-full text-base text-black @if($isStaffUser) bg-gray-100 text-gray-500 cursor-not-allowed @endif" onchange="this.form.submit()" @disabled($isStaffUser)>
+                @unless($isStaffUser)
+                    <option value="">All Branches</option>
+                @endunless
                 @foreach ($branches as $branch)
                     <option value="{{ $branch->id }}" @selected($filters['branch_id'] === $branch->id)>{{ $branch->name }}</option>
                 @endforeach
             </select>
+            @if($isStaffUser)
+                <input type="hidden" name="branch_id" value="{{ auth()->user()->branch_id }}">
+            @endif
         </label>
         <label class="form-control">
             <span class="label-text mb-2 text-sm font-semibold text-black">Warehouse</span>
@@ -56,17 +64,16 @@
 
 <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 sm:gap-4">
     @foreach ([
-        ['label' => 'Total Warehouses', 'value' => number_format($summary['warehouses']), 'accent' => 'primary', 'size' => 'text-lg xl:text-xl'],
         ['label' => 'Total Piles', 'value' => number_format($summary['piles']), 'accent' => 'primary', 'size' => 'text-lg xl:text-xl'],
-        ['label' => 'Total Volume (50 kg bags)', 'value' => number_format($summary['volume_bags'], 3), 'accent' => 'secondary', 'size' => 'text-base xl:text-lg'],
+        ['label' => 'Total Volume (50 kg Bags)', 'value' => number_format($summary['volume_bags'], 3), 'accent' => 'secondary', 'size' => 'text-base xl:text-lg'],
         ['label' => 'Average Purity', 'value' => $formatPercentage($summary['purity']), 'accent' => 'accent', 'size' => 'text-lg xl:text-xl'],
         ['label' => 'Average AMR', 'value' => $formatPercentage($summary['amr']), 'accent' => 'primary', 'size' => 'text-lg xl:text-xl'],
         ['label' => 'Average PMR', 'value' => $formatPercentage($summary['pmr']), 'accent' => 'secondary', 'size' => 'text-lg xl:text-xl'],
         ['label' => 'Expected Milling Recovery', 'value' => $formatRange($summary['emr_lower'], $summary['emr_upper']), 'accent' => 'accent', 'size' => 'text-sm xl:text-base'],
     ] as $card)
         <div class="card min-w-0 overflow-hidden border border-base-content/10 bg-base-100 p-3 sm:p-4 text-black shadow-sm">
-            <p class="truncate text-xs sm:text-sm font-semibold text-black" title="{{ $card['label'] }}">{{ $card['label'] }}</p>
-            <p class="mt-2 truncate {{ $card['size'] }} font-bold text-black" title="{{ $card['value'] }}">{{ $card['value'] }}</p>
+            <p class="text-xs sm:text-sm font-semibold text-black">{{ $card['label'] }}</p>
+            <p class="mt-2 {{ $card['size'] }} font-bold text-black">{{ $card['value'] }}</p>
         </div>
     @endforeach
 </div>
