@@ -96,8 +96,10 @@ class TestWorkflowController extends Controller
                     : 'pmr_status' => strtolower($newStatus),
             ]);
 
+            $module = $test instanceof AmrRecord ? 'amr' : 'pmr';
+
             AuditLog::record(strtoupper($validated['action']), $test, [
-                'form_type' => $test instanceof AmrRecord ? 'amr' : 'pmr',
+                'form_type' => $module,
                 'pile_id' => $test->pile_id,
                 'conduct_number' => $test->conduct_number,
                 'previous_status' => $previousStatus,
@@ -106,7 +108,7 @@ class TestWorkflowController extends Controller
                 'action_remarks' => $remarks,
                 'actioned_by' => Auth::id(),
                 'actioned_at' => now()->toIso8601String(),
-            ]);
+            ], $module, "Test milling data marked as {$newStatus}");
         });
 
         $message = "Test conduct marked as {$newStatus}.";
@@ -222,7 +224,7 @@ class TestWorkflowController extends Controller
                 'reset_reason' => $validated['reason'],
                 'reset_by' => Auth::id(),
                 'reset_at' => now()->toIso8601String(),
-            ]);
+            ], $formType, 'RMEC action reset');
         });
 
         $message = "RMEC action for {$pile->pile_number} has been reset to PENDING. Reason recorded.";

@@ -8,6 +8,19 @@
         @page {
             size: {{ $config->getCssPageSize() }};
             margin: {{ $config->getCssMargins() }};
+
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 8pt;
+                color: #555;
+            }
+
+            @bottom-left {
+                content: "GMR System - Developed by Dindo O. Quitor | {{ now()->format('M d, Y') }}";
+                font-size: 6pt;
+                color: #999;
+                font-style: italic;
+            }
         }
 
         * {
@@ -165,6 +178,7 @@
             border: 1px solid #000;
             padding: 4px 6px;
             font-size: 9.5pt;
+            white-space: nowrap;
         }
 
         .gmr-table th {
@@ -182,7 +196,7 @@
 
         /* Signatories Section */
         .signatories-section {
-            margin-top: 30px;
+            margin-top: 20px;
             page-break-inside: avoid;
         }
 
@@ -190,22 +204,22 @@
             font-size: 10.5pt;
             font-weight: 800;
             text-align: center;
-            margin: 10px 0 4px 0;
+            margin: 6px 0 4px 0;
         }
 
         .signatories-subheader {
             font-size: 10pt;
             font-weight: 700;
             text-align: center;
-            margin: 0 0 20px 0;
+            margin: 0 0 12px 0;
         }
 
         .signatories-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             column-gap: 30px;
-            row-gap: 28px;
-            margin-bottom: 24px;
+            row-gap: 16px;
+            margin-bottom: 16px;
         }
 
         .signatory-box {
@@ -222,7 +236,7 @@
             min-width: 220px;
             padding-bottom: 2px;
             margin-bottom: 3px;
-            margin-top: 18px;
+            margin-top: 10px;
         }
 
         .signatory-position {
@@ -237,7 +251,7 @@
         }
 
         .reviewed-section {
-            margin-top: 28px;
+            margin-top: 16px;
             text-align: center;
         }
 
@@ -245,7 +259,7 @@
             font-size: 10pt;
             font-weight: 800;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 12px;
         }
 
         @media print {
@@ -270,6 +284,7 @@
                 padding: 0 !important;
                 max-width: none !important;
                 width: 100% !important;
+                min-height: 0 !important;
             }
 
             .gmr-table th,

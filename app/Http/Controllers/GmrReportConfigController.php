@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\GmrReportSignatory;
 use App\Services\GmrReportService;
 use Illuminate\Http\RedirectResponse;
@@ -72,6 +73,8 @@ class GmrReportConfigController extends Controller
         $config = $this->reportService->getConfiguration();
         $config->update($validated);
 
+        AuditLog::record('GMR_CONFIG_UPDATED', $config, $validated, 'gmr', 'GMR report configuration updated');
+
         return redirect()
             ->route('gmr.config.edit')
             ->with('status', 'GMR Report configuration successfully saved.');
@@ -95,7 +98,9 @@ class GmrReportConfigController extends Controller
         $validated['is_active'] = $request->boolean('is_active');
         $validated['role_group'] = $validated['role_group'] ?? 'member';
 
-        GmrReportSignatory::create($validated);
+        $signatory = GmrReportSignatory::create($validated);
+
+        AuditLog::record('SIGNATORY_ADDED', $signatory, $validated, 'gmr', "Signatory '{$signatory->name}' added");
 
         return redirect()
             ->route('gmr.config.edit')
@@ -122,6 +127,8 @@ class GmrReportConfigController extends Controller
 
         $signatory->update($validated);
 
+        AuditLog::record('SIGNATORY_UPDATED', $signatory, $validated, 'gmr', "Signatory '{$signatory->name}' updated");
+
         return redirect()
             ->route('gmr.config.edit')
             ->with('status', "Signatory '{$signatory->name}' updated successfully.");
@@ -136,6 +143,8 @@ class GmrReportConfigController extends Controller
 
         $name = $signatory->name;
         $signatory->delete();
+
+        AuditLog::record('SIGNATORY_DELETED', $signatory, ['name' => $name], 'gmr', "Signatory '{$name}' deleted");
 
         return redirect()
             ->route('gmr.config.edit')
@@ -154,6 +163,10 @@ class GmrReportConfigController extends Controller
         ]);
 
         $state = $signatory->is_active ? 'activated' : 'deactivated';
+
+        AuditLog::record('SIGNATORY_TOGGLED', $signatory, [
+            'is_active' => $signatory->is_active,
+        ], 'gmr', "Signatory '{$signatory->name}' {$state}");
 
         return redirect()
             ->route('gmr.config.edit')

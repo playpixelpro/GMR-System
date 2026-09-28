@@ -227,6 +227,7 @@ class GmrReportService
             'branchName' => $branchName,
             'isPdf' => true,
         ]);
+        $pdf->setOption('isPhpEnabled', true);
 
         $bounds = $config->getPaperBounds();
         $pdf->setPaper([0, 0, $bounds[2], $bounds[3]], strtolower($config->orientation));

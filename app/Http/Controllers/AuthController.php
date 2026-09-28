@@ -54,7 +54,7 @@ class AuthController extends Controller
 
         AuditLog::record('USER_REGISTERED', $user, [
             'branch_id' => $user->branch_id,
-        ]);
+        ], 'auth', 'User self-registered a staff account');
 
         try {
             $user->notify(new TemporaryPasswordNotification($temporaryPassword));
@@ -116,7 +116,10 @@ class AuthController extends Controller
             $throttle->recordFailure($request->ip(), AuthThrottle::REASON_LOGIN);
 
             AuditLog::create([
+                'module' => 'auth',
                 'action' => 'LOGIN_FAILED',
+                'description' => 'Failed login attempt',
+                'ip_address' => $request->ip(),
                 'metadata' => ['email' => $credentials['email']],
             ]);
 
@@ -129,7 +132,7 @@ class AuthController extends Controller
 
         $throttle->clear($request->ip());
         $request->session()->regenerate();
-        AuditLog::record('LOGIN', $user);
+        AuditLog::record('LOGIN', $user, [], 'auth', 'User logged in');
 
         if ($user->must_change_password) {
             return redirect()->route('password.change');
@@ -140,7 +143,7 @@ class AuthController extends Controller
 
     public function destroy(Request $request): RedirectResponse
     {
-        AuditLog::record('LOGOUT', $request->user());
+        AuditLog::record('LOGOUT', $request->user(), [], 'auth', 'User logged out');
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
@@ -165,7 +168,7 @@ class AuthController extends Controller
             'activated_at' => $user->activated_at ?? now(),
             'temporary_password_expires_at' => null,
         ])->save();
-        AuditLog::record('PASSWORD_CHANGED', $user);
+        AuditLog::record('PASSWORD_CHANGED', $user, [], 'auth', 'User changed their password');
 
         return redirect()
             ->route('home')
@@ -233,7 +236,7 @@ class AuthController extends Controller
                     'remember_token' => null,
                 ])
                 ->save();
-            AuditLog::record('PASSWORD_RESET', $user);
+            AuditLog::record('PASSWORD_RESET', $user, [], 'auth', 'Password reset via email link');
         });
 
         if ($status !== Password::PASSWORD_RESET) {

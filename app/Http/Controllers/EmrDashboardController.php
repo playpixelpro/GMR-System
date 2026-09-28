@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AmrRecord;
+use App\Models\AuditLog;
 use App\Models\Branch;
 use App\Models\Pile;
 use App\Models\Warehouse;
@@ -52,6 +53,7 @@ class EmrDashboardController extends Controller
             'rows' => $paginator,
             'allRows' => $rows,
             'summary' => $this->summary($rows),
+            'total_warehouses' => $warehouses->count(),
         ]);
     }
 
@@ -62,6 +64,7 @@ class EmrDashboardController extends Controller
     {
         $filters = $this->filters($request);
         $rows = $this->rows($filters);
+        $this->logEmrExport($request, 'csv');
 
         return response()->streamDownload(
             function () use ($rows): void {
@@ -118,6 +121,7 @@ class EmrDashboardController extends Controller
         $filters = $this->filters($request);
         $rows = $this->rows($filters);
         $filterNames = $this->filterNames($filters);
+        $this->logEmrExport($request, 'excel');
 
         return $this->exportService->exportExcel($rows, $filterNames);
     }
@@ -130,8 +134,24 @@ class EmrDashboardController extends Controller
         $filters = $this->filters($request);
         $rows = $this->rows($filters);
         $filterNames = $this->filterNames($filters);
+        $this->logEmrExport($request, 'pdf');
 
         return $this->exportService->exportPdf($rows, $filterNames);
+    }
+
+    private function logEmrExport(Request $request, string $format): void
+    {
+        AuditLog::create([
+            'module' => 'emr',
+            'action' => 'EMR_EXPORTED',
+            'description' => "EMR report exported as {$format}",
+            'ip_address' => $request->ip(),
+            'metadata' => [
+                'format' => $format,
+                'branch_id' => $request->integer('branch_id') ?: null,
+                'warehouse_id' => $request->integer('warehouse_id') ?: null,
+            ],
+        ]);
     }
 
     /**

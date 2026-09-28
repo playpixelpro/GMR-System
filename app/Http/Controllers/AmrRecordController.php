@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AmrRecord;
+use App\Models\AuditLog;
 use App\Models\Branch;
 use App\Models\Pile;
 use App\Models\PmrCalculation;
@@ -60,6 +61,7 @@ class AmrRecordController extends Controller
     {
         $filters = $this->filters($request);
         $groups = $this->getRecordGroups($filters);
+        $this->logExport($request, 'excel');
 
         $filterNames = [
             'branch' => $filters['branch_id'] ? Branch::find($filters['branch_id'])?->name : 'All Branches',
@@ -76,6 +78,7 @@ class AmrRecordController extends Controller
     {
         $filters = $this->filters($request);
         $groups = $this->getRecordGroups($filters);
+        $this->logExport($request, 'pdf');
 
         $filterNames = [
             'branch' => $filters['branch_id'] ? Branch::find($filters['branch_id'])?->name : 'All Branches',
@@ -83,6 +86,21 @@ class AmrRecordController extends Controller
         ];
 
         return $this->exportService->exportPdf($groups, $filterNames);
+    }
+
+    private function logExport(Request $request, string $format): void
+    {
+        AuditLog::create([
+            'module' => 'amr',
+            'action' => 'AMR_EXPORTED',
+            'description' => "AMR report exported as {$format}",
+            'ip_address' => $request->ip(),
+            'metadata' => [
+                'format' => $format,
+                'branch_id' => $request->integer('branch_id') ?: null,
+                'warehouse_id' => $request->integer('warehouse_id') ?: null,
+            ],
+        ]);
     }
 
     /**

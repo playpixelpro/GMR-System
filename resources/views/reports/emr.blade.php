@@ -11,8 +11,7 @@
 
 <div class="mb-5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
     <div>
-        <h1 class="text-2xl font-bold leading-tight text-black sm:text-3xl">Expected Milling Recovery (EMR) Dashboard</h1>
-        <p class="mt-2 text-sm leading-6 text-black">Summary of Expected Milling Recovery by Branch, Warehouse, and Pile</p>
+        <h1 class="text-2xl font-bold leading-tight text-black sm:text-3xl">EMR - Dashboard</h1>
     </div>
     <div class="flex flex-wrap items-center gap-2">
         @if (auth()->user()?->hasRole('RMEC', 'ADMINISTRATOR'))
@@ -63,14 +62,19 @@
 </form>
 
 <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 sm:gap-4">
-    @foreach ([
-        ['label' => 'Total Piles', 'value' => number_format($summary['piles']), 'accent' => 'primary', 'size' => 'text-lg xl:text-xl'],
-        ['label' => 'Total Volume (50 kg Bags)', 'value' => number_format($summary['volume_bags'], 3), 'accent' => 'secondary', 'size' => 'text-base xl:text-lg'],
-        ['label' => 'Average Purity', 'value' => $formatPercentage($summary['purity']), 'accent' => 'accent', 'size' => 'text-lg xl:text-xl'],
-        ['label' => 'Average AMR', 'value' => $formatPercentage($summary['amr']), 'accent' => 'primary', 'size' => 'text-lg xl:text-xl'],
-        ['label' => 'Average PMR', 'value' => $formatPercentage($summary['pmr']), 'accent' => 'secondary', 'size' => 'text-lg xl:text-xl'],
-        ['label' => 'Expected Milling Recovery', 'value' => $formatRange($summary['emr_lower'], $summary['emr_upper']), 'accent' => 'accent', 'size' => 'text-sm xl:text-base'],
-    ] as $card)
+    @foreach (array_merge(
+        $filters['warehouse_id'] ? [] : [
+            ['label' => 'Total Warehouses', 'value' => number_format($total_warehouses), 'accent' => 'primary', 'size' => 'text-lg xl:text-xl'],
+        ],
+        [
+            ['label' => 'Total Piles', 'value' => number_format($summary['piles']), 'accent' => 'primary', 'size' => 'text-lg xl:text-xl'],
+            ['label' => 'Volume in Bags', 'value' => number_format($summary['volume_bags'], 3), 'accent' => 'secondary', 'size' => 'text-base xl:text-lg'],
+            ['label' => 'Average Purity', 'value' => $formatPercentage($summary['purity']), 'accent' => 'accent', 'size' => 'text-lg xl:text-xl'],
+            ['label' => 'Average AMR', 'value' => $formatPercentage($summary['amr']), 'accent' => 'primary', 'size' => 'text-lg xl:text-xl'],
+            ['label' => 'Average PMR', 'value' => $formatPercentage($summary['pmr']), 'accent' => 'secondary', 'size' => 'text-lg xl:text-xl'],
+            ['label' => 'EMR', 'value' => $formatRange($summary['emr_lower'], $summary['emr_upper']), 'accent' => 'accent', 'size' => 'text-sm xl:text-base'],
+        ],
+    ) as $card)
         <div class="card min-w-0 overflow-hidden border border-base-content/10 bg-base-100 p-3 sm:p-4 text-black shadow-sm">
             <p class="text-xs sm:text-sm font-semibold text-black">{{ $card['label'] }}</p>
             <p class="mt-2 {{ $card['size'] }} font-bold text-black">{{ $card['value'] }}</p>
@@ -89,7 +93,7 @@
     <section class="card mb-5 border border-base-content/10 bg-base-100 p-4 text-black shadow-sm">
         <h2 class="mb-4 text-lg font-semibold text-black">EMR Summary by Warehouse</h2>
         <div class="overflow-x-auto">
-            <table class="table table-sm min-w-[52rem] text-sm">
+            <table class="table table-sm min-w-208 text-sm">
                 <thead><tr class="border-b border-base-content/15 text-sm font-semibold text-black"><th>Warehouse</th><th class="text-end">Piles</th><th class="text-end">Volume (50 kg bags)</th><th class="text-end">Avg Purity</th><th class="text-end">Avg AMR</th><th class="text-end">Avg PMR</th><th class="text-end">EMR</th></tr></thead>
                 <tbody>
                     @foreach ($allRows->groupBy('warehouse') as $warehouseName => $warehouseRows)
@@ -107,7 +111,7 @@
             <span class="text-sm text-black">{{ $rows->firstItem() ?? 0 }}–{{ $rows->lastItem() ?? 0 }} of {{ $rows->total() }}</span>
         </div>
         <div class="overflow-x-auto">
-            <table class="table table-sm min-w-[82rem] text-sm">
+            <table class="table table-sm min-w-328 text-sm">
                 <thead><tr class="border-y border-base-content/15 bg-base-200/60 text-sm font-semibold text-black"><th class="text-center">No.</th><th>Branch</th><th>Warehouse</th><th>Pile</th><th>Variety</th><th class="text-center">Age</th><th class="text-center">Volume <br>(50 kg bags)</th><th class="text-center">Purity</th><th class="text-center">Quality</th><th class="text-center">AMR</th><th class="text-center">PMR</th><th class="text-center">EMR</th><th>Status</th></tr></thead>
                 <tbody>
                     @foreach ($rows as $row)

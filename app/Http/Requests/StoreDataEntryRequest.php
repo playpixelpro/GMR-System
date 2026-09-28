@@ -281,7 +281,7 @@ class StoreDataEntryRequest extends FormRequest
                     'premium',
                 ]),
             ],
-            'aged' => ['required', 'integer', 'min:0'],
+            'aged' => ['required', 'numeric', 'min:0'],
             'volume' => ['required', 'numeric', 'min:0'],
             'trials' => ['required', 'array', 'min:1', 'max:'.$maximumTrial],
             'trials.*.trial_number' => [

@@ -5,10 +5,7 @@
     <!-- Header / Title -->
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-            <div class="flex items-center gap-2">
-                <span class="badge badge-soft badge-primary text-xs font-semibold">RMEC Administration</span>
-                <span class="text-xs text-base-content/60">GMR Module</span>
-            </div>
+
             <h1 class="text-2xl font-bold tracking-tight text-base-content sm:text-3xl">GMR Report Configuration</h1>
             <p class="text-sm text-base-content/70">
                 Configure printable paper dimensions, orientation, margins, headers, and official signatories for the GMR report.
@@ -295,7 +292,7 @@
                         <th>Position / Designation</th>
                         <th>Role / Group</th>
                         <th class="text-center">Status</th>
-                        <th class="text-end pr-5">Actions</th>
+                        <th class="text-end pr-5 min-w-56">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-base-content/10 text-sm">
@@ -335,28 +332,38 @@
                                     <span class="badge badge-neutral badge-sm text-xs font-medium">Inactive</span>
                                 @endif
                             </td>
-                            <td class="text-end pr-5">
-                                <div class="inline-flex items-center gap-1">
+                            <td class="text-end pr-5 whitespace-nowrap">
+                                <div class="inline-flex items-center justify-end gap-1.5 flex-wrap">
                                     <!-- Toggle Active/Inactive -->
                                     <form action="{{ route('gmr.config.signatories.toggle', $signatory) }}" method="POST" class="inline">
                                         @csrf
                                         @method('PATCH')
-                                        <button type="submit" class="btn btn-ghost btn-xs" title="{{ $signatory->is_active ? 'Deactivate' : 'Activate' }}">
-                                            <span class="icon-[tabler--toggle-{{ $signatory->is_active ? 'right text-success' : 'left text-base-content/40' }}] size-4"></span>
-                                        </button>
+                                        @if ($signatory->is_active)
+                                            <button type="submit" class="btn btn-xs btn-outline btn-warning inline-flex items-center gap-1" title="Deactivate Signatory">
+                                                <span class="icon-[tabler--toggle-right] size-3.5"></span>
+                                                <span>Deactivate</span>
+                                            </button>
+                                        @else
+                                            <button type="submit" class="btn btn-xs btn-outline btn-success inline-flex items-center gap-1" title="Activate Signatory">
+                                                <span class="icon-[tabler--toggle-left] size-3.5"></span>
+                                                <span>Activate</span>
+                                            </button>
+                                        @endif
                                     </form>
 
                                     <!-- Edit Button -->
-                                    <button type="button" onclick="openEditModal({{ json_encode($signatory) }})" class="btn btn-ghost btn-xs text-primary" title="Edit Signatory">
-                                        <span class="icon-[tabler--pencil] size-4"></span>
+                                    <button type="button" onclick="openEditModal({{ json_encode($signatory) }})" class="btn btn-xs btn-outline btn-primary inline-flex items-center gap-1" title="Edit Signatory">
+                                        <span class="icon-[tabler--pencil] size-3.5"></span>
+                                        <span>Edit</span>
                                     </button>
 
                                     <!-- Delete Button -->
                                     <form action="{{ route('gmr.config.signatories.destroy', $signatory) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this signatory?');">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-ghost btn-xs text-error" title="Delete Signatory">
-                                            <span class="icon-[tabler--trash] size-4"></span>
+                                        <button type="submit" class="btn btn-xs btn-outline btn-error inline-flex items-center gap-1" title="Delete Signatory">
+                                            <span class="icon-[tabler--trash] size-3.5"></span>
+                                            <span>Delete</span>
                                         </button>
                                     </form>
                                 </div>
@@ -376,10 +383,10 @@
 </div>
 
 <!-- Add Signatory Modal -->
-<dialog id="modal-add-signatory" class="modal">
-    <div class="modal-box max-w-md">
+<dialog id="modal-add-signatory" class="fixed left-1/2 top-1/2 m-0 max-h-[90vh] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg p-0 shadow-xl backdrop:bg-gray-900/50">
+    <div class="relative bg-base-100 p-6">
         <form method="dialog">
-            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+            <button class="btn btn-sm btn-circle btn-text absolute right-2 top-2">✕</button>
         </form>
         <h3 class="text-lg font-bold">Add Official Signatory</h3>
         <p class="text-xs text-base-content/60 mt-1">Configure an official signatory to appear on the printed GMR report.</p>
@@ -419,8 +426,8 @@
                 </label>
             </div>
 
-            <div class="modal-action">
-                <button type="button" onclick="document.getElementById('modal-add-signatory').close()" class="btn btn-ghost">Cancel</button>
+            <div class="mt-6 flex justify-end gap-2">
+                <button type="button" onclick="document.getElementById('modal-add-signatory').close()" class="btn btn-outline">Cancel</button>
                 <button type="submit" class="btn btn-primary">Add Signatory</button>
             </div>
         </form>
@@ -428,10 +435,10 @@
 </dialog>
 
 <!-- Edit Signatory Modal -->
-<dialog id="modal-edit-signatory" class="modal">
-    <div class="modal-box max-w-md">
+<dialog id="modal-edit-signatory" class="fixed left-1/2 top-1/2 m-0 max-h-[90vh] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg p-0 shadow-xl backdrop:bg-gray-900/50">
+    <div class="relative bg-base-100 p-6">
         <form method="dialog">
-            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+            <button class="btn btn-sm btn-circle btn-text absolute right-2 top-2">✕</button>
         </form>
         <h3 class="text-lg font-bold">Edit Signatory</h3>
         <p class="text-xs text-base-content/60 mt-1">Update signatory details or display order.</p>
@@ -472,8 +479,8 @@
                 </label>
             </div>
 
-            <div class="modal-action">
-                <button type="button" onclick="document.getElementById('modal-edit-signatory').close()" class="btn btn-ghost">Cancel</button>
+            <div class="mt-6 flex justify-end gap-2">
+                <button type="button" onclick="document.getElementById('modal-edit-signatory').close()" class="btn btn-outline">Cancel</button>
                 <button type="submit" class="btn btn-primary">Update Signatory</button>
             </div>
         </form>
@@ -492,7 +499,8 @@
 
     function openEditModal(signatory) {
         const form = document.getElementById('edit-signatory-form');
-        form.action = `/gmr/config/signatories/${signatory.id}`;
+        const updateUrl = @json(route('gmr.config.signatories.update', ['signatory' => 'SIGNATORY_ID']));
+        form.action = updateUrl.replace('SIGNATORY_ID', signatory.id);
 
         document.getElementById('edit_name').value = signatory.name;
         document.getElementById('edit_position').value = signatory.position;

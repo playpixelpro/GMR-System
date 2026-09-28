@@ -107,7 +107,7 @@
                 </div>
                 <div>
                     <label for="aged" class="block text-sm font-medium text-gray-700">Aged (in months)</label>
-                    <input type="number" name="aged" id="aged" value="{{ old('aged') }}" min="0" step="1" required data-pile-detail-field
+                    <input type="number" name="aged" id="aged" value="{{ old('aged') }}" min="0" step="any" required data-pile-detail-field
                            class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
                 </div>
                 <div>

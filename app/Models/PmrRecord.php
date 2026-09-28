@@ -58,7 +58,7 @@ class PmrRecord extends Model
         return [
             'purity' => 'decimal:2',
             'mc' => 'decimal:2',
-            'aged_months' => 'integer',
+            'aged_months' => 'float',
             'volume_kg' => 'decimal:3',
             'trial_number' => 'integer',
             'test_milling_date' => 'date:Y-m-d',

@@ -206,7 +206,7 @@ class DataEntryController extends Controller
         AuditLog::record('DATA_EDITED', $pile, [
             'details' => $updateData,
             'user_id' => Auth::id(),
-        ]);
+        ], 'pile', 'Pile details updated');
 
         return response()->json([
             'message' => 'Pile details updated successfully.',
@@ -307,7 +307,7 @@ class DataEntryController extends Controller
             'form_type' => $formType,
             'within_editing_window' => $trial->created_at?->greaterThanOrEqualTo(now()->subDay()),
             'admin_unlocked' => Auth::user()?->isEditOverrideActive() ?? false,
-        ]);
+        ], $formType, 'Test milling data edited');
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -390,7 +390,7 @@ class DataEntryController extends Controller
             'form_type' => $formType,
             'pile_id' => $pile?->id,
             'deleted_trial_number' => $deletedTrialNumber,
-        ]);
+        ], $formType, 'Test milling data deleted');
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -607,7 +607,7 @@ class DataEntryController extends Controller
                     'pile_id' => $pile->id,
                     'trial_number' => $trialNumber,
                     'conduct_number' => $conductNumber,
-                ]);
+                ], $validated['form_type'], 'Test milling data encoded');
             }
 
             if ($validated['form_type'] === 'amr') {

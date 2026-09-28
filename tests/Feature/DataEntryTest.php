@@ -25,6 +25,32 @@ class DataEntryTest extends TestCase
         $this->actingAs($user);
     }
 
+    public function test_aged_months_accepts_decimal_values(): void
+    {
+        $payload = [
+            'form_type' => 'amr',
+            'new_branch_name' => 'Decimal Branch',
+            'new_warehouse_name' => 'Warehouse D',
+            'test_milling_date' => '2026-09-24',
+            'pile_number' => '1',
+            'variety' => 'PD',
+            'purity' => 90,
+            'mc' => 12,
+            'quality' => 'gqa',
+            'aged' => 2.5,
+            'volume' => 10,
+            'rice_millers' => 'Miller',
+            'no_of_trial' => 1,
+            'palay_input' => 100,
+            'rice_recovery' => 60,
+        ];
+
+        $this->post(route('records.store'), $payload)->assertRedirect();
+
+        $pile = Pile::where('number', '1')->firstOrFail();
+        $this->assertSame(2.5, (float) $pile->aged_months);
+    }
+
     public function test_the_shared_form_creates_the_branch_warehouse_and_pile_hierarchy(): void
     {
         $payload = [

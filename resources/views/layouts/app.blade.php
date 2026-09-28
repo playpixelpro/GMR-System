@@ -126,8 +126,13 @@
                                     </a>
                                 </li>
                                 <li>
-                                    <a href="{{ route('settings.blocked-ips') }}" class="{{ request()->routeIs('settings.*') ? 'menu-active' : '' }}">
+                                    <a href="{{ route('settings.blocked-ips') }}" class="{{ request()->routeIs('settings.blocked-ips') ? 'menu-active' : '' }}">
                                         <span class="icon-[tabler--shield-lock] size-5"></span>Blocked IPs
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{{ route('settings.activity-logs') }}" class="{{ request()->routeIs('settings.activity-logs*') ? 'menu-active' : '' }}">
+                                        <span class="icon-[tabler--list-details] size-5"></span>Activity Logs
                                     </a>
                                 </li>
                             @endif

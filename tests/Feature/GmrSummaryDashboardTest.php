@@ -61,6 +61,7 @@ class GmrSummaryDashboardTest extends TestCase
         $response
             ->assertOk()
             ->assertSee('Total Piles')
+            ->assertDontSee('Total Warehouses')
             ->assertSee('61.88%')
             ->assertSee('61.53%–62.22%')
             ->assertSee('GMR = (AMR + PMR) / 2')
@@ -87,6 +88,7 @@ class GmrSummaryDashboardTest extends TestCase
 
         $this->get(route('gmr.summary'))
             ->assertOk()
+            ->assertSee('Total Warehouses')
             ->assertSee('Re-establish')
             ->assertSee('GMR is 60% or lower');
     }

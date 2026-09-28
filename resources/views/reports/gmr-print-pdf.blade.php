@@ -60,6 +60,7 @@
             border: 1px solid #000;
             padding: 3px 5px;
             font-size: 8pt;
+            white-space: nowrap;
         }
 
         .gmr-table th {
@@ -254,5 +255,22 @@
             </div>
         @endif
     </div>
+
+    <script type="text/php">
+        if (isset($pdf)) {
+            $font = $fontMetrics->get_font("helvetica", "normal");
+            $generatedDate = date("M d, Y");
+            $pageWidth = $pdf->get_width();
+            $pageHeight = $pdf->get_height();
+
+            // Lower-right: page number "Page X of Y".
+            $pageNumberText = "Page {PAGE_NUM} of {PAGE_COUNT}";
+            $pdf->page_text($pageWidth - 52, $pageHeight - 16, $pageNumberText, $font, 7, array(0, 0, 0));
+
+            // Lower-left: small watermark with developer credit and generation date.
+            $watermark = "GMR System - Developed by Dindo O. Quitor | " . $generatedDate;
+            $pdf->page_text(18, $pageHeight - 16, $watermark, $font, 6, array(0, 0, 0));
+        }
+    </script>
 </body>
 </html>

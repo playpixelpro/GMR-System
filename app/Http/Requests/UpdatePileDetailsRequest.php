@@ -45,7 +45,7 @@ class UpdatePileDetailsRequest extends FormRequest
         return [
             'variety' => ['required', 'string', 'max:100'],
             'purity' => ['required', 'numeric', 'between:0,100'],
-            'aged' => ['required', 'integer', 'min:0'],
+            'aged' => ['required', 'numeric', 'min:0'],
             'mc' => ['required', 'numeric', 'between:0,100'],
             'quality' => ['required', 'string'],
             'volume' => ['required', 'numeric', 'min:0'],

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Branch;
 use App\Models\Pile;
 use App\Services\GmrReportService;
@@ -88,6 +89,20 @@ class GmrReportPrintController extends Controller
                 ->route('gmr.summary')
                 ->with('error', 'No valid GMR data found for the selected records.');
         }
+
+        AuditLog::create([
+            'module' => 'gmr',
+            'action' => 'GMR_PRINTED',
+            'description' => 'GMR report generated',
+            'branch_id' => $branchId,
+            'branch_name' => $branch->name,
+            'ip_address' => $request->ip(),
+            'metadata' => [
+                'branch_id' => $branchId,
+                'pile_count' => count($allowedPileIds),
+                'pdf' => $request->boolean('pdf'),
+            ],
+        ]);
 
         $config = $this->reportService->getConfiguration();
         $signatories = $this->reportService->getActiveSignatories();

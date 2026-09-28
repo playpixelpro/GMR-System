@@ -62,7 +62,7 @@ class UserController extends Controller
         AuditLog::record('USER_CREATED', $user, [
             'role' => $user->role,
             'branch_id' => $user->branch_id,
-        ]);
+        ], 'user', "User account '{$user->name}' created");
 
         $emailSent = false;
         try {
@@ -122,7 +122,7 @@ class UserController extends Controller
         AuditLog::record($isAwaiting ? 'TEMPORARY_PASSWORD_RESENT' : 'TEMPORARY_PASSWORD_RESET', $user, [
             'reset_by' => $currentUser->id,
             'email' => $user->email,
-        ]);
+        ], 'user', 'Temporary password reset for user');
 
         $emailSent = false;
         try {
@@ -190,7 +190,7 @@ class UserController extends Controller
             $user->must_change_password = false;
             $user->temporary_password_expires_at = null;
             $user->activated_at = $user->activated_at ?? now();
-            AuditLog::record('PASSWORD_CHANGED', $user);
+            AuditLog::record('PASSWORD_CHANGED', $user, [], 'user', 'Password changed from profile settings');
         }
 
         $user->save();
@@ -204,7 +204,7 @@ class UserController extends Controller
         $currentUser = Auth::user();
         abort_unless($currentUser?->hasRole('ADMINISTRATOR'), 403);
         $user->update(['is_active' => false, 'disabled_at' => now()]);
-        AuditLog::record('USER_DISABLED', $user);
+        AuditLog::record('USER_DISABLED', $user, [], 'user', "User account '{$user->name}' disabled");
 
         return back()->with('status', 'User disabled.');
     }
@@ -228,7 +228,7 @@ class UserController extends Controller
 
         AuditLog::record('USER_REGISTRATION_CONFIRMED', $user, [
             'confirmed_by' => $currentUser->id,
-        ]);
+        ], 'user', "Registration confirmed permanent for '{$user->name}'");
 
         return back()->with('status', "Registration for {$user->name} has been confirmed as permanent.");
     }
@@ -254,7 +254,7 @@ class UserController extends Controller
         AuditLog::record('STAFF_EDIT_UNLOCKED', $user, [
             'hours' => $hours,
             'expires_at' => $expiresAt->toDateTimeString(),
-        ]);
+        ], 'user', "Edit mode unlocked for '{$user->name}'");
 
         return back()->with('status', "Edit mode unlocked for {$user->name} until {$expiresAt->format('M d, Y h:i A')} (+{$hours}h).");
     }
@@ -270,7 +270,7 @@ class UserController extends Controller
             'edit_unlocked_until' => null,
         ]);
 
-        AuditLog::record('STAFF_EDIT_LOCKED', $user);
+        AuditLog::record('STAFF_EDIT_LOCKED', $user, [], 'user', "Edit mode locked for '{$user->name}'");
 
         return back()->with('status', "Edit mode locked for {$user->name}. Editing is disabled.");
     }
@@ -286,7 +286,7 @@ class UserController extends Controller
             'edit_unlocked_until' => null,
         ]);
 
-        AuditLog::record('STAFF_EDIT_RESET_DEFAULT', $user);
+        AuditLog::record('STAFF_EDIT_RESET_DEFAULT', $user, [], 'user', "Edit mode reset to default for '{$user->name}'");
 
         return back()->with('status', "Edit mode for {$user->name} reset to default 24-hour window.");
     }
@@ -319,7 +319,7 @@ class UserController extends Controller
             'name' => $userName,
             'email' => $userEmail,
             'role' => $userRole,
-        ]);
+        ], 'user', "User account '{$userName}' deleted");
 
         if ($photoPath !== null) {
             Storage::disk('public')->delete($photoPath);
@@ -347,7 +347,7 @@ class UserController extends Controller
         AuditLog::record('USER_BRANCH_UPDATED', $user, [
             'branch_id' => $user->branch_id,
             'branch_name' => $user->branch?->name,
-        ]);
+        ], 'user', "Branch updated for '{$user->name}'");
 
         return back()->with('status', "Branch updated for {$user->name}.");
     }

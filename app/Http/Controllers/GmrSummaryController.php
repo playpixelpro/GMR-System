@@ -30,25 +30,27 @@ class GmrSummaryController extends Controller
             'warehouse_id' => $request->integer('warehouse_id') ?: null,
         ];
         $rows = $this->rows($filters);
+        $warehouses = Warehouse::query()
+            ->when(
+                $filters['branch_id'],
+                fn ($query, $branchId) => $query->where(
+                    'branch_id',
+                    $branchId,
+                ),
+            )
+            ->orderBy('name')
+            ->get(['id', 'branch_id', 'name']);
 
         return view('reports.gmr-summary', [
             'branches' => Branch::query()
                 ->when($isStaff, fn ($query) => $query->whereKey($user->branch_id))
                 ->orderBy('name')
                 ->get(['id', 'name']),
-            'warehouses' => Warehouse::query()
-                ->when(
-                    $filters['branch_id'],
-                    fn ($query, $branchId) => $query->where(
-                        'branch_id',
-                        $branchId,
-                    ),
-                )
-                ->orderBy('name')
-                ->get(['id', 'branch_id', 'name']),
+            'warehouses' => $warehouses,
             'filters' => $filters,
             'rows' => $rows,
             'summary' => $this->summary($rows),
+            'total_warehouses' => $warehouses->count(),
         ]);
     }
 

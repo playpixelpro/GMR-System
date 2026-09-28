@@ -165,7 +165,7 @@ class AmrExportService
             $sheet->setCellValue("F{$startRow}", $purity !== null ? (float) $purity : '—');
             $sheet->setCellValue("G{$startRow}", $mc !== null ? (float) $mc : '—');
             $sheet->setCellValue("H{$startRow}", strtoupper(str_replace('_', ' ', $quality ?: '—')));
-            $sheet->setCellValue("I{$startRow}", (int) $agedMonths);
+            $sheet->setCellValue("I{$startRow}", (float) $agedMonths);
             $sheet->setCellValue("J{$startRow}", round((float) $volumeKg / 50, 3));
             $sheet->setCellValue("K{$startRow}", $riceMillers);
 

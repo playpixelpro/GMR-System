@@ -131,6 +131,15 @@ Route::middleware('auth')->group(function (): void {
             SettingsController::class,
             'unlockIp',
         ])->name('settings.blocked-ips.unlock');
+
+        Route::get('/settings/activity-logs', [
+            SettingsController::class,
+            'activityLogs',
+        ])->name('settings.activity-logs');
+        Route::get('/settings/activity-logs/download', [
+            SettingsController::class,
+            'downloadActivityLogs',
+        ])->name('settings.activity-logs.download');
     });
 });
 

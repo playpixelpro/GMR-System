@@ -161,7 +161,7 @@ class PmrExportService
             $sheet->setCellValue("F{$startRow}", (float) $purity);
             $sheet->setCellValue("G{$startRow}", (float) $mc);
             $sheet->setCellValue("H{$startRow}", strtoupper(str_replace('_', ' ', $quality ?: '—')));
-            $sheet->setCellValue("I{$startRow}", (int) $agedMonths);
+            $sheet->setCellValue("I{$startRow}", (float) $agedMonths);
             $sheet->setCellValue("J{$startRow}", round((float) $volumeKg / 50, 3));
 
             $sheet->setCellValue("M{$startRow}", $mean !== null ? round($mean, 2).'%' : '—');

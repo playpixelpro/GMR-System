@@ -77,6 +77,23 @@ class GmrReportConfigurationTest extends TestCase
             ->assertSee('GMR Report Configuration');
     }
 
+    public function test_signatory_modals_render_as_native_dialogs(): void
+    {
+        $response = $this->actingAs($this->rmecUser)->get(route('gmr.config.edit'));
+
+        $response->assertOk()
+            ->assertSee('Add Signatory')
+            ->assertSee('id="modal-add-signatory"', false)
+            ->assertSee('id="modal-edit-signatory"', false)
+            ->assertSee('openEditModal', false);
+
+        // The modals must NOT use FlyonUI's `.modal` class, which keeps a native
+        // <dialog> at opacity:0 / pointer-events:none and hides it after showModal().
+        $response->assertDontSee('id="modal-add-signatory" class="modal"', false)
+            ->assertDontSee('id="modal-edit-signatory" class="modal"', false)
+            ->assertDontSee('modal-box', false);
+    }
+
     public function test_default_configuration_and_signatories_are_seeded(): void
     {
         $config = GmrReportConfiguration::current();

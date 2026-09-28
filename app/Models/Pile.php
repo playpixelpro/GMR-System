@@ -32,7 +32,7 @@ class Pile extends Model
         return [
             'purity' => 'decimal:2',
             'mc' => 'decimal:2',
-            'aged_months' => 'integer',
+            'aged_months' => 'float',
             'volume_kg' => 'decimal:3',
         ];
     }

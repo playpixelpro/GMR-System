@@ -58,14 +58,19 @@
 </form>
 
 <div class="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-7">
-    @foreach ([
-        ['label' => 'Total Piles', 'value' => number_format($summary['piles']), 'class' => 'text-primary'],
-        ['label' => 'Total Volume (50 kg Bags)', 'value' => number_format($summary['volume_bags'], 3), 'class' => 'text-secondary'],
-        ['label' => 'Average PMR', 'value' => $formatPercentage($summary['pmr']), 'class' => 'text-secondary'],
-        ['label' => 'Average AMR', 'value' => $formatPercentage($summary['amr']), 'class' => 'text-primary'],
-        ['label' => 'Overall EMR Range', 'value' => $formatRange($summary['emr_lower'] ?? $summary['emr_min'] ?? null, $summary['emr_upper'] ?? $summary['emr_max'] ?? null), 'class' => 'text-accent'],
-        ['label' => 'GMR', 'value' => $formatPercentage($summary['gmr']), 'class' => 'text-black'],
-    ] as $card)
+    @foreach (array_merge(
+        $filters['warehouse_id'] ? [] : [
+            ['label' => 'Total Warehouses', 'value' => number_format($total_warehouses), 'class' => 'text-lg xl:text-xl'],
+        ],
+        [
+            ['label' => 'Total Piles', 'value' => number_format($summary['piles']), 'class' => 'text-lg xl:text-xl'],
+            ['label' => 'Volume (50 kg Bags)', 'value' => number_format($summary['volume_bags'], 3), 'class' => 'text-lg xl:text-xl'],
+            ['label' => 'Average PMR', 'value' => $formatPercentage($summary['pmr']), 'class' => 'text-lg xl:text-xl'],
+            ['label' => 'Average AMR', 'value' => $formatPercentage($summary['amr']), 'class' => 'text-lg xl:text-xl'],
+            ['label' => 'Overall EMR Range', 'value' => $formatRange($summary['emr_lower'] ?? $summary['emr_min'] ?? null, $summary['emr_upper'] ?? $summary['emr_max'] ?? null), 'class' => 'text-lg xl:text-xl'],
+            ['label' => 'GMR', 'value' => $formatPercentage($summary['gmr']), 'class' => 'text-black text-lg xl:text-xl'],
+        ],
+    ) as $card)
         <div class="card border border-base-content/10 bg-base-100 p-3 sm:p-4 text-black shadow-sm min-w-0 overflow-hidden">
             <p class="text-xs sm:text-sm font-semibold leading-5 text-black">{{ $card['label'] }}</p>
             <p class="mt-2 font-mono text-lg sm:text-xl xl:text-2xl font-bold {{ $card['class'] }}">{{ $card['value'] }}</p>
