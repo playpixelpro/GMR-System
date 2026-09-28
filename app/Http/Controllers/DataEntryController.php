@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreDataEntryRequest;
 use App\Http\Requests\UpdatePileDetailsRequest;
 use App\Http\Requests\UpdateTrialRequest;
+use App\Concerns\GuardsGmrLockedPiles;
 use App\Models\AmrRecord;
 use App\Models\AuditLog;
 use App\Models\Branch;
@@ -23,6 +24,8 @@ use Illuminate\View\View;
 
 class DataEntryController extends Controller
 {
+    use GuardsGmrLockedPiles;
+
     public function __construct(
         protected AmrCalculationService $amrCalculationService,
         protected PmrCalculationService $pmrCalculationService,
@@ -169,6 +172,8 @@ class DataEntryController extends Controller
         UpdatePileDetailsRequest $request,
         Pile $pile,
     ): JsonResponse {
+        $this->ensurePileNotGmrLocked($pile, $request, 'edited');
+
         /** @var User|null $currentUser */
         $currentUser = Auth::user();
         if ($currentUser?->hasRole('STAFF') && $currentUser?->branch_id) {
@@ -226,6 +231,8 @@ class DataEntryController extends Controller
         $recordModel =
             $formType === 'amr' ? AmrRecord::class : PmrRecord::class;
         $trial = $recordModel::findOrFail($recordId);
+
+        $this->ensureRecordPileNotGmrLocked($trial, $request, 'edited');
 
         /** @var User|null $currentUser */
         $currentUser = Auth::user();
@@ -345,6 +352,8 @@ class DataEntryController extends Controller
             $formType === 'amr' ? AmrRecord::class : PmrRecord::class;
         $trial = $recordModel::findOrFail($recordId);
 
+        $this->ensureRecordPileNotGmrLocked($trial, $request, 'deleted');
+
         /** @var User|null $currentUser */
         $currentUser = Auth::user();
         if ($currentUser?->hasRole('STAFF') && $currentUser?->branch_id) {
@@ -451,6 +460,13 @@ class DataEntryController extends Controller
                 $pile = Pile::where('id', $validated['pile_id'])
                     ->where('warehouse_id', $warehouse->id)
                     ->firstOrFail();
+
+                // A pile whose GMR is approved/locked cannot receive new test milling data.
+                if ($pile->isGmrLocked()) {
+                    return redirect()
+                        ->route('records.create', ['type' => $validated['form_type']])
+                        ->withErrors(['pile' => "This pile's GMR has been approved and locked by the Central Office and can no longer accept new test milling data."]);
+                }
             } else {
                 $pile = Pile::firstOrCreate(
                     [
@@ -706,6 +722,8 @@ class DataEntryController extends Controller
 
     public function updatePileStatus(Request $request, Pile $pile): JsonResponse|RedirectResponse
     {
+        $this->ensurePileNotGmrLocked($pile, $request, 'modified');
+
         /** @var User|null $currentUser */
         $currentUser = Auth::user();
         if ($currentUser?->hasRole('STAFF') && $currentUser?->branch_id) {

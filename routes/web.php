@@ -4,9 +4,11 @@ use App\Http\Controllers\AmrRecordController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DataEntryController;
 use App\Http\Controllers\EmrDashboardController;
+use App\Http\Controllers\GmrApprovalController;
 use App\Http\Controllers\GmrReportConfigController;
 use App\Http\Controllers\GmrReportPrintController;
 use App\Http\Controllers\GmrSummaryController;
+use App\Http\Controllers\MillingController;
 use App\Http\Controllers\PmrRecordController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TestWorkflowController;
@@ -276,4 +278,20 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
         TestWorkflowController::class,
         'requestRetest',
     ])->name('piles.workflow.retest');
+
+    // Central-Office GMR approval workflow
+    Route::get('/gmr-approvals', [GmrApprovalController::class, 'index'])->name('gmr-approvals.index');
+    Route::post('/gmr-approvals', [GmrApprovalController::class, 'store'])->name('gmr-approvals.store')->middleware('can:manage-gmr-approvals');
+    Route::get('/gmr-approvals/{approval}', [GmrApprovalController::class, 'show'])->name('gmr-approvals.show');
+    Route::post('/gmr-approvals/{approval}/approve', [GmrApprovalController::class, 'approve'])->name('gmr-approvals.approve')->middleware('can:manage-gmr-approvals');
+    Route::post('/gmr-approvals/{approval}/reject', [GmrApprovalController::class, 'reject'])->name('gmr-approvals.reject')->middleware('can:manage-gmr-approvals');
+
+    // Rice-milling progress monitoring
+    Route::get('/millings', [MillingController::class, 'index'])->name('millings.index');
+    Route::get('/millings/create', [MillingController::class, 'create'])->name('millings.create')->middleware('can:manage-millings');
+    Route::post('/millings', [MillingController::class, 'store'])->name('millings.store')->middleware('can:manage-millings');
+    Route::get('/millings/{milling}', [MillingController::class, 'show'])->name('millings.show');
+    Route::patch('/millings/{milling}', [MillingController::class, 'update'])->name('millings.update')->middleware('can:manage-millings');
+    Route::post('/millings/{milling}/progress', [MillingController::class, 'storeProgress'])->name('millings.progress.store')->middleware('can:record-milling-progress');
+    Route::delete('/millings/progress/{progress}', [MillingController::class, 'destroyProgress'])->name('millings.progress.destroy')->middleware('can:manage-millings');
 });

@@ -31,5 +31,14 @@ class AppServiceProvider extends ServiceProvider
         // RMEC and Administrators.
         Gate::define('export-emr-report', fn (User $user) => $user->hasRole('RMEC', 'ADMINISTRATOR'));
         Gate::define('print-gmr-report', fn (User $user) => $user->hasRole('RMEC', 'ADMINISTRATOR'));
+
+        // Central-Office GMR approval workflow: submit, approve, and reject.
+        Gate::define('manage-gmr-approvals', fn (User $user) => $user->hasRole('RMEC', 'ADMINISTRATOR'));
+
+        // Rice-milling assignments and status changes.
+        Gate::define('manage-millings', fn (User $user) => $user->hasRole('RMEC', 'ADMINISTRATOR'));
+
+        // Logging milling accomplishment/progress per pile.
+        Gate::define('record-milling-progress', fn (User $user) => $user->hasRole('STAFF', 'RMEC', 'ADMINISTRATOR'));
     }
 }
