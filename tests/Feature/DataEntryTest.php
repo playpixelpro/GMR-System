@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AmrRecord;
 use App\Models\Branch;
 use App\Models\Pile;
 use App\Models\User;
@@ -306,5 +307,78 @@ class DataEntryTest extends TestCase
 
         // PMR trial input is disabled initially to prevent duplicate empty submission
         $response->assertSee('name="trials[0][trial_number]" data-trial-value value="1" disabled', false);
+    }
+
+    public function test_saving_against_a_gmr_locked_pile_returns_to_the_form_with_errors(): void
+    {
+        $branch = Branch::where('name', 'North Cotabato')->firstOrFail();
+        $warehouse = $branch->warehouses()->create(['name' => 'GMR Locked Warehouse']);
+        $pile = $warehouse->piles()->create([
+            'number' => '777',
+            'pile_number' => '777',
+            'branch_id' => $branch->id,
+            'gmr_status' => 'approved',
+        ]);
+
+        $response = $this->post(route('records.store'), $this->trialPayload($branch, $warehouse, $pile));
+
+        // The user must be returned to the form with an error — not a 500/403 page.
+        $response->assertRedirect();
+        $response->assertSessionHasErrors('pile');
+        $this->assertDatabaseCount('amr_records', 0);
+    }
+
+    public function test_saving_against_a_locked_conduct_returns_to_the_form_with_errors(): void
+    {
+        $branch = Branch::where('name', 'North Cotabato')->firstOrFail();
+        $warehouse = $branch->warehouses()->create(['name' => 'Conduct Locked Warehouse']);
+        $pile = $warehouse->piles()->create([
+            'number' => '888',
+            'pile_number' => '888',
+            'branch_id' => $branch->id,
+        ]);
+
+        AmrRecord::factory()->create([
+            'pile_id' => $pile->id,
+            'conduct_number' => 1,
+            'trial_number' => 1,
+            'is_locked' => true,
+            'warehouse_name' => $warehouse->name,
+            'pile_number' => '888',
+        ]);
+
+        $response = $this->post(route('records.store'), $this->trialPayload($branch, $warehouse, $pile));
+
+        $response->assertRedirect();
+        $response->assertSessionHasErrors('pile');
+        $this->assertDatabaseCount('amr_records', 1);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function trialPayload(Branch $branch, Warehouse $warehouse, Pile $pile): array
+    {
+        return [
+            'form_type' => 'amr',
+            'branch_id' => $branch->id,
+            'warehouse_id' => $warehouse->id,
+            'pile_id' => $pile->id,
+            'variety' => 'PD',
+            'purity' => 94.31,
+            'mc' => 11.1,
+            'quality' => 'good',
+            'aged' => 5,
+            'volume' => 10,
+            'trials' => [
+                [
+                    'trial_number' => 1,
+                    'test_milling_date' => '2026-09-24',
+                    'rice_millers' => 'Miller',
+                    'palay_input' => 100,
+                    'rice_recovery' => 60,
+                ],
+            ],
+        ];
     }
 }

@@ -274,20 +274,20 @@ class EmrGmrGateService
     {
         // 1. Retest required takes precedence
         if ($amrEval['status'] === 'RETEST' || $pmrEval['status'] === 'RETEST') {
-            return 'EMR/GMR Blocked - Retest Required';
+            return 'Retest Required';
         }
 
         // 2. AMR is recommended, PMR is not recommended
         if ($amrEval['eligible'] && ! $pmrEval['eligible']) {
-            return 'EMR/GMR Pending - PMR Recommendation Required';
+            return 'PMR Recommendation Required';
         }
 
         // 3. PMR is recommended, AMR is not recommended
         if ($pmrEval['eligible'] && ! $amrEval['eligible']) {
-            return 'EMR/GMR Pending - AMR Recommendation Required';
+            return 'AMR Recommendation Required';
         }
 
         // 4. Neither has RMEC RECOMMEND
-        return 'EMR/GMR Pending - RMEC Action Required';
+        return 'RMEC Action Required';
     }
 }

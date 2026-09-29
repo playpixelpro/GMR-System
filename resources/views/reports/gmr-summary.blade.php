@@ -64,7 +64,7 @@
         ],
         [
             ['label' => 'Total Piles', 'value' => number_format($summary['piles']), 'class' => 'text-lg xl:text-xl'],
-            ['label' => 'Volume (50 kg Bags)', 'value' => number_format($summary['volume_bags'], 3), 'class' => 'text-lg xl:text-xl'],
+            ['label' => 'Volume (bags)', 'value' => number_format($summary['volume_bags'], 3), 'class' => 'text-lg xl:text-xl'],
             ['label' => 'Average PMR', 'value' => $formatPercentage($summary['pmr']), 'class' => 'text-lg xl:text-xl'],
             ['label' => 'Average AMR', 'value' => $formatPercentage($summary['amr']), 'class' => 'text-lg xl:text-xl'],
             ['label' => 'Overall EMR Range', 'value' => $formatRange($summary['emr_lower'] ?? $summary['emr_min'] ?? null, $summary['emr_upper'] ?? $summary['emr_max'] ?? null), 'class' => 'text-lg xl:text-xl'],
@@ -93,7 +93,7 @@
                     <tr class="border-b border-base-content/15 text-sm font-semibold text-black">
                         <th>Warehouse</th>
                         <th class="text-end">Piles</th>
-                        <th class="text-end">Total Volume (50 kg bags)</th>
+                        <th class="text-end">Total Volume (bags)</th>
                         <th class="text-end">Average PMR</th>
                         <th class="text-end">Average AMR</th>
                         <th class="text-end">EMR Range</th>
@@ -163,17 +163,17 @@
                             <th>Branch</th>
                             <th>Warehouse</th>
                             <th>Pile No.</th>
-                            <th class="text-end">Volume (50 kg bags)</th>
+                            <th class="text-end">Volume (bags)</th>
                             <th class="text-end">PMR</th>
                             <th class="text-end">AMR</th>
                             <th>EMR</th>
                             <th class="text-end">GMR</th>
                             <th>Status</th>
-                            <th>GMR Approval</th>
+                            <th>Approved GMR</th>
                             <th class="text-center w-28">
                                 <label class="flex items-center justify-center gap-1 cursor-pointer" title="Select All for Report">
                                     <input type="checkbox" id="select-all-checkbox" class="checkbox checkbox-primary checkbox-xs" disabled />
-                                    <span class="text-xs font-bold text-black">Include in Report</span>
+                                    <span class="text-xs font-bold text-black">Select</span>
                                 </label>
                             </th>
                         </tr>
@@ -212,7 +212,10 @@
                                 </td>
                                 <td>
                                     @if (($row['gmr_status'] ?? null) === 'approved')
-                                        <span class="badge badge-soft badge-success text-xs font-medium" title="Approved and permanently locked by Central Office">Approved · Locked</span>
+                                        @php $approvedGmr = $row['approved_gmr'] ?? null; @endphp
+                                        <span class="font-mono font-bold text-success text-sm" title="Central-Office approved Final GMR (pile permanently locked)">
+                                            {{ $approvedGmr !== null ? number_format((float) $approvedGmr, 2) . '%' : '—' }}
+                                        </span>
                                     @elseif (($row['gmr_status'] ?? null) === 'submitted')
                                         <span class="badge badge-soft badge-info text-xs font-medium" title="Awaiting Central Office approval">Submitted</span>
                                     @else

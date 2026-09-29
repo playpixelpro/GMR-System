@@ -222,7 +222,7 @@ class GmrReportConfigurationTest extends TestCase
         $response = $this->actingAs($this->rmecUser)->get(route('gmr.summary'));
 
         $response->assertOk()
-            ->assertSee('Include in Report')
+            ->assertSee('Select')
             ->assertSee('Print Report')
             ->assertSee('name="selected_piles[]"', false)
             ->assertSee('value="'.$pile->id.'"', false);

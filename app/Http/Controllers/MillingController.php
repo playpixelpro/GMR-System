@@ -87,11 +87,18 @@ class MillingController extends Controller
         // Available approved-GMR piles for the Assign Milling modal.
         $availablePiles = $this->availablePiles($isStaff ? (int) $user->branch_id : null);
 
+        // Warehouses for the Assign Milling modal, scoped like the branch list.
+        $assignWarehouses = Warehouse::query()
+            ->when($isStaff, fn ($q) => $q->where('branch_id', (int) $user->branch_id))
+            ->orderBy('name')
+            ->get(['id', 'branch_id', 'name']);
+
         return view('millings.index', [
             'millings' => $millings,
             'branches' => $branches,
             'warehouses' => $warehouses,
             'availablePiles' => $availablePiles,
+            'assignWarehouses' => $assignWarehouses,
             'filters' => [
                 'branch_id' => $branchId,
                 'warehouse_id' => $warehouseId,
@@ -139,7 +146,7 @@ class MillingController extends Controller
     private function availablePiles(?int $branchId)
     {
         return Pile::query()
-            ->with(['branch:id,name', 'warehouse:id,branch_id,name'])
+            ->with(['branch:id,name', 'warehouse:id,branch_id,name', 'gmrApprovalPile:id,gmr,co_approved_gmr'])
             ->where('gmr_status', 'approved')
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereDoesntHave('millings', fn ($q) => $q->whereIn('status', ['assigned', 'ongoing']))

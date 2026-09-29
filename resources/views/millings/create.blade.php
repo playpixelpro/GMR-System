@@ -65,7 +65,7 @@
     <div id="pile-info" class="mt-4 hidden rounded-lg border border-base-content/10 bg-base-200/50 p-3 text-sm">
         <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <div><span class="text-xs font-semibold uppercase text-base-content/60">Warehouse</span><span id="info-warehouse" class="block font-medium">—</span></div>
-            <div><span class="text-xs font-semibold uppercase text-base-content/60">Volume (50 kg bags)</span><span id="info-volume" class="block font-medium font-mono">—</span></div>
+            <div><span class="text-xs font-semibold uppercase text-base-content/60">Volume (bags)</span><span id="info-volume" class="block font-medium font-mono">—</span></div>
             <div><span class="text-xs font-semibold uppercase text-base-content/60">Variety</span><span id="info-variety" class="block font-medium">—</span></div>
             <div><span class="text-xs font-semibold uppercase text-base-content/60">Quality</span><span id="info-quality" class="block font-medium">—</span></div>
         </div>
