@@ -26,6 +26,9 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::define('manage-users', fn (User $user) => $user->hasRole('ADMINISTRATOR'));
 
+        // Admin-only data cleanup (warehouses, piles, laboratory test data).
+        Gate::define('manage-data-cleanup', fn (User $user) => $user->hasRole('ADMINISTRATOR'));
+
         // Staff may view EMR and GMR reports, but may only EXPORT AMR and PMR
         // reports. The EMR export and the printable GMR report are reserved for
         // RMEC and Administrators.
