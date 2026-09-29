@@ -154,7 +154,7 @@
             <div class="flex items-start justify-between gap-4 border-b border-base-content/10 pb-3">
                 <div>
                     <h3 id="assign-milling-modal-title" class="text-lg font-bold">Assign Rice Milling</h3>
-                    <p class="mt-1 text-sm">Select an approved-GMR pile, the miller, and the project/memo reference. The pile's volume is frozen as the milling target.</p>
+                    <p class="mt-1 text-sm">Select the branch and warehouse, then an approved-GMR pile, the miller, and the project/memo reference. The pile's volume is frozen as the milling target.</p>
                 </div>
                 <button type="button" class="btn btn-circle btn-text btn-sm" data-milling-modal-close="assign-milling-modal" aria-label="Close">&times;</button>
             </div>
@@ -164,10 +164,20 @@
                 <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                     <label class="form-control">
                         <span class="label-text mb-2 text-sm font-semibold text-black">Branch *</span>
-                        <select name="branch_id" id="assign-branch-select" class="select select-bordered min-h-11 w-full text-base text-black" required onchange="filterAssignPiles()">
+                        <select name="branch_id" id="assign-branch-select" class="select select-bordered min-h-11 w-full text-base text-black" required onchange="filterAssignWarehouses()">
                             <option value="">Select branch</option>
                             @foreach ($branches as $branch)
                                 <option value="{{ $branch->id }}">{{ $branch->name }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+
+                    <label class="form-control">
+                        <span class="label-text mb-2 text-sm font-semibold text-black">Warehouse *</span>
+                        <select name="warehouse_id" id="assign-warehouse-select" class="select select-bordered min-h-11 w-full text-base text-black" required onchange="filterAssignPiles()">
+                            <option value="">Select branch first</option>
+                            @foreach ($assignWarehouses as $warehouse)
+                                <option value="{{ $warehouse->id }}" data-branch-id="{{ $warehouse->branch_id }}">{{ $warehouse->name }}</option>
                             @endforeach
                         </select>
                     </label>
@@ -180,11 +190,11 @@
                                 @php
                                     $pileBranchId = $pile->branch_id ?? $pile->warehouse?->branch_id;
                                     $volumeBags = $pile->volume_kg !== null ? round((float) $pile->volume_kg / 50, 3) : null;
+                                    $approvedGmr = $pile->finalGmr();
                                     $pileLabel = ($pile->pile_number ?? ($pile->number ?? '#'.$pile->id))
-                                        . ' · ' . ($pile->warehouse?->name ?? '—')
                                         . ($volumeBags !== null ? ' · ' . number_format($volumeBags, 3) . ' bags' : '');
                                 @endphp
-                                <option value="{{ $pile->id }}" data-branch-id="{{ $pileBranchId }}" data-warehouse="{{ $pile->warehouse?->name ?? '—' }}" data-volume="{{ $volumeBags !== null ? number_format($volumeBags, 3) . ' bags' : 'N/A' }}" data-variety="{{ $pile->variety ?? '' }}" data-quality="{{ $pile->quality ?? '' }}">
+                                <option value="{{ $pile->id }}" data-branch-id="{{ $pileBranchId }}" data-warehouse-id="{{ $pile->warehouse_id }}" data-warehouse="{{ $pile->warehouse?->name ?? '—' }}" data-volume="{{ $volumeBags !== null ? number_format($volumeBags, 3) . ' bags' : 'N/A' }}" data-approved-gmr="{{ $approvedGmr !== null ? number_format($approvedGmr, 2) . '%' : '—' }}" data-variety="{{ $pile->variety ?? '' }}" data-quality="{{ $pile->quality ?? '' }}">
                                     {{ $pileLabel }}
                                 </option>
                             @endforeach
@@ -196,7 +206,7 @@
                         <x-miller-combobox name="miller" class="input input-bordered min-h-11 w-full text-black" placeholder="e.g. North Cotabato Rice Mill" />
                     </label>
 
-                    <label class="form-control">
+                    <label class="form-control md:col-span-2">
                         <span class="label-text mb-2 text-sm font-semibold text-black">Project / Memo Reference No. *</span>
                         <input type="text" name="reference_number" class="input input-bordered min-h-11 w-full text-black" placeholder="Bidding project ref. no. or NFA memo no." required />
                         <span class="mt-1 text-xs text-base-content/60">For contracted millers: the bidding project reference. For NFA-owned rice mills: the memorandum no.</span>
@@ -204,11 +214,12 @@
                 </div>
 
                 <div id="assign-pile-info" class="mt-4 hidden rounded-lg border border-base-content/10 bg-base-200/50 p-3 text-sm">
-                    <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
                         <div><span class="text-xs font-semibold uppercase text-base-content/60">Warehouse</span><span id="info-warehouse" class="block font-medium">—</span></div>
-                        <div><span class="text-xs font-semibold uppercase text-base-content/60">Volume (50 kg bags)</span><span id="info-volume" class="block font-medium font-mono">—</span></div>
+                        <div><span class="text-xs font-semibold uppercase text-base-content/60">Volume (bags)</span><span id="info-volume" class="block font-medium font-mono">—</span></div>
                         <div><span class="text-xs font-semibold uppercase text-base-content/60">Variety</span><span id="info-variety" class="block font-medium">—</span></div>
                         <div><span class="text-xs font-semibold uppercase text-base-content/60">Quality</span><span id="info-quality" class="block font-medium">—</span></div>
+                        <div><span class="text-xs font-semibold uppercase text-base-content/60">Approved GMR</span><span id="info-approved-gmr" class="block font-medium font-mono">—</span></div>
                     </div>
                 </div>
 
@@ -240,7 +251,7 @@
             function openModal() {
                 modal.classList.remove('hidden');
                 modal.classList.add('flex');
-                filterAssignPiles();
+                filterAssignWarehouses();
             }
             function closeModal() {
                 modal.classList.add('hidden');
@@ -257,19 +268,45 @@
                 if (e.target === modal) closeModal();
             });
 
-            window.filterAssignPiles = function () {
+            window.filterAssignWarehouses = function () {
                 const branchId = document.getElementById('assign-branch-select').value;
-                const pileSelect = document.getElementById('assign-pile-select');
-                const options = pileSelect.querySelectorAll('option[data-branch-id]');
+                const warehouseSelect = document.getElementById('assign-warehouse-select');
+                const options = warehouseSelect.querySelectorAll('option[data-branch-id]');
                 let anyVisible = false;
                 options.forEach(opt => {
                     const match = !branchId || String(opt.dataset.branchId) === String(branchId);
                     opt.hidden = !match;
                     if (match && opt.value) anyVisible = true;
                 });
+                const placeholder = warehouseSelect.querySelector('option:not([data-branch-id])');
+                if (placeholder) {
+                    placeholder.textContent = branchId ? (anyVisible ? 'Select a warehouse' : 'No warehouses in this branch') : 'Select branch first';
+                }
+                warehouseSelect.value = '';
+                filterAssignPiles();
+            };
+
+            window.filterAssignPiles = function () {
+                const branchId = document.getElementById('assign-branch-select').value;
+                const warehouseId = document.getElementById('assign-warehouse-select').value;
+                const pileSelect = document.getElementById('assign-pile-select');
+                const options = pileSelect.querySelectorAll('option[data-branch-id]');
+                let anyVisible = false;
+                options.forEach(opt => {
+                    const match = (!branchId || String(opt.dataset.branchId) === String(branchId))
+                        && (!warehouseId || String(opt.dataset.warehouseId) === String(warehouseId));
+                    opt.hidden = !match;
+                    if (match && opt.value) anyVisible = true;
+                });
                 const placeholder = pileSelect.querySelector('option:not([data-branch-id])');
                 if (placeholder) {
-                    placeholder.textContent = branchId ? (anyVisible ? 'Select a pile' : 'No approved piles in this branch') : 'Select branch first';
+                    if (!branchId) {
+                        placeholder.textContent = 'Select branch first';
+                    } else if (!warehouseId) {
+                        placeholder.textContent = 'Select warehouse first';
+                    } else {
+                        placeholder.textContent = anyVisible ? 'Select a pile' : 'No approved piles in this warehouse';
+                    }
                 }
                 pileSelect.value = '';
                 updateAssignPileInfo();
@@ -287,6 +324,7 @@
                 document.getElementById('info-volume').textContent = selected.dataset.volume || '—';
                 document.getElementById('info-variety').textContent = selected.dataset.variety || '—';
                 document.getElementById('info-quality').textContent = selected.dataset.quality || '—';
+                document.getElementById('info-approved-gmr').textContent = selected.dataset.approvedGmr || '—';
                 infoBox.classList.remove('hidden');
             };
         })();

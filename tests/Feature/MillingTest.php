@@ -236,16 +236,41 @@ class MillingTest extends TestCase
     {
         [$branch, $pile] = $this->createApprovedPile('1', 5000);
 
+        // Simulate a Central Office approval so the modal can show the Approved GMR.
+        $approval = GmrApproval::create([
+            'branch_id' => $branch->id,
+            'reference_number' => 'GMR-CO-MODAL',
+            'status' => 'approved',
+            'co_approval_memo_no' => 'AO-2026-01-003',
+            'submitted_by' => $this->rmec->id,
+            'approved_by' => $this->rmec->id,
+            'submitted_at' => now(),
+            'approved_at' => now(),
+        ]);
+        $approvalPile = GmrApprovalPile::create([
+            'gmr_approval_id' => $approval->id,
+            'pile_id' => $pile->id,
+            'gmr' => 63.00,
+            'co_approved_gmr' => 70.00,
+            'volume_kg' => 5000,
+        ]);
+        $pile->update(['gmr_approval_pile_id' => $approvalPile->id]);
+
         // The index page renders the Assign Milling modal (not a separate page
-        // link) and exposes warehouse details alongside the pile number.
+        // link) and exposes warehouse details alongside the pile number, with
+        // warehouse and pile as separate cascading dropdowns.
         $this->get(route('millings.index'))
             ->assertOk()
             ->assertSee('Rice Milling Progress')
             ->assertSee('Assign Milling')
             ->assertSee('assign-milling-modal')
+            ->assertSee('assign-warehouse-select')
             ->assertSee('Project / Memo Reference No.')
             ->assertSee('Warehouse')
-            ->assertSee($pile->warehouse->name);
+            ->assertSee($pile->warehouse->name)
+            ->assertSee('info-approved-gmr')
+            ->assertSee('Approved GMR')
+            ->assertSee('70.00%');
     }
 
     public function test_index_filters_by_warehouse(): void

@@ -69,6 +69,7 @@ class GmrSummaryController extends Controller
                 'pmrCalculation',
                 'amrRecords',
                 'pmrRecords',
+                'gmrApprovalPile',
             ])
             ->where(function ($query): void {
                 $query
@@ -132,6 +133,7 @@ class GmrSummaryController extends Controller
                 'emr' => 'N/A',
                 'gmr' => null,
                 'gmr_status' => $pile->gmr_status,
+                'approved_gmr' => $pile->finalGmr(),
                 'status' => $gate['status'],
                 'can_compute' => false,
                 'gate_message' => $gate['gate_message'],
@@ -188,6 +190,7 @@ class GmrSummaryController extends Controller
             'emr' => $emr,
             'gmr' => $gmr,
             'gmr_status' => $pile->gmr_status,
+            'approved_gmr' => $pile->finalGmr(),
             'status' => $status,
             'can_compute' => true,
             'gate_message' => $gate['gate_message'],

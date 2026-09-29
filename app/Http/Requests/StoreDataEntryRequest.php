@@ -7,6 +7,7 @@ use App\Models\Pile;
 use App\Models\PmrRecord;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -206,9 +207,18 @@ class StoreDataEntryRequest extends FormRequest
 
         if ($userBranchId) {
             $warehouseExists->where('branch_id', $userBranchId);
+            // The `Rule::exists` closure receives a base query builder (not an
+            // Eloquent builder), so `orWhereHas` is unavailable here. Use a raw
+            // `whereExists` subquery to also accept piles whose warehouse
+            // belongs to the staff's branch.
             $pileExists->where(function ($query) use ($userBranchId): void {
                 $query->where('branch_id', $userBranchId)
-                    ->orWhereHas('warehouse', fn ($w) => $w->where('branch_id', $userBranchId));
+                    ->orWhereExists(function ($sub) use ($userBranchId): void {
+                        $sub->select(DB::raw(1))
+                            ->from('warehouses')
+                            ->whereColumn('warehouses.id', 'piles.warehouse_id')
+                            ->where('warehouses.branch_id', $userBranchId);
+                    });
             });
         } elseif ($this->filled('branch_id')) {
             $warehouseExists->where('branch_id', $this->input('branch_id'));

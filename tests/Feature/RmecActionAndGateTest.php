@@ -160,11 +160,11 @@ class RmecActionAndGateTest extends TestCase
         $this->assertFalse($gate['can_compute']);
         $this->assertNull($gate['gmr']);
         $this->assertEquals('N/A', $gate['emr_display']);
-        $this->assertEquals('EMR/GMR Pending - PMR Recommendation Required', $gate['status']);
+        $this->assertEquals('PMR Recommendation Required', $gate['status']);
 
         $response = $this->actingAs($this->rmec)->get(route('emr.index'));
         $response->assertOk()
-            ->assertSee('EMR/GMR Pending - PMR Recommendation Required');
+            ->assertSee('PMR Recommendation Required');
     }
 
     /**
@@ -182,11 +182,11 @@ class RmecActionAndGateTest extends TestCase
         $this->assertFalse($gate['can_compute']);
         $this->assertNull($gate['gmr']);
         $this->assertEquals('N/A', $gate['emr_display']);
-        $this->assertEquals('EMR/GMR Pending - AMR Recommendation Required', $gate['status']);
+        $this->assertEquals('AMR Recommendation Required', $gate['status']);
 
         $response = $this->actingAs($this->rmec)->get(route('emr.index'));
         $response->assertOk()
-            ->assertSee('EMR/GMR Pending - AMR Recommendation Required');
+            ->assertSee('AMR Recommendation Required');
     }
 
     /**
@@ -203,7 +203,7 @@ class RmecActionAndGateTest extends TestCase
 
         $this->assertFalse($gate['can_compute']);
         $this->assertNull($gate['gmr']);
-        $this->assertEquals('EMR/GMR Blocked - Retest Required', $gate['status']);
+        $this->assertEquals('Retest Required', $gate['status']);
     }
 
     /**
@@ -220,7 +220,7 @@ class RmecActionAndGateTest extends TestCase
 
         $this->assertFalse($gate['can_compute']);
         $this->assertNull($gate['gmr']);
-        $this->assertEquals('EMR/GMR Blocked - Retest Required', $gate['status']);
+        $this->assertEquals('Retest Required', $gate['status']);
     }
 
     /**
@@ -237,7 +237,7 @@ class RmecActionAndGateTest extends TestCase
 
         $this->assertFalse($gate['can_compute']);
         $this->assertNull($gate['gmr']);
-        $this->assertEquals('EMR/GMR Pending - RMEC Action Required', $gate['status']);
+        $this->assertEquals('RMEC Action Required', $gate['status']);
     }
 
     /**

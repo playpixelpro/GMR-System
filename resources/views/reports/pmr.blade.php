@@ -73,7 +73,7 @@
           <th class="text-end px-2.5 py-2">MC</th>
           <th class="text-center px-2.5 py-2">QUALITY <br> (CONDITION)</th>
           <th class="text-center px-2.5 py-2">AGED <br>( in months)</th>
-          <th class="text-center px-2.5 py-2">VOLUME <br> (50kg bags)</th>
+          <th class="text-center px-2.5 py-2">VOLUME <br> (bags)</th>
           <th class="text-center px-2.5 py-2">NO. OF <br> TRIAL</th>
           <th class="text-center px-2.0 py-2">RECOVERY<br> RATE (%)</th>
           <th class="text-center px-2.5 py-2">MEAN (%)</th>

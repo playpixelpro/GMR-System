@@ -190,10 +190,17 @@ class PmrRecordController extends Controller
                         ): bool => $record->included_in_computation &&
                             $record->status === 'RECOMMENDED',
                     )
-                    ->map(fn (PmrRecord $r) => $r->recovery_rate_percentage)
+                    ->map(fn (PmrRecord $r) => (float) $r->recovery_rate_percentage)
+                    ->filter(fn ($rate): bool => $rate > 0)
                     ->values();
-                $mean = $rates->avg() ?? 0.0;
-                $stdDev = $this->sampleStandardDeviation($rates->all(), $mean);
+                // When no trials are RECOMMENDED yet (the usual case for freshly
+                // encoded data), leave $mean null so the report view falls back
+                // to the calculation result's computed mean — matching the AMR
+                // report behaviour.
+                $mean = $rates->isNotEmpty() ? $rates->avg() : null;
+                $stdDev = $mean !== null
+                    ? $this->sampleStandardDeviation($rates->all(), (float) $mean)
+                    : null;
             } else {
                 $calc = $this->calculationService->calculate([]);
                 $mean = null;
@@ -286,10 +293,13 @@ class PmrRecordController extends Controller
                 $key,
             );
             $rates = $standaloneGroup
-                ->map(fn (PmrRecord $r) => $r->recovery_rate_percentage)
+                ->map(fn (PmrRecord $r) => (float) $r->recovery_rate_percentage)
+                ->filter(fn ($rate): bool => $rate > 0)
                 ->values();
-            $mean = $rates->avg() ?? 0.0;
-            $stdDev = $this->sampleStandardDeviation($rates->all(), $mean);
+            $mean = $rates->isNotEmpty() ? $rates->avg() : null;
+            $stdDev = $mean !== null
+                ? $this->sampleStandardDeviation($rates->all(), (float) $mean)
+                : null;
             $firstRecord = $standaloneGroup->first();
 
             $amrRate = null;

@@ -241,4 +241,81 @@ class StaffBranchScopingTest extends TestCase
         $responseGmr->assertSee('PA-01');
         $responseGmr->assertDontSee('PB-01');
     }
+
+    public function test_staff_can_save_against_an_existing_pile_in_their_branch(): void
+    {
+        $branchA = Branch::create(['name' => 'Branch Alpha']);
+        $warehouseA = Warehouse::create(['branch_id' => $branchA->id, 'name' => 'Warehouse A']);
+        // Pile intentionally has no branch_id set — it is scoped to the branch
+        // only through its warehouse, exercising the warehouse-based branch check.
+        $pileA = Pile::create(['warehouse_id' => $warehouseA->id, 'number' => 'PA-01', 'pile_number' => 'PA-01']);
+
+        $staff = User::factory()->create([
+            'role' => 'STAFF',
+            'branch_id' => $branchA->id,
+            'must_change_password' => false,
+        ]);
+
+        $response = $this->actingAs($staff)->post(route('records.store'), [
+            'form_type' => 'pmr',
+            'warehouse_id' => $warehouseA->id,
+            'pile_id' => $pileA->id,
+            'variety' => 'RC216',
+            'purity' => 95.0,
+            'mc' => 12.0,
+            'quality' => 'gqa',
+            'aged' => 3,
+            'volume' => 10000,
+            'trials' => [
+                [
+                    'trial_number' => 1,
+                    'test_milling_date' => now()->toDateString(),
+                    'recovery_rate' => 64.0,
+                ],
+            ],
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect();
+        $this->assertDatabaseHas('pmr_records', ['pile_id' => $pileA->id, 'trial_number' => 1]);
+    }
+
+    public function test_staff_cannot_save_against_an_existing_pile_in_another_branch(): void
+    {
+        $branchA = Branch::create(['name' => 'Branch Alpha']);
+        $branchB = Branch::create(['name' => 'Branch Beta']);
+        $warehouseB = Warehouse::create(['branch_id' => $branchB->id, 'name' => 'Warehouse B']);
+        $pileB = Pile::create(['branch_id' => $branchB->id, 'warehouse_id' => $warehouseB->id, 'number' => 'PB-01', 'pile_number' => 'PB-01']);
+
+        $staff = User::factory()->create([
+            'role' => 'STAFF',
+            'branch_id' => $branchA->id,
+            'must_change_password' => false,
+        ]);
+
+        $response = $this->actingAs($staff)->post(route('records.store'), [
+            'form_type' => 'pmr',
+            'warehouse_id' => $warehouseB->id,
+            'pile_id' => $pileB->id,
+            'variety' => 'RC216',
+            'purity' => 95.0,
+            'mc' => 12.0,
+            'quality' => 'gqa',
+            'aged' => 3,
+            'volume' => 10000,
+            'trials' => [
+                [
+                    'trial_number' => 1,
+                    'test_milling_date' => now()->toDateString(),
+                    'recovery_rate' => 64.0,
+                ],
+            ],
+        ]);
+
+        // Previously this threw BadMethodCallException (orWhereHas on the base
+        // query builder used by Rule::exists). It must now fail validation and
+        // return to the form with a pile_id error.
+        $response->assertSessionHasErrors('pile_id');
+        $this->assertDatabaseMissing('pmr_records', ['pile_id' => $pileB->id]);
+    }
 }

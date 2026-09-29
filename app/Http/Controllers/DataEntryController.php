@@ -21,6 +21,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class DataEntryController extends Controller
@@ -84,6 +85,7 @@ class DataEntryController extends Controller
                     'branch_id' => $pile->branch_id ?? $pile->warehouse?->branch_id,
                     'number' => $pile->pile_number ?? $pile->number,
                     'pile_number' => $pile->pile_number ?? $pile->number,
+                    'is_gmr_locked' => $pile->isGmrLocked(),
                     'shared' => $sharedData,
                     'amr' => [
                         ...$sharedData,
@@ -467,11 +469,14 @@ class DataEntryController extends Controller
                     ->where('warehouse_id', $warehouse->id)
                     ->firstOrFail();
 
-                // A pile whose GMR is approved/locked cannot receive new test milling data.
+                // A pile whose GMR is approved/locked cannot receive new test
+                // milling data. Throwing (rather than returning a redirect) keeps
+                // us inside the int-typed transaction closure and sends the user
+                // back to the data-entry form with the error and their old input.
                 if ($pile->isGmrLocked()) {
-                    return redirect()
-                        ->route('records.create', ['type' => $validated['form_type']])
-                        ->withErrors(['pile' => "This pile's GMR has been approved and locked by the Central Office and can no longer accept new test milling data."]);
+                    throw ValidationException::withMessages([
+                        'pile' => "This pile's GMR has been approved and locked by the Central Office and can no longer accept new test milling data.",
+                    ]);
                 }
             } else {
                 $pile = Pile::firstOrCreate(
@@ -510,7 +515,9 @@ class DataEntryController extends Controller
                 $conductNumber = 1;
             } else {
                 if ($latestIsLocked) {
-                    abort(403, 'The current test milling conduct is locked and finalized.');
+                    throw ValidationException::withMessages([
+                        'pile' => 'The current test milling conduct for this pile is locked and finalized. Request a retest to encode new test milling data.',
+                    ]);
                 }
                 $conductNumber = $currentConductNumber;
             }

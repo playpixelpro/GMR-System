@@ -73,7 +73,7 @@
           <th class="text-end px-2.5 py-2">MC (%)</th>
           <th class="text-center px-2.5 py-2">Quality</th>
           <th class="text-center px-2.5 py-2">Aged <br> (mos)</th>
-          <th class="text-center px-2.5 py-2">Volume <br>(50kg bags)</th>
+          <th class="text-center px-2.5 py-2">Volume <br>(bags)</th>
           <th class="px-2.5 py-2">Rice Miller</th>
           <th class="text-center px-2.5 py-2">Trial</th>
           <th class="text-center px-2.5 py-2">Palay <br> In (kg)</th>

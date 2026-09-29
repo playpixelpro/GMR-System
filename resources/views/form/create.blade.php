@@ -84,7 +84,7 @@
                             class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
                         <option value="">Select pile</option>
                         @foreach ($piles as $pile)
-                            <option value="{{ $pile['id'] }}" data-warehouse-id="{{ $pile['warehouse_id'] }}" @selected((string) old('pile_id') === (string) $pile['id'])>{{ $pile['number'] }}</option>
+                            <option value="{{ $pile['id'] }}" data-warehouse-id="{{ $pile['warehouse_id'] }}" @selected((string) old('pile_id') === (string) $pile['id']) @disabled($pile['is_gmr_locked'] ?? false)>{{ $pile['number'] }}{{ ($pile['is_gmr_locked'] ?? false) ? ' (GMR locked)' : '' }}</option>
                         @endforeach
                         <option value="__new__" @selected(old('new_pile_number'))>Add new pile...</option>
                     </select>
@@ -162,8 +162,8 @@
                 <div data-trial-row class="grid grid-cols-1 gap-3 rounded-md border border-red-200 bg-white p-3 sm:grid-cols-6">
                     <div><label class="block text-sm font-medium text-gray-700">Trial</label><input type="hidden" name="trials[0][trial_number]" data-trial-value value="1" disabled><span data-trial-label class="mt-1 block px-3 py-2 text-sm text-gray-700">Trial 1</span></div>
                     <div><label class="block text-sm font-medium text-gray-700">Test Milling Date</label><input type="text" name="trials[0][test_milling_date]" data-test-field data-flatpickr-date required class="input max-w-sm mt-1 block min-h-10 w-full border border-blue-500! focus:border-green-500! focus:ring-green-500!" placeholder="Month DD, YYYY"></div>
-                    <div><label class="block text-sm font-medium text-gray-700">Palay Input (kg)</label><input type="text" name="trials[0][palay_input]" data-test-field data-number-format inputmode="decimal" autocomplete="off" class="mt-1 block w-full rounded-md border border-blue-500! px-3 py-2 text-sm" placeholder="Optional"></div>
-                    <div><label class="block text-sm font-medium text-gray-700">Rice Output (kg)</label><input type="text" name="trials[0][rice_recovery]" data-test-field data-number-format inputmode="decimal" autocomplete="off" class="mt-1 block w-full rounded-md border border-blue-500! px-3 py-2 text-sm" placeholder="Optional"></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Palay Input (kg)</label><input type="text" name="trials[0][palay_input]" data-test-field data-decimal-format inputmode="decimal" autocomplete="off" class="mt-1 block w-full rounded-md border border-blue-500! px-3 py-2 text-sm" placeholder="Optional"></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Rice Output (kg)</label><input type="text" name="trials[0][rice_recovery]" data-test-field data-decimal-format inputmode="decimal" autocomplete="off" class="mt-1 block w-full rounded-md border border-blue-500! px-3 py-2 text-sm" placeholder="Optional"></div>
                     <div><label class="block text-sm font-medium text-gray-700">RECOVERY RATE (%)</label><input type="number" name="trials[0][recovery_rate]" data-test-field min="0" max="100" step="any" class="mt-1 block w-full rounded-md border border-blue-500! px-3 py-2 text-sm" placeholder="e.g. 63.00"></div>
                     <div data-row-action class="flex items-end gap-2"><button type="button" disabled class="w-full rounded-md border border-blue-500! bg-gray-100 px-3 py-2 text-sm font-medium text-gray-400 disabled:cursor-not-allowed">Edit</button><button type="button" data-delete-trial aria-label="Delete trial" title="Delete trial" class="rounded-md border border-red-200 p-2 text-red-600 hover:bg-red-50"><span class="icon-[tabler--trash] h-5 w-5" aria-hidden="true"></span></button></div>
                 </div>
@@ -435,7 +435,34 @@
             });
         }
 
+        // Laboratory (PMR) samples can be very small (e.g. 0.063 kg), so the
+        // thousand-separator formatter is wrong here. This decimal formatter
+        // keeps only digits and a single dot, preserving a leading dot so
+        // values like ".063" can be typed naturally, and allows up to six
+        // decimal places for precise laboratory measurements.
+        function formatDecimal(value) {
+            const cleaned = value.replace(/[^0-9.]/g, '');
+            const parts = cleaned.split('.');
+            if (parts.length <= 1) {
+                return parts[0] ?? '';
+            }
+            const integerPart = parts.shift();
+            const decimalPart = parts.join('').slice(0, 6);
+
+            return `${integerPart}.${decimalPart}`;
+        }
+
+        function initializeDecimalFormatting(container = document) {
+            container.querySelectorAll('[data-decimal-format]').forEach((input) => {
+                input.addEventListener('input', () => {
+                    input.value = formatDecimal(input.value);
+                });
+                input.value = formatDecimal(input.value);
+            });
+        }
+
         initializeNumberFormatting();
+        initializeDecimalFormatting();
 
         function reindexTrialRows(section) {
             section.querySelectorAll('[data-trial-row]').forEach((row, index) => {
@@ -608,6 +635,7 @@
             clone.querySelector('[data-row-action]').innerHTML = trialActionMarkup();
             rows.appendChild(clone);
             initializeNumberFormatting(clone);
+            initializeDecimalFormatting(clone);
 
             if (dateInput) {
                 initFlatpickr(dateInput);

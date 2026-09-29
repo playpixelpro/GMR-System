@@ -55,6 +55,42 @@ class PmrRecordTest extends TestCase
         ]);
     }
 
+    public function test_pmr_trial_accepts_small_leading_dot_float_samples(): void
+    {
+        $response = $this->post(route('records.store'), [
+            'form_type' => 'pmr',
+            'new_branch_name' => 'Lab Branch',
+            'new_warehouse_name' => 'Lab Warehouse',
+            'pile_number' => 'L-1',
+            'variety' => 'PD',
+            'purity' => '94.31',
+            'mc' => '11.1',
+            'quality' => 'gqa',
+            'aged' => 5,
+            'volume' => '100',
+            'trials' => [
+                [
+                    'trial_number' => 1,
+                    'test_milling_date' => '2026-09-24',
+                    // Laboratory samples may be very small, e.g. 0.063417 kg,
+                    // and may be typed with a leading dot. Up to six decimal
+                    // places must be accepted and preserved exactly.
+                    'palay_input' => '.063417',
+                    'rice_recovery' => '0.040125',
+                ],
+            ],
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect(route('records.create', ['type' => 'pmr']));
+        $this->assertDatabaseHas('pmr_records', [
+            'pile_number' => 'L-1',
+            'trial_number' => 1,
+            'palay_input_kg' => '0.063417',
+            'rice_recovery_kg' => '0.040125',
+        ]);
+    }
+
     public function test_pmr_report_calculates_mean_and_sample_standard_deviation(): void
     {
         foreach ([62.76, 62.48, 61.84] as $trialNumber => $rate) {
@@ -80,6 +116,62 @@ class PmrRecordTest extends TestCase
         $response->assertSee('0.47');
         $response->assertSee('Trial 1 Recovery Rate (%)');
         $response->assertSee('Trial 3 Recovery Rate (%)');
+    }
+
+    public function test_pmr_report_shows_computed_mean_for_pending_pile_trials(): void
+    {
+        // Regression: pile-based PMR trials that are still PENDING (not yet
+        // RECOMMENDED, included_in_computation = false) must still display the
+        // mean computed by PmrCalculationService. Previously the controller
+        // used `$rates->avg() ?? 0.0`, which yielded `0.0` (not null) when no
+        // trials were RECOMMENDED yet, so the report view's
+        // `$group['mean'] ?? $calculation->mean` fallback never triggered and
+        // the MEAN column showed "0.00" instead of the computed value.
+        $branch = Branch::create(['name' => 'Branch 1']);
+        $warehouse = Warehouse::create([
+            'branch_id' => $branch->id,
+            'name' => 'GID#2, MLANG BS',
+        ]);
+        $pile = Pile::create([
+            'branch_id' => $branch->id,
+            'warehouse_id' => $warehouse->id,
+            'number' => '1',
+            'pile_number' => '1',
+            'variety' => 'PD',
+        ]);
+
+        foreach ([62.76, 62.48, 61.84] as $trialNumber => $rate) {
+            PmrRecord::factory()->create([
+                'pile_id' => $pile->id,
+                'warehouse_name' => $warehouse->name,
+                'pile_number' => '1',
+                'variety' => 'PD',
+                'purity' => '94.31',
+                'mc' => '11.10',
+                'quality' => 'gqa',
+                'aged_months' => 5,
+                'volume_kg' => '11522.357',
+                'trial_number' => $trialNumber + 1,
+                'palay_input_kg' => '10000.00',
+                'rice_recovery_kg' => $rate * 100,
+                // Rely on factory/column defaults: status = PENDING,
+                // included_in_computation = false — the exact state freshly
+                // encoded pile trials are in before being recommended.
+            ]);
+        }
+
+        $response = $this->get(route('pmr.index'));
+
+        $response->assertOk();
+        // The MEAN column must render the computed mean (62.36), not "0.00".
+        $response->assertSee(
+            '<span class="font-medium text-base-content">62.36</span>',
+            false,
+        );
+        $response->assertDontSee(
+            '<span class="font-medium text-base-content">0.00</span>',
+            false,
+        );
     }
 
     public function test_pmr_cannot_use_more_than_three_trials(): void
