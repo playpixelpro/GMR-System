@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Rice Trial Data Entry')
+@section('title', 'Data Entry')
 
 @section('content')
     <div class="mb-8">
-        <h1 class="text-2xl font-semibold text-gray-900">Rice Trial Data Entry</h1>
+        <h1 class="text-2xl font-semibold text-gray-900">Data Entry Form</h1>
         <p class="mt-1 text-sm text-gray-500">Choose AMR or PMR and enter the trial details.</p>
     </div>
 
