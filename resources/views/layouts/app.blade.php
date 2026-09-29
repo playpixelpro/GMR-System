@@ -152,6 +152,11 @@
                                         <span class="icon-[tabler--list-details] size-5"></span>Activity Logs
                                     </a>
                                 </li>
+                                <li>
+                                    <a href="{{ route('settings.data-cleanup') }}" class="{{ request()->routeIs('settings.data-cleanup*') ? 'menu-active' : '' }}">
+                                        <span class="icon-[tabler--database-cog] size-5"></span>Data Cleanup
+                                    </a>
+                                </li>
                             @endif
                         </ul>
                     </li>

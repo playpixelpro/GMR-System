@@ -539,4 +539,74 @@ class PmrCalculationTest extends TestCase
         $response->assertSee('Trial 1 Recovery Rate (%)');
         $response->assertSee('Trial 3 Recovery Rate (%)');
     }
+
+    public function test_pmr_computation_modal_displays_palay_input_and_rice_recovery_when_provided(): void
+    {
+        $branch = Branch::create(['name' => 'Branch Provided']);
+        $warehouse = Warehouse::create([
+            'name' => 'Warehouse Provided',
+            'branch_id' => $branch->id,
+        ]);
+        $pile = Pile::create([
+            'number' => 'P-1',
+            'warehouse_id' => $warehouse->id,
+        ]);
+
+        foreach ([1, 2, 3] as $trialNumber) {
+            PmrRecord::factory()->create([
+                'pile_id' => $pile->id,
+                'warehouse_name' => $warehouse->name,
+                'pile_number' => $pile->number,
+                'variety' => 'PD',
+                'trial_number' => $trialNumber,
+                'palay_input_kg' => 9876.54,
+                'rice_recovery_kg' => 6419.75,
+            ]);
+        }
+
+        $response = $this->get(route('pmr.index'));
+
+        $response->assertOk();
+        $response->assertSee('Palay Input (kg)');
+        $response->assertSee('Rice Rec (kg)');
+        $response->assertDontSee('Palay Input (g/kg)');
+        $response->assertDontSee('Rice Rec (g/kg)');
+        $response->assertSee('9,876.54');
+        $response->assertSee('6,419.75');
+    }
+
+    public function test_pmr_computation_modal_displays_dash_when_palay_and_rice_not_provided(): void
+    {
+        $branch = Branch::create(['name' => 'Branch Rate Only']);
+        $warehouse = Warehouse::create([
+            'name' => 'Warehouse Rate Only',
+            'branch_id' => $branch->id,
+        ]);
+        $pile = Pile::create([
+            'number' => 'P-2',
+            'warehouse_id' => $warehouse->id,
+        ]);
+
+        foreach ([1, 2, 3] as $trialNumber) {
+            PmrRecord::factory()->create([
+                'pile_id' => $pile->id,
+                'warehouse_name' => $warehouse->name,
+                'pile_number' => $pile->number,
+                'variety' => 'PD',
+                'trial_number' => $trialNumber,
+                'palay_input_kg' => null,
+                'rice_recovery_kg' => null,
+            ]);
+        }
+
+        $response = $this->get(route('pmr.index'));
+
+        $response->assertOk();
+        $response->assertSee('Palay Input (kg)');
+        $response->assertDontSee('9,876.54');
+        $response->assertSee(
+            '<td class="text-end font-mono py-1 px-2">—</td>',
+            false,
+        );
+    }
 }

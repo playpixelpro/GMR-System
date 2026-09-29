@@ -504,8 +504,8 @@
               <thead class="bg-base-200/60 text-xs uppercase font-semibold text-base-content">
                 <tr>
                   <th class="py-1 px-2">Trial</th>
-                  <th class="text-end py-1 px-2">Palay Input (g/kg)</th>
-                  <th class="text-end py-1 px-2">Rice Rec (g/kg)</th>
+                  <th class="text-end py-1 px-2">Palay Input (kg)</th>
+                  <th class="text-end py-1 px-2">Rice Rec (kg)</th>
                   <th class="text-end py-1 px-2">Recovery %</th>
                   <th class="text-center py-1 px-2">Status</th>
                 </tr>

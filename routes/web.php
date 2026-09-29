@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AmrRecordController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DataCleanupController;
 use App\Http\Controllers\DataEntryController;
 use App\Http\Controllers\EmrDashboardController;
 use App\Http\Controllers\GmrApprovalController;
@@ -143,6 +144,35 @@ Route::middleware('auth')->group(function (): void {
             SettingsController::class,
             'downloadActivityLogs',
         ])->name('settings.activity-logs.download');
+    });
+
+    // Admin-only data cleanup: delete test data, piles, then warehouses,
+    // strictly bottom-up, with an audit entry for every deletion.
+    Route::middleware('can:manage-data-cleanup')->group(function (): void {
+        Route::get('/settings/data-cleanup', [
+            DataCleanupController::class,
+            'index',
+        ])->name('settings.data-cleanup');
+        Route::delete('/settings/data-cleanup/warehouses/{warehouse}', [
+            DataCleanupController::class,
+            'destroyWarehouse',
+        ])->name('settings.data-cleanup.warehouses.destroy');
+        Route::delete('/settings/data-cleanup/piles/{pile}', [
+            DataCleanupController::class,
+            'destroyPile',
+        ])->name('settings.data-cleanup.piles.destroy');
+        Route::delete('/settings/data-cleanup/piles/{pile}/amr', [
+            DataCleanupController::class,
+            'destroyAmrData',
+        ])->name('settings.data-cleanup.amr.destroy');
+        Route::delete('/settings/data-cleanup/piles/{pile}/pmr', [
+            DataCleanupController::class,
+            'destroyPmrData',
+        ])->name('settings.data-cleanup.pmr.destroy');
+        Route::delete('/settings/data-cleanup/trials/{formType}/{record}', [
+            DataCleanupController::class,
+            'destroyTrial',
+        ])->name('settings.data-cleanup.trials.destroy');
     });
 });
 
