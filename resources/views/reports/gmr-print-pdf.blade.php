@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light" class="light" style="color-scheme: light;">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <title>{{ $config->title ?? 'REPORT ON PRE-MILLING ACTIVITY' }}</title>

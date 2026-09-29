@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light" class="light" style="color-scheme: light;">
 <head>
     <meta charset="UTF-8">
     <title>EMR Report</title>

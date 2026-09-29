@@ -1,0 +1,190 @@
+@extends('layouts.app')
+
+@section('title', 'GMR Submission Detail')
+
+@section('content')
+@php
+    $formatPercentage = static fn (?float $value): string => $value === null ? 'N/A' : number_format($value, 2).'%';
+@endphp
+
+<div class="mb-5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+    <div>
+        <h1 class="text-2xl font-bold leading-tight text-black sm:text-3xl">GMR Submission Detail</h1>
+        <p class="mt-2 text-sm leading-6 text-black">
+            {{ $approval->branch?->name ?? '—' }}
+            @if ($approval->reference_number) · Recommendation Memo: {{ $approval->reference_number }} @endif
+        </p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+        <a href="{{ route('gmr-approvals.index') }}" class="btn btn-outline btn-sm sm:btn-md gap-2">
+            <span class="icon-[tabler--arrow-left] size-5"></span>
+            Back to Approvals
+        </a>
+    </div>
+</div>
+
+<div class="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+    <div class="card border border-base-content/10 bg-base-100 p-4 text-black shadow-sm">
+        <p class="text-xs font-semibold uppercase text-black">Status</p>
+        <p class="mt-2">
+            @if ($approval->isApproved())
+                <span class="badge badge-soft badge-success">Approved</span>
+            @elseif ($approval->isRejected())
+                <span class="badge badge-soft badge-error">Rejected</span>
+            @else
+                <span class="badge badge-soft badge-info">Submitted</span>
+            @endif
+        </p>
+    </div>
+    <div class="card border border-base-content/10 bg-base-100 p-4 text-black shadow-sm">
+        <p class="text-xs font-semibold uppercase text-black">Submitted</p>
+        <p class="mt-2 text-sm">{{ $approval->submitted_at?->format('M d, Y H:i') ?? '—' }}</p>
+        <p class="text-xs text-base-content/60">{{ $approval->submittedBy?->name }}</p>
+    </div>
+    <div class="card border border-base-content/10 bg-base-100 p-4 text-black shadow-sm">
+        <p class="text-xs font-semibold uppercase text-black">Approved / Rejected</p>
+        <p class="mt-2 text-sm">{{ $approval->approved_at?->format('M d, Y H:i') ?? '—' }}</p>
+        <p class="text-xs text-base-content/60">{{ $approval->approvedBy?->name }}</p>
+    </div>
+    <div class="card border border-base-content/10 bg-base-100 p-4 text-black shadow-sm">
+        <p class="text-xs font-semibold uppercase text-black">Piles Included</p>
+        <p class="mt-2 text-2xl font-bold font-mono">{{ $approval->piles->count() }}</p>
+    </div>
+    <div class="card border border-base-content/10 bg-base-100 p-4 text-black shadow-sm">
+        <p class="text-xs font-semibold uppercase text-black">Recommendation Memo No.</p>
+        <p class="mt-2 text-sm font-mono">{{ $approval->reference_number ?? '—' }}</p>
+    </div>
+    <div class="card border border-base-content/10 bg-base-100 p-4 text-black shadow-sm">
+        <p class="text-xs font-semibold uppercase text-black">CO Memo No.</p>
+        <p class="mt-2 text-sm font-mono">{{ $approval->co_approval_memo_no ?? '—' }}</p>
+    </div>
+</div>
+
+@if ($approval->remarks)
+    <div class="alert alert-soft alert-info mb-4 text-sm"><strong>Remarks:</strong> {{ $approval->remarks }}</div>
+@endif
+@if ($approval->rejection_reason)
+    <div class="alert alert-soft alert-error mb-4 text-sm"><strong>Rejection reason:</strong> {{ $approval->rejection_reason }}</div>
+@endif
+
+@php
+    $canApprove = auth()->user()?->hasRole('RMEC', 'ADMINISTRATOR') && $approval->isSubmitted();
+@endphp
+
+@if ($canApprove)
+    <form method="POST" action="{{ route('gmr-approvals.approve', $approval) }}">
+        @csrf
+        <div class="mb-5 rounded-lg border border-secondary/30 bg-secondary/5 p-4">
+            <h2 class="text-sm font-semibold uppercase text-secondary">Central Office Approval</h2>
+            <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                <label class="form-control">
+                    <span class="label-text mb-1 text-xs font-semibold text-black">CO Approval Memorandum No. *</span>
+                    <input type="text" name="co_approval_memo_no" class="input input-bordered min-h-10 text-black" placeholder="e.g. AO-2026-XX-XXX" required />
+                    @error('co_approval_memo_no') <span class="text-xs text-error">{{ $message }}</span> @enderror
+                </label>
+                <label class="form-control">
+                    <span class="label-text mb-1 text-xs font-semibold text-black">Remarks (optional)</span>
+                    <input type="text" name="remarks" class="input input-bordered min-h-10 text-black" value="{{ old('remarks') }}" />
+                </label>
+            </div>
+        </div>
+@endif
+
+<section class="card border border-base-content/10 bg-base-100 p-4 text-black shadow-sm">
+    <h2 class="mb-4 text-lg font-semibold text-black">Included Piles (Frozen Snapshot)</h2>
+    <div class="overflow-x-auto">
+        <table class="table table-sm min-w-[64rem] text-sm">
+            <thead>
+                <tr class="border-b border-base-content/15 text-sm font-semibold text-black">
+                    <th>Pile</th>
+                    <th>Variety</th>
+                    <th>Quality</th>
+                    <th class="text-end">Volume (kg)</th>
+                    <th class="text-end">AMR</th>
+                    <th class="text-end">PMR</th>
+                    <th class="text-end">Recommended GMR</th>
+                    <th class="text-end">CO Approved GMR</th>
+                    <th class="text-end">Final GMR</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($approval->piles as $pileRow)
+                    @php
+                        $recommended = $pileRow->gmr !== null ? (float) $pileRow->gmr : null;
+                        $coApproved = $pileRow->co_approved_gmr !== null ? (float) $pileRow->co_approved_gmr : null;
+                        $final = $pileRow->finalGmr();
+                        $source = $pileRow->finalGmrSource();
+                    @endphp
+                    <tr class="border-b border-base-content/10">
+                        <td class="font-semibold">{{ $pileRow->pile?->pile_number ?? ($pileRow->pile?->number ?? '—') }}</td>
+                        <td>{{ $pileRow->variety ?? '—' }}</td>
+                        <td>{{ ! empty($pileRow->quality) ? strtoupper($pileRow->quality) : 'GQA' }}</td>
+                        <td class="text-end font-mono">{{ $pileRow->volume_kg !== null ? number_format((float) $pileRow->volume_kg, 3) : 'N/A' }}</td>
+                        <td class="text-end font-mono">{{ $formatPercentage($pileRow->amr !== null ? (float) $pileRow->amr : null) }}</td>
+                        <td class="text-end font-mono">{{ $formatPercentage($pileRow->pmr !== null ? (float) $pileRow->pmr : null) }}</td>
+                        <td class="text-end font-mono">{{ $formatPercentage($recommended) }}</td>
+                        <td class="text-end font-mono">
+                            @if ($canApprove)
+                                <input type="number" step="0.01" min="0" max="100" name="co_approved_gmr[{{ $pileRow->id }}]" value="{{ old("co_approved_gmr.{$pileRow->id}") }}" class="input input-bordered input-sm w-28 text-end font-mono text-black" placeholder="{{ $recommended !== null ? number_format($recommended, 2) : '0.00' }}" />
+                                @error("co_approved_gmr.{$pileRow->id}") <span class="block text-xs text-error">{{ $message }}</span> @enderror
+                            @else
+                                <span class="badge badge-soft {{ $coApproved !== null ? 'badge-success' : 'badge-neutral' }}">{{ $formatPercentage($coApproved) }}</span>
+                            @endif
+                        </td>
+                        <td class="text-end font-mono font-bold">
+                            @if ($source === 'co_approved')
+                                <span class="text-success">{{ $formatPercentage($final) }}</span>
+                                <span class="block text-[10px] font-semibold uppercase text-success">CO Approved</span>
+                            @else
+                                <span class="text-secondary">{{ $formatPercentage($final) }}</span>
+                                <span class="block text-[10px] font-semibold uppercase text-base-content/50">Recommended</span>
+                            @endif
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+</section>
+
+@if ($canApprove)
+        <div class="mt-4 flex flex-wrap items-center gap-3">
+            <button type="submit" class="btn btn-primary btn-sm gap-2" onclick="return confirm('Approve this GMR report and permanently lock the {{ $approval->piles->count() }} included pile(s)? This action cannot be undone.');">
+                <span class="icon-[tabler--check] size-4"></span>
+                Approve &amp; Lock Piles
+            </button>
+            <button type="button" id="btn-reject" class="btn btn-outline btn-error btn-sm gap-2">
+                <span class="icon-[tabler--x] size-4"></span>
+                Reject
+            </button>
+        </div>
+    </form>
+
+    <form id="reject-form" method="POST" action="{{ route('gmr-approvals.reject', $approval) }}" class="hidden mb-5 card border border-error/30 p-4">
+        @csrf
+        <label class="form-control">
+            <span class="label-text mb-2 text-sm font-semibold text-black">Rejection reason *</span>
+            <textarea name="rejection_reason" class="textarea textarea-bordered min-h-24 text-black" required></textarea>
+        </label>
+        <div class="mt-3 flex gap-2">
+            <button type="submit" class="btn btn-error btn-sm">Confirm Reject</button>
+            <button type="button" id="btn-cancel-reject" class="btn btn-ghost btn-sm">Cancel</button>
+        </div>
+    </form>
+@endif
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const rejectBtn = document.getElementById('btn-reject');
+        const rejectForm = document.getElementById('reject-form');
+        const cancelBtn = document.getElementById('btn-cancel-reject');
+
+        if (rejectBtn && rejectForm) {
+            rejectBtn.addEventListener('click', () => rejectForm.classList.remove('hidden'));
+        }
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => rejectForm?.classList.add('hidden'));
+        }
+    });
+</script>
+@endsection

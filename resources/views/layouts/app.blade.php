@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="light" class="light" style="color-scheme: light;">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>@yield('title', config('app.name', 'GMR System'))</title>
@@ -11,6 +12,8 @@
     <script>
         (function() {
             try {
+                document.documentElement.setAttribute('data-theme', 'light');
+                document.documentElement.style.colorScheme = 'light';
                 if (localStorage.getItem('sidebar-minified') === 'true') {
                     document.documentElement.classList.add('sidebar-is-minified');
                 }
@@ -89,7 +92,7 @@
                             <span class="overlay-minified:hidden">Data Entry</span>
                         </a>
                     </li>
-                    @php($isReportActive = request()->routeIs('amr.*', 'pmr.*', 'emr.*', 'gmr.*'))
+                    @php($isReportActive = request()->routeIs('amr.*', 'pmr.*', 'emr.*', 'gmr.*', 'gmr-approvals.*', 'millings.*'))
                     <li class="dropdown relative {{ $isReportActive ? 'open' : '' }} [--adaptive:none] [--strategy:static]" data-flyout-title="Reports">
                         <button id="reports-dropdown" type="button" class="dropdown-toggle {{ $isReportActive ? 'menu-active' : '' }}" aria-haspopup="menu" aria-expanded="{{ $isReportActive ? 'true' : 'false' }}" aria-label="Reports" title="Reports">
                             <span class="icon-[tabler--report-analytics] size-5"></span>
@@ -103,7 +106,9 @@
                             <li><a href="{{ route('gmr.summary') }}" class="{{ request()->routeIs('gmr.summary') ? 'menu-active' : '' }}"><span class="icon-[tabler--chart-dots] size-5"></span>GMR Summary</a></li>
                             @if (auth()->user()?->hasRole('RMEC', 'ADMINISTRATOR'))
                                 <li><a href="{{ route('gmr.config.edit') }}" class="{{ request()->routeIs('gmr.config.*') ? 'menu-active' : '' }}"><span class="icon-[tabler--adjustments] size-5"></span>GMR Report Configuration</a></li>
+                                <li><a href="{{ route('gmr-approvals.index') }}" class="{{ request()->routeIs('gmr-approvals.*') ? 'menu-active' : '' }}"><span class="icon-[tabler--clipboard-check] size-5"></span>GMR Central Office Approvals</a></li>
                             @endif
+                            <li><a href="{{ route('millings.index') }}" class="{{ request()->routeIs('millings.*') ? 'menu-active' : '' }}"><span class="icon-[tabler--building-factory-2] size-5"></span>Rice Milling</a></li>
                         </ul>
                     </li>
                     @php($isSettingActive = request()->routeIs('profile.*', 'users.*', 'settings.*'))

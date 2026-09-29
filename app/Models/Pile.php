@@ -25,6 +25,9 @@ class Pile extends Model
         'volume_kg',
         'amr_status',
         'pmr_status',
+        'gmr_status',
+        'gmr_approval_pile_id',
+        'gmr_locked_at',
     ];
 
     protected function casts(): array
@@ -34,6 +37,7 @@ class Pile extends Model
             'mc' => 'decimal:2',
             'aged_months' => 'float',
             'volume_kg' => 'decimal:3',
+            'gmr_locked_at' => 'datetime',
         ];
     }
 
@@ -80,6 +84,68 @@ class Pile extends Model
     public function pmrCalculation(): HasOne
     {
         return $this->hasOne(PmrCalculation::class);
+    }
+
+    public function gmrApprovalPile(): BelongsTo
+    {
+        return $this->belongsTo(GmrApprovalPile::class, 'gmr_approval_pile_id');
+    }
+
+    public function millings(): HasMany
+    {
+        return $this->hasMany(Milling::class);
+    }
+
+    /**
+     * A pile is permanently locked once its GMR has been approved by the
+     * Central Office. While locked, no AMR/PMR/GMR changes are permitted.
+     */
+    public function isGmrLocked(): bool
+    {
+        return $this->gmr_status === 'approved';
+    }
+
+    public function isGmrApproved(): bool
+    {
+        return $this->gmr_status === 'approved';
+    }
+
+    public function isGmrSubmitted(): bool
+    {
+        return $this->gmr_status === 'submitted';
+    }
+
+    /**
+     * Only piles with an approved GMR may be assigned to a rice milling.
+     */
+    public function canBeMilled(): bool
+    {
+        return $this->isGmrApproved();
+    }
+
+    /**
+     * The official Final GMR for this pile.
+     *
+     * When a Central-Office approved GMR exists on the linked approval-pile
+     * record, it takes precedence over the system-recommended GMR. Returns
+     * null when the pile has no approved-GMR record.
+     */
+    public function finalGmr(): ?float
+    {
+        if ($this->gmrApprovalPile) {
+            return $this->gmrApprovalPile->finalGmr();
+        }
+
+        return null;
+    }
+
+    /**
+     * Whether the Final GMR is sourced from the Central-Office approved value
+     * rather than the system recommendation.
+     */
+    public function finalGmrIsCoApproved(): bool
+    {
+        return $this->gmrApprovalPile?->co_approved_gmr !== null;
     }
 
     public function getVolumeAttribute()

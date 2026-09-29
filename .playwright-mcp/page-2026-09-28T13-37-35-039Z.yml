@@ -1,0 +1,28 @@
+- main [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - img "NFA logo" [ref=e6]
+      - heading "Welcome Back" [level=1] [ref=e7]
+      - paragraph [ref=e8]: Please enter your details to sign in
+    - generic [ref=e9]:
+      - generic [ref=e10]:
+        - generic [ref=e11] [cursor=pointer]: Email address
+        - textbox "Email address" [active] [ref=e12]:
+          - /placeholder: Enter your email address
+      - generic [ref=e13]:
+        - generic [ref=e14] [cursor=pointer]: Password
+        - generic [ref=e15]:
+          - textbox "Password Toggle password visibility" [ref=e16]:
+            - /placeholder: ••••••••
+          - button "Toggle password visibility" [ref=e17] [cursor=pointer]
+      - generic [ref=e19]:
+        - generic [ref=e20] [cursor=pointer]:
+          - checkbox "Remember Me" [ref=e21]
+          - generic [ref=e22]: Remember Me
+        - link "Forgot Password?" [ref=e23] [cursor=pointer]:
+          - /url: http://localhost:8000/forgot-password
+      - button "Sign in" [ref=e24] [cursor=pointer]
+      - paragraph [ref=e25]:
+        - text: Don't have an account?
+        - link "Register" [ref=e26] [cursor=pointer]:
+          - /url: http://localhost:8000/register

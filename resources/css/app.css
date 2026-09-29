@@ -3,8 +3,11 @@
 @import "../../node_modules/flyonui/src/js/plugins/dropdown/variants.css";
 @import "flatpickr/dist/flatpickr.css";
 @import "../../node_modules/flyonui/src/vendor/flatpickr.css";
-@plugin "flyonui";
+@plugin "flyonui" {
+    themes: light --default;
+}
 @plugin "@iconify/tailwind4";
+@custom-variant dark (&:where(.dark-disabled-never-match));
 
 @source "../views/**/*.blade.php";
 @source "../../node_modules/flyonui/flyonui.js";
@@ -121,7 +124,11 @@ form[data-entry-form] :is(.shadow-sm, .shadow, .shadow-md):not(:focus) {
 }
 
 :root,
+html,
+body,
 [data-theme] {
+    color-scheme: light !important;
+
     /* Primary = Vibrant Blue */
     --color-primary: oklch(54.6% 0.245 262.88);
     --color-primary-content: #ffffff;
@@ -149,6 +156,21 @@ form[data-entry-form] :is(.shadow-sm, .shadow, .shadow-md):not(:focus) {
     /* Error = Red */
     --color-error: oklch(57.7% 0.245 27.33);
     --color-error-content: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root,
+    html,
+    body,
+    [data-theme] {
+        color-scheme: light !important;
+        --color-base-100: oklch(100% 0 0) !important;
+        --color-base-200: oklch(97.8% 0.005 297.73) !important;
+        --color-base-300: oklch(37.01% 0.0069 297.49) !important;
+        --color-base-content: oklch(37.57% 0.022 281.8) !important;
+        --color-neutral: oklch(37.57% 0.0222 281.8) !important;
+        --color-neutral-content: oklch(98% 0.0013 286.38) !important;
+    }
 }
 
 @theme {

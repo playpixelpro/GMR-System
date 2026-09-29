@@ -148,12 +148,16 @@
                             <span class="icon-[tabler--printer] size-4"></span>
                             Print Report
                         </button>
+                        <button type="button" id="btn-submit-approval" class="btn btn-outline btn-secondary btn-sm gap-2" disabled>
+                            <span class="icon-[tabler--send] size-4"></span>
+                            Submit to Central Office
+                        </button>
                     @endif
                     <span class="text-xs text-base-content/60">{{ $rows->count() }} total piles</span>
                 </div>
             </div>
             <div class="overflow-x-auto">
-                <table class="table table-sm min-w-[78rem] text-sm">
+                <table class="table table-sm min-w-[88rem] text-sm">
                     <thead>
                         <tr class="border-y border-base-content/15 bg-base-200/60 text-sm font-semibold text-black">
                             <th>Branch</th>
@@ -165,6 +169,7 @@
                             <th>EMR</th>
                             <th class="text-end">GMR</th>
                             <th>Status</th>
+                            <th>GMR Approval</th>
                             <th class="text-center w-28">
                                 <label class="flex items-center justify-center gap-1 cursor-pointer" title="Select All for Report">
                                     <input type="checkbox" id="select-all-checkbox" class="checkbox checkbox-primary checkbox-xs" disabled />
@@ -205,9 +210,20 @@
                                         <span class="badge badge-soft {{ str_contains($row['status'], 'Blocked') ? 'badge-error' : 'badge-neutral' }} text-xs font-medium" title="{{ implode('; ', $row['review_reasons'] ?? []) }}">{{ $row['status'] }}</span>
                                     @endif
                                 </td>
+                                <td>
+                                    @if (($row['gmr_status'] ?? null) === 'approved')
+                                        <span class="badge badge-soft badge-success text-xs font-medium" title="Approved and permanently locked by Central Office">Approved · Locked</span>
+                                    @elseif (($row['gmr_status'] ?? null) === 'submitted')
+                                        <span class="badge badge-soft badge-info text-xs font-medium" title="Awaiting Central Office approval">Submitted</span>
+                                    @else
+                                        <span class="badge badge-soft badge-neutral text-xs font-medium text-base-content/50">—</span>
+                                    @endif
+                                </td>
                                 <td class="text-center">
                                     @if ($row['gmr'] === null || $row['status'] === 'Incomplete')
                                         <input type="checkbox" class="checkbox checkbox-sm pile-checkbox" disabled title="Uncomputed records cannot be included in report" />
+                                    @elseif (($row['gmr_status'] ?? null) === 'submitted' || ($row['gmr_status'] ?? null) === 'approved')
+                                        <input type="checkbox" class="checkbox checkbox-sm pile-checkbox" disabled title="This pile is already submitted/approved and cannot be re-submitted" />
                                     @else
                                         <input type="checkbox" name="selected_piles[]" value="{{ $row['id'] }}" data-branch-id="{{ $row['branch_id'] }}" data-status="{{ $row['status'] }}" class="checkbox checkbox-primary checkbox-sm pile-checkbox" aria-label="Include pile {{ $row['pile'] }} in report" disabled />
                                     @endif
@@ -219,6 +235,49 @@
             </div>
         </section>
     </form>
+
+    @if (auth()->user()?->hasRole('RMEC', 'ADMINISTRATOR'))
+        <form id="gmr-submit-form" method="POST" action="{{ route('gmr-approvals.store') }}" class="hidden">
+            @csrf
+            <input type="hidden" name="branch_id" id="submit-branch-id" value="" />
+            <input type="hidden" name="reference_number" id="submit-reference-number" value="" />
+            <input type="hidden" name="remarks" id="submit-remarks" value="" />
+        </form>
+
+        <!-- Submit to Central Office popup -->
+        <div id="gmr-submit-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="gmr-submit-modal-title">
+            <div class="w-full max-w-lg rounded-xl bg-base-100 p-5 text-black shadow-2xl">
+                <div class="flex items-start justify-between gap-4 border-b border-base-content/10 pb-3">
+                    <div>
+                        <h3 id="gmr-submit-modal-title" class="text-lg font-bold">Submit GMR to Central Office</h3>
+                        <p class="mt-1 text-sm" id="gmr-submit-modal-context">—</p>
+                    </div>
+                    <button type="button" class="btn btn-circle btn-text btn-sm" data-submit-close="gmr-submit-modal" aria-label="Close">&times;</button>
+                </div>
+                <div class="mt-4 space-y-3 text-sm">
+                    <div class="alert alert-soft alert-info">
+                        Enter the <strong>Recommendation Memo No.</strong> of the GMR report memo submitted to the Central Office. This becomes the reference recorded for this submission.
+                    </div>
+                    <label class="form-control">
+                        <span class="label-text mb-2 text-sm font-semibold text-black">Recommendation Memo No. *</span>
+                        <input type="text" id="submit-memo-input" class="input input-bordered min-h-11 text-black" placeholder="e.g. RM-2026-01-001" required />
+                        <span id="submit-memo-error" class="mt-1 hidden text-xs text-error">Please enter the Recommendation Memo No.</span>
+                    </label>
+                    <label class="form-control">
+                        <span class="label-text mb-2 text-sm font-semibold text-black">Remarks (optional)</span>
+                        <textarea id="submit-remarks-input" class="textarea textarea-bordered min-h-20 text-black" placeholder="Optional notes for the Central Office"></textarea>
+                    </label>
+                </div>
+                <div class="mt-5 flex items-center justify-end gap-2">
+                    <button type="button" class="btn btn-ghost btn-sm" data-submit-close="gmr-submit-modal">Cancel</button>
+                    <button type="button" id="btn-confirm-submit" class="btn btn-secondary btn-sm gap-2">
+                        <span class="icon-[tabler--send] size-4"></span>
+                        Submit to Central Office
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
 
     @foreach ($rows as $row)
         <div id="gmr-breakdown-{{ $row['id'] }}" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="gmr-breakdown-{{ $row['id'] }}-title">
@@ -266,6 +325,8 @@
         const selectionCounter = document.getElementById('selection-counter');
         const printForm = document.getElementById('gmr-print-form');
         const printButton = document.getElementById('btn-print-report');
+        const submitButton = document.getElementById('btn-submit-approval');
+        const submitForm = document.getElementById('gmr-submit-form');
         const reportBranchSelect = document.getElementById('report-branch-select');
         const reportBranchInput = document.getElementById('report-branch-id');
         const tableRows = document.querySelectorAll('[data-row-branch-id]');
@@ -329,6 +390,9 @@
             if (printButton) {
                 printButton.disabled = checkedCount === 0;
             }
+            if (submitButton) {
+                submitButton.disabled = checkedCount === 0;
+            }
 
             const selectedBranch = getSelectedBranch();
             const branchCheckboxes = Array.from(pileCheckboxes).filter(cb => cb.hasAttribute('name') && String(cb.dataset.branchId) === String(selectedBranch));
@@ -378,6 +442,85 @@
                     e.preventDefault();
                     alert('Please select at least one record to include in the printable GMR report.');
                 }
+            });
+        }
+
+        if (submitButton && submitForm) {
+            const submitModal = document.getElementById('gmr-submit-modal');
+            const submitMemoInput = document.getElementById('submit-memo-input');
+            const submitRemarksInput = document.getElementById('submit-remarks-input');
+            const submitMemoError = document.getElementById('submit-memo-error');
+            const submitModalContext = document.getElementById('gmr-submit-modal-context');
+            const confirmSubmitButton = document.getElementById('btn-confirm-submit');
+
+            let pendingPiles = [];
+            let pendingBranch = '';
+
+            function openSubmitModal(branchName, pileCount) {
+                if (submitModalContext) {
+                    submitModalContext.textContent = branchName + ' · ' + pileCount + ' pile(s) selected';
+                }
+                if (submitMemoInput) submitMemoInput.value = '';
+                if (submitRemarksInput) submitRemarksInput.value = '';
+                if (submitMemoError) submitMemoError.classList.add('hidden');
+                submitModal?.classList.remove('hidden');
+                submitModal?.classList.add('flex');
+                submitMemoInput?.focus();
+            }
+
+            function closeSubmitModal() {
+                submitModal?.classList.add('hidden');
+                submitModal?.classList.remove('flex');
+            }
+
+            submitButton.addEventListener('click', function () {
+                const selectedBranch = getSelectedBranch();
+                if (!selectedBranch) {
+                    alert('Please select a branch before submitting the GMR report to the Central Office.');
+                    return;
+                }
+                const checkedPiles = Array.from(document.querySelectorAll('.pile-checkbox:checked'))
+                    .map(cb => cb.value);
+                if (checkedPiles.length === 0) {
+                    alert('Please select at least one record to submit to the Central Office.');
+                    return;
+                }
+                pendingPiles = checkedPiles;
+                pendingBranch = selectedBranch;
+                const branchOption = reportBranchSelect ? reportBranchSelect.querySelector('option[value="' + selectedBranch + '"]') : null;
+                const branchName = branchOption ? branchOption.textContent : 'Selected branch';
+                openSubmitModal(branchName, checkedPiles.length);
+            });
+
+            if (confirmSubmitButton) {
+                confirmSubmitButton.addEventListener('click', function () {
+                    const memo = submitMemoInput ? submitMemoInput.value.trim() : '';
+                    if (!memo) {
+                        if (submitMemoError) submitMemoError.classList.remove('hidden');
+                        submitMemoInput?.focus();
+                        return;
+                    }
+                    document.getElementById('submit-branch-id').value = pendingBranch;
+                    document.getElementById('submit-reference-number').value = memo;
+                    document.getElementById('submit-remarks').value = submitRemarksInput ? submitRemarksInput.value.trim() : '';
+                    // Remove any previously injected pile inputs
+                    submitForm.querySelectorAll('input[name="selected_piles[]"]').forEach(el => el.remove());
+                    pendingPiles.forEach(id => {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'selected_piles[]';
+                        input.value = id;
+                        submitForm.appendChild(input);
+                    });
+                    submitForm.submit();
+                });
+            }
+
+            submitModal?.querySelectorAll('[data-submit-close]').forEach(btn => {
+                btn.addEventListener('click', closeSubmitModal);
+            });
+            submitModal?.addEventListener('click', function (e) {
+                if (e.target === submitModal) closeSubmitModal();
             });
         }
 

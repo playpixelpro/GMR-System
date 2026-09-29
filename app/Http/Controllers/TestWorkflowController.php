@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\GuardsGmrLockedPiles;
 use App\Models\AmrRecord;
 use App\Models\AuditLog;
 use App\Models\Pile;
@@ -17,6 +18,8 @@ use Illuminate\Validation\ValidationException;
 
 class TestWorkflowController extends Controller
 {
+    use GuardsGmrLockedPiles;
+
     /**
      * Apply RMEC Action (RECOMMEND or RETEST) to a test milling conduct.
      */
@@ -40,6 +43,17 @@ class TestWorkflowController extends Controller
 
         $model = $formType === 'amr' ? AmrRecord::class : PmrRecord::class;
         $test = $model::query()->with('pile')->findOrFail($record);
+
+        // Block RMEC actions on a pile whose GMR has been approved/locked.
+        if ($test->pile && $test->pile->isGmrLocked()) {
+            $message = "This pile's GMR has been approved and locked by the Central Office; RMEC actions are no longer permitted.";
+
+            if ($request->expectsJson()) {
+                throw ValidationException::withMessages(['action' => $message]);
+            }
+
+            return back()->withErrors(['action' => $message]);
+        }
 
         if ($test->is_locked) {
             if ($request->expectsJson()) {
@@ -176,6 +190,8 @@ class TestWorkflowController extends Controller
      */
     public function resetAction(Request $request, Pile $pile): JsonResponse|RedirectResponse
     {
+        $this->ensurePileNotGmrLocked($pile, $request, 'reset');
+
         /** @var User|null $user */
         $user = Auth::user();
         abort_unless($user?->hasRole('ADMINISTRATOR'), 403, 'Unauthorized. Only Administrators can reset an RMEC action.');
@@ -246,6 +262,8 @@ class TestWorkflowController extends Controller
      */
     public function requestRetest(Request $request, Pile $pile): RedirectResponse
     {
+        $this->ensurePileNotGmrLocked($pile, $request, 'retested');
+
         $formType = $request->input('form_type', 'amr');
 
         return redirect()->route('records.create', [
