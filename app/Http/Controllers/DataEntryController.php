@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\GuardsGmrLockedPiles;
 use App\Http\Requests\StoreDataEntryRequest;
 use App\Http\Requests\UpdatePileDetailsRequest;
 use App\Http\Requests\UpdateTrialRequest;
-use App\Concerns\GuardsGmrLockedPiles;
 use App\Models\AmrRecord;
 use App\Models\AuditLog;
 use App\Models\Branch;
+use App\Models\Miller;
 use App\Models\Pile;
 use App\Models\PmrRecord;
 use App\Models\Warehouse;
@@ -296,6 +297,11 @@ class DataEntryController extends Controller
 
         if ($formType === 'amr') {
             $updateData['rice_millers'] = $validated['rice_millers'] ?? null;
+
+            $millerName = trim((string) ($validated['rice_millers'] ?? ''));
+            if ($millerName !== '') {
+                Miller::firstOrCreate(['name' => $millerName]);
+            }
         }
 
         $trial->update($updateData);
@@ -539,6 +545,17 @@ class DataEntryController extends Controller
 
             $trials = $validated['trials'];
             $count = 0;
+
+            // Keep the millers master list in sync even when a value bypassed
+            // the combobox popup (legacy posts, tests, scripted requests).
+            if ($validated['form_type'] === 'amr') {
+                foreach ($trials as $trial) {
+                    $millerName = trim((string) ($trial['rice_millers'] ?? ''));
+                    if ($millerName !== '') {
+                        Miller::firstOrCreate(['name' => $millerName]);
+                    }
+                }
+            }
 
             foreach ($trials as $trial) {
                 $trialNumber = (int) $trial['trial_number'];

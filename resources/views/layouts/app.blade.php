@@ -92,7 +92,13 @@
                             <span class="overlay-minified:hidden">Data Entry</span>
                         </a>
                     </li>
-                    @php($isReportActive = request()->routeIs('amr.*', 'pmr.*', 'emr.*', 'gmr.*', 'gmr-approvals.*', 'millings.*'))
+                    <li>
+                        <a href="{{ route('millings.index') }}" class="{{ request()->routeIs('millings.*') ? 'menu-active' : '' }}" title="Rice Milling">
+                            <span class="icon-[tabler--building-factory-2] size-5"></span>
+                            <span class="overlay-minified:hidden">Rice Milling</span>
+                        </a>
+                    </li>
+                    @php($isReportActive = request()->routeIs('amr.*', 'pmr.*', 'emr.*', 'gmr.*', 'gmr-approvals.*'))
                     <li class="dropdown relative {{ $isReportActive ? 'open' : '' }} [--adaptive:none] [--strategy:static]" data-flyout-title="Reports">
                         <button id="reports-dropdown" type="button" class="dropdown-toggle {{ $isReportActive ? 'menu-active' : '' }}" aria-haspopup="menu" aria-expanded="{{ $isReportActive ? 'true' : 'false' }}" aria-label="Reports" title="Reports">
                             <span class="icon-[tabler--report-analytics] size-5"></span>
@@ -108,7 +114,6 @@
                                 <li><a href="{{ route('gmr.config.edit') }}" class="{{ request()->routeIs('gmr.config.*') ? 'menu-active' : '' }}"><span class="icon-[tabler--adjustments] size-5"></span>GMR Report Configuration</a></li>
                                 <li><a href="{{ route('gmr-approvals.index') }}" class="{{ request()->routeIs('gmr-approvals.*') ? 'menu-active' : '' }}"><span class="icon-[tabler--clipboard-check] size-5"></span>GMR Central Office Approvals</a></li>
                             @endif
-                            <li><a href="{{ route('millings.index') }}" class="{{ request()->routeIs('millings.*') ? 'menu-active' : '' }}"><span class="icon-[tabler--building-factory-2] size-5"></span>Rice Milling</a></li>
                         </ul>
                     </li>
                     @php($isSettingActive = request()->routeIs('profile.*', 'users.*', 'settings.*'))
@@ -124,6 +129,13 @@
                                     <span class="icon-[tabler--user-cog] size-5"></span>Profile settings
                                 </a>
                             </li>
+                            @can('manage-millings')
+                                <li>
+                                    <a href="{{ route('settings.millers') }}" class="{{ request()->routeIs('settings.millers*') ? 'menu-active' : '' }}">
+                                        <span class="icon-[tabler--building-factory-2] size-5"></span>Miller Management
+                                    </a>
+                                </li>
+                            @endcan
                             @if (auth()->user()?->hasRole('ADMINISTRATOR'))
                                 <li>
                                     <a href="{{ route('users.index') }}" class="{{ request()->routeIs('users.*') ? 'menu-active' : '' }}">
@@ -361,6 +373,7 @@
             });
         });
     </script>
+    @stack('modals')
 </body>
 
 </html>

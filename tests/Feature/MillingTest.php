@@ -2,13 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Models\AmrRecord;
 use App\Models\Branch;
 use App\Models\GmrApproval;
 use App\Models\GmrApprovalPile;
 use App\Models\Milling;
 use App\Models\Pile;
-use App\Models\PmrRecord;
 use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -248,6 +246,91 @@ class MillingTest extends TestCase
             ->assertSee('Project / Memo Reference No.')
             ->assertSee('Warehouse')
             ->assertSee($pile->warehouse->name);
+    }
+
+    public function test_index_filters_by_warehouse(): void
+    {
+        [$branch, $pile1] = $this->createApprovedPile('1', 5000);
+        $warehouse2 = Warehouse::create(['branch_id' => $branch->id, 'name' => 'Second Warehouse']);
+        $pile2 = Pile::create([
+            'branch_id' => $branch->id,
+            'warehouse_id' => $warehouse2->id,
+            'pile_number' => '2',
+            'number' => '2',
+            'volume_kg' => 4000,
+            'gmr_status' => 'approved',
+            'gmr_locked_at' => now(),
+        ]);
+
+        Milling::create([
+            'branch_id' => $branch->id,
+            'pile_id' => $pile1->id,
+            'reference_number' => 'REF-WH-1',
+            'status' => 'assigned',
+            'assigned_at' => now(),
+        ]);
+
+        Milling::create([
+            'branch_id' => $branch->id,
+            'pile_id' => $pile2->id,
+            'reference_number' => 'REF-WH-2',
+            'status' => 'assigned',
+            'assigned_at' => now(),
+        ]);
+
+        $this->get(route('millings.index', ['warehouse_id' => $pile1->warehouse_id]))
+            ->assertOk()
+            ->assertSee('REF-WH-1')
+            ->assertDontSee('REF-WH-2');
+
+        $this->get(route('millings.index', ['warehouse_id' => $warehouse2->id]))
+            ->assertOk()
+            ->assertSee('REF-WH-2')
+            ->assertDontSee('REF-WH-1');
+    }
+
+    public function test_index_filters_by_date_range(): void
+    {
+        [$branch, $pile1] = $this->createApprovedPile('1', 5000);
+
+        Milling::create([
+            'branch_id' => $branch->id,
+            'pile_id' => $pile1->id,
+            'reference_number' => 'REF-OLD-DATE',
+            'status' => 'completed',
+            'assigned_at' => '2026-01-10',
+        ]);
+
+        $warehouse2 = Warehouse::create(['branch_id' => $branch->id, 'name' => 'WH 2']);
+        $pile2 = Pile::create([
+            'branch_id' => $branch->id,
+            'warehouse_id' => $warehouse2->id,
+            'pile_number' => '2',
+            'number' => '2',
+            'volume_kg' => 3000,
+            'gmr_status' => 'approved',
+            'gmr_locked_at' => now(),
+        ]);
+
+        Milling::create([
+            'branch_id' => $branch->id,
+            'pile_id' => $pile2->id,
+            'reference_number' => 'REF-NEW-DATE',
+            'status' => 'assigned',
+            'assigned_at' => '2026-05-20',
+        ]);
+
+        // Filter for January 2026
+        $this->get(route('millings.index', ['date_from' => '2026-01-01', 'date_to' => '2026-01-31']))
+            ->assertOk()
+            ->assertSee('REF-OLD-DATE')
+            ->assertDontSee('REF-NEW-DATE');
+
+        // Filter for May 2026
+        $this->get(route('millings.index', ['date_from' => '2026-05-01', 'date_to' => '2026-05-31']))
+            ->assertOk()
+            ->assertSee('REF-NEW-DATE')
+            ->assertDontSee('REF-OLD-DATE');
     }
 
     /**

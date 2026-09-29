@@ -72,7 +72,7 @@
 @endphp
 
 @if ($canApprove)
-    <form method="POST" action="{{ route('gmr-approvals.approve', $approval) }}">
+    <form method="POST" action="{{ route('gmr-approvals.approve', $approval) }}" id="approve-form">
         @csrf
         <div class="mb-5 rounded-lg border border-secondary/30 bg-secondary/5 p-4">
             <h2 class="text-sm font-semibold uppercase text-secondary">Central Office Approval</h2>
@@ -149,7 +149,7 @@
 
 @if ($canApprove)
         <div class="mt-4 flex flex-wrap items-center gap-3">
-            <button type="submit" class="btn btn-primary btn-sm gap-2" onclick="return confirm('Approve this GMR report and permanently lock the {{ $approval->piles->count() }} included pile(s)? This action cannot be undone.');">
+            <button type="button" id="btn-open-approve-confirm" class="btn btn-primary btn-sm gap-2">
                 <span class="icon-[tabler--check] size-4"></span>
                 Approve &amp; Lock Piles
             </button>
@@ -159,6 +159,81 @@
             </button>
         </div>
     </form>
+
+    <!-- Custom Confirmation Dialog Modal for Approval -->
+    <div id="approve-confirm-modal"
+         class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-xs p-4 transition-opacity duration-200"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="approve-confirm-modal-title">
+        <div class="w-full max-w-md transform overflow-hidden rounded-2xl bg-base-100 p-6 text-black shadow-2xl border border-base-content/15 text-left transition-all">
+            <div class="flex items-start gap-4">
+                <div class="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary ring-8 ring-primary/5">
+                    <span class="icon-[tabler--shield-lock] size-6"></span>
+                </div>
+                <div class="flex-1">
+                    <h3 id="approve-confirm-modal-title" class="text-lg font-bold text-black leading-snug">
+                        Approve &amp; Lock Piles?
+                    </h3>
+                    <p class="mt-0.5 text-xs text-base-content/60">
+                        Central Office Final GMR Approval
+                    </p>
+                </div>
+                <button type="button" id="btn-close-approve-confirm" class="btn btn-circle btn-text btn-xs text-base-content/50 hover:text-black" aria-label="Close">
+                    &times;
+                </button>
+            </div>
+
+            <div class="mt-4 space-y-3">
+                <p class="text-sm leading-relaxed text-black">
+                    Are you sure you want to approve this GMR report and permanently lock the <strong class="font-semibold text-primary">{{ $approval->piles->count() }} included pile(s)</strong>?
+                </p>
+
+                <div class="rounded-xl border border-warning/30 bg-warning/10 p-3 text-xs text-black">
+                    <div class="flex gap-2.5">
+                        <span class="icon-[tabler--alert-triangle] size-5 text-warning shrink-0 mt-0.5"></span>
+                        <div class="space-y-1">
+                            <span class="font-bold block text-black">This action cannot be undone.</span>
+                            <span class="text-base-content/80 block leading-relaxed">
+                                All {{ $approval->piles->count() }} pile(s) will be locked with their official GMR and immediately become eligible for Rice Milling.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded-xl bg-base-200/70 p-3 text-xs space-y-1.5 border border-base-content/5">
+                    <div class="flex justify-between items-center">
+                        <span class="text-base-content/60">Branch</span>
+                        <span class="font-semibold text-black">{{ $approval->branch?->name ?? '—' }}</span>
+                    </div>
+                    @if ($approval->reference_number)
+                        <div class="flex justify-between items-center">
+                            <span class="text-base-content/60">Recommendation Memo</span>
+                            <span class="font-mono text-black">{{ $approval->reference_number }}</span>
+                        </div>
+                    @endif
+                    <div class="flex justify-between items-center">
+                        <span class="text-base-content/60">Piles to Lock</span>
+                        <span class="badge badge-soft badge-primary font-mono text-xs font-bold">{{ $approval->piles->count() }} pile(s)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex items-center justify-end gap-3 border-t border-base-content/10 pt-4">
+                <button type="button"
+                        id="btn-cancel-approve-confirm"
+                        class="btn btn-outline min-h-10 px-4 text-sm">
+                    Cancel
+                </button>
+                <button type="button"
+                        id="btn-submit-approve-confirm"
+                        class="btn btn-primary min-h-10 px-5 text-sm gap-2">
+                    <span class="icon-[tabler--check] size-4"></span>
+                    Yes, Approve &amp; Lock
+                </button>
+            </div>
+        </div>
+    </div>
 
     <form id="reject-form" method="POST" action="{{ route('gmr-approvals.reject', $approval) }}" class="hidden mb-5 card border border-error/30 p-4">
         @csrf
@@ -177,14 +252,70 @@
     document.addEventListener('DOMContentLoaded', function () {
         const rejectBtn = document.getElementById('btn-reject');
         const rejectForm = document.getElementById('reject-form');
-        const cancelBtn = document.getElementById('btn-cancel-reject');
+        const cancelRejectBtn = document.getElementById('btn-cancel-reject');
+
+        const openApproveConfirmBtn = document.getElementById('btn-open-approve-confirm');
+        const approveConfirmModal = document.getElementById('approve-confirm-modal');
+        const closeApproveConfirmBtn = document.getElementById('btn-close-approve-confirm');
+        const cancelApproveConfirmBtn = document.getElementById('btn-cancel-approve-confirm');
+        const submitApproveConfirmBtn = document.getElementById('btn-submit-approve-confirm');
+        const approveForm = document.getElementById('approve-form');
 
         if (rejectBtn && rejectForm) {
             rejectBtn.addEventListener('click', () => rejectForm.classList.remove('hidden'));
         }
-        if (cancelBtn) {
-            cancelBtn.addEventListener('click', () => rejectForm?.classList.add('hidden'));
+        if (cancelRejectBtn) {
+            cancelRejectBtn.addEventListener('click', () => rejectForm?.classList.add('hidden'));
         }
+
+        function openConfirmModal() {
+            if (!approveForm) return;
+            if (!approveForm.checkValidity()) {
+                approveForm.reportValidity();
+                return;
+            }
+            if (approveConfirmModal) {
+                approveConfirmModal.classList.remove('hidden');
+                approveConfirmModal.classList.add('flex');
+            }
+        }
+
+        function closeConfirmModal() {
+            if (approveConfirmModal) {
+                approveConfirmModal.classList.add('hidden');
+                approveConfirmModal.classList.remove('flex');
+            }
+        }
+
+        if (openApproveConfirmBtn) {
+            openApproveConfirmBtn.addEventListener('click', openConfirmModal);
+        }
+        if (closeApproveConfirmBtn) {
+            closeApproveConfirmBtn.addEventListener('click', closeConfirmModal);
+        }
+        if (cancelApproveConfirmBtn) {
+            cancelApproveConfirmBtn.addEventListener('click', closeConfirmModal);
+        }
+        if (approveConfirmModal) {
+            approveConfirmModal.addEventListener('click', function (e) {
+                if (e.target === approveConfirmModal) {
+                    closeConfirmModal();
+                }
+            });
+        }
+        if (submitApproveConfirmBtn && approveForm) {
+            submitApproveConfirmBtn.addEventListener('click', function () {
+                submitApproveConfirmBtn.disabled = true;
+                submitApproveConfirmBtn.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Processing...';
+                approveForm.submit();
+            });
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && approveConfirmModal && !approveConfirmModal.classList.contains('hidden')) {
+                closeConfirmModal();
+            }
+        });
     });
 </script>
 @endsection

@@ -145,7 +145,7 @@
                 <div data-trial-row class="grid grid-cols-1 gap-3 rounded-md border border-blue-200 bg-white p-3 sm:grid-cols-6">
                     <div><label class="block text-sm font-medium text-gray-700">Trial</label><input type="hidden" name="trials[0][trial_number]" data-trial-value value="1"><span data-trial-label class="mt-1 block px-3 py-2 text-sm text-gray-700">Trial 1</span></div>
                     <div><label class="block text-sm font-medium text-gray-700">Test Milling Date</label><input type="text" name="trials[0][test_milling_date]" data-test-field data-flatpickr-date required class="input max-w-sm mt-1 block min-h-10 w-full border border-blue-500! focus:border-green-500! focus:ring-green-500!" placeholder="Month DD, YYYY"></div>
-                    <div><label class="block text-sm font-medium text-gray-700">Rice Miller</label><input type="text" name="trials[0][rice_millers]" data-amr-required class="mt-1 block min-h-10 w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm"></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Rice Miller</label><x-miller-combobox name="trials[0][rice_millers]" data-amr-required class="mt-1 block min-h-10 w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm" placeholder="Type to search or add a miller" /></div>
                     <div><label class="block text-sm font-medium text-gray-700">Palay Input (kg)</label><input type="text" name="trials[0][palay_input]" data-test-field data-number-format inputmode="decimal" autocomplete="off" required class="mt-1 block w-full rounded-md border border-blue-500! px-3 py-2 text-sm"></div>
                     <div><label class="block text-sm font-medium text-gray-700">Rice Output (kg)</label><input type="text" name="trials[0][rice_recovery]" data-test-field data-number-format inputmode="decimal" autocomplete="off" required class="mt-1 block w-full rounded-md border border-blue-500! px-3 py-2 text-sm"></div>
                     <div data-amr-recovery-col class="hidden"><label class="block text-sm font-medium text-gray-700">Recovery Rate (%)</label><input type="number" name="trials[0][recovery_rate]" data-test-field min="0" max="100" step="any" disabled class="mt-1 block w-full rounded-md border border-blue-500! px-3 py-2 text-sm" placeholder="e.g. 63.00"></div>
@@ -593,6 +593,10 @@
             clone.dataset.editing = 'false';
             delete clone.dataset.recordId;
             clone.classList.replace('bg-gray-100', 'bg-white');
+            clone.querySelectorAll('[data-miller-combobox]').forEach((combo) => {
+                combo.querySelector('[data-miller-panel]')?.classList.add('hidden');
+                combo.querySelector('input[name]')?.setAttribute('aria-expanded', 'false');
+            });
             clone.querySelectorAll('input').forEach((input) => {
                 if (!input.hasAttribute('data-trial-value')) {
                     input.value = '';
@@ -632,6 +636,10 @@
             firstRow.dataset.editing = 'false';
             delete firstRow.dataset.recordId;
             firstRow.classList.replace('bg-gray-100', 'bg-white');
+            firstRow.querySelectorAll('[data-miller-combobox]').forEach((combo) => {
+                combo.querySelector('[data-miller-panel]')?.classList.add('hidden');
+                combo.querySelector('input[name]')?.setAttribute('aria-expanded', 'false');
+            });
             firstRow.querySelectorAll('input').forEach((input) => {
                 if (!input.hasAttribute('data-trial-value')) {
                     input.value = '';
