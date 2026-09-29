@@ -285,7 +285,16 @@ class GmrApprovalTest extends TestCase
             ->assertSee('CO Approval Memorandum No.')
             ->assertSee('Approved GMR')
             ->assertSee($recommended)
-            ->assertSee('RM-2026-01-001');
+            ->assertSee('RM-2026-01-001')
+            ->assertSee('data-approve-confirm-trigger="'.$approval->id.'"', false)
+            ->assertSee('id="approve-confirm-modal-'.$approval->id.'"', false)
+            ->assertDontSee('onclick="return confirm(');
+
+        $this->get(route('gmr-approvals.show', $approval))
+            ->assertOk()
+            ->assertSee('id="btn-open-approve-confirm"', false)
+            ->assertSee('id="approve-confirm-modal"', false)
+            ->assertDontSee('onclick="return confirm(');
     }
 
     /**

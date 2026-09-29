@@ -4,12 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\Branch;
+use App\Models\Miller;
 use App\Models\Milling;
 use App\Models\MillingProgress;
 use App\Models\Pile;
+use App\Models\Warehouse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -27,17 +28,61 @@ class MillingController extends Controller
             ? (int) $user->branch_id
             : ($request->integer('branch_id') ?: null);
 
+        $warehouseId = $request->integer('warehouse_id') ?: null;
+
+        // If both branch and warehouse are selected, verify warehouse belongs to branch
+        if ($branchId && $warehouseId) {
+            $belongs = Warehouse::query()->where('id', $warehouseId)->where('branch_id', $branchId)->exists();
+            if (! $belongs) {
+                $warehouseId = null;
+            }
+        }
+
         $status = $request->input('status');
+        $dateFrom = $request->input('date_from') ?: $request->input('from') ?: $request->input('date');
+        $dateTo = $request->input('date_to') ?: $request->input('to') ?: $request->input('date');
 
         $millings = Milling::query()
             ->with(['branch:id,name', 'pile:id,pile_number,number,branch_id,warehouse_id,variety,quality,volume_kg', 'pile.warehouse:id,branch_id,name', 'assignedBy:id,name'])
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+            ->when($warehouseId, fn ($q) => $q->whereHas('pile', fn ($pq) => $pq->where('warehouse_id', $warehouseId)))
             ->when($status, fn ($q) => $q->where('status', $status))
+            ->when($dateFrom || $dateTo, function ($q) use ($dateFrom, $dateTo) {
+                $q->where(function ($sub) use ($dateFrom, $dateTo) {
+                    $sub->where(function ($assignedQ) use ($dateFrom, $dateTo) {
+                        if ($dateFrom) {
+                            $assignedQ->where(function ($w) use ($dateFrom) {
+                                $w->whereDate('assigned_at', '>=', $dateFrom)
+                                    ->orWhere(fn ($sq) => $sq->whereNull('assigned_at')->whereDate('created_at', '>=', $dateFrom));
+                            });
+                        }
+                        if ($dateTo) {
+                            $assignedQ->where(function ($w) use ($dateTo) {
+                                $w->whereDate('assigned_at', '<=', $dateTo)
+                                    ->orWhere(fn ($sq) => $sq->whereNull('assigned_at')->whereDate('created_at', '<=', $dateTo));
+                            });
+                        }
+                    })->orWhereHas('progress', function ($progQ) use ($dateFrom, $dateTo) {
+                        if ($dateFrom) {
+                            $progQ->whereDate('progress_date', '>=', $dateFrom);
+                        }
+                        if ($dateTo) {
+                            $progQ->whereDate('progress_date', '<=', $dateTo);
+                        }
+                    });
+                });
+            })
             ->latest()
             ->paginate(20)
             ->withQueryString();
 
         $branches = $this->branchesForUser($user, $isStaff);
+
+        $warehouses = Warehouse::query()
+            ->with('branch:id,name')
+            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+            ->orderBy('name')
+            ->get(['id', 'branch_id', 'name']);
 
         // Available approved-GMR piles for the Assign Milling modal.
         $availablePiles = $this->availablePiles($isStaff ? (int) $user->branch_id : null);
@@ -45,10 +90,14 @@ class MillingController extends Controller
         return view('millings.index', [
             'millings' => $millings,
             'branches' => $branches,
+            'warehouses' => $warehouses,
             'availablePiles' => $availablePiles,
             'filters' => [
                 'branch_id' => $branchId,
+                'warehouse_id' => $warehouseId,
                 'status' => $status,
+                'date_from' => $dateFrom,
+                'date_to' => $dateTo,
             ],
         ]);
     }
@@ -151,11 +200,18 @@ class MillingController extends Controller
         $finalGmr = $pile->finalGmr();
         $finalGmrSource = $pile->finalGmrIsCoApproved() ? 'co_approved' : 'recommended';
 
-        $milling = DB::transaction(function () use ($validated, $pile, $targetVolumeKg, $targetVolumeBags, $finalGmr, $finalGmrSource, $request): Milling {
+        // Link the free-text miller name to its master profile when known.
+        $millerName = $validated['miller'] ?? null;
+        $millerId = filled($millerName)
+            ? Miller::where('name', $millerName)->value('id')
+            : null;
+
+        $milling = DB::transaction(function () use ($validated, $pile, $targetVolumeKg, $targetVolumeBags, $finalGmr, $finalGmrSource, $request, $millerId): Milling {
             $milling = Milling::create([
                 'branch_id' => $validated['branch_id'],
                 'pile_id' => $pile->id,
                 'miller' => $validated['miller'] ?? null,
+                'miller_id' => $millerId,
                 'reference_number' => $validated['reference_number'] ?? null,
                 'status' => 'assigned',
                 'target_volume_kg' => $targetVolumeKg > 0 ? $targetVolumeKg : null,

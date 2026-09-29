@@ -19,13 +19,32 @@
 </div>
 
 <form method="GET" action="{{ route('millings.index') }}" class="card mb-5 border border-base-content/10 bg-base-100 p-4 text-black shadow-sm">
-    <div class="grid grid-cols-1 items-end gap-4 md:grid-cols-3">
+    <div class="grid grid-cols-1 items-end gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <label class="form-control">
             <span class="label-text mb-2 text-sm font-semibold text-black">Branch</span>
-            <select name="branch_id" class="select select-bordered min-h-11 w-full text-base text-black" onchange="this.form.submit()">
-                <option value="">All Branches</option>
+            @php
+                $isStaffUser = auth()->user()?->hasRole('STAFF') && auth()->user()?->branch_id;
+            @endphp
+            <select name="branch_id" class="select select-bordered min-h-11 w-full text-base text-black @if($isStaffUser) bg-gray-100 text-gray-500 cursor-not-allowed @endif" onchange="this.form.submit()" @disabled($isStaffUser)>
+                @unless($isStaffUser)
+                    <option value="">All Branches</option>
+                @endunless
                 @foreach ($branches as $branch)
                     <option value="{{ $branch->id }}" @selected((int) ($filters['branch_id'] ?? 0) === $branch->id)>{{ $branch->name }}</option>
+                @endforeach
+            </select>
+            @if($isStaffUser)
+                <input type="hidden" name="branch_id" value="{{ auth()->user()->branch_id }}">
+            @endif
+        </label>
+        <label class="form-control">
+            <span class="label-text mb-2 text-sm font-semibold text-black">Warehouse</span>
+            <select name="warehouse_id" class="select select-bordered min-h-11 w-full text-base text-black" onchange="this.form.submit()">
+                <option value="">All Warehouses</option>
+                @foreach ($warehouses as $warehouse)
+                    <option value="{{ $warehouse->id }}" @selected((int) ($filters['warehouse_id'] ?? 0) === $warehouse->id)>
+                        {{ $warehouse->name }}{{ empty($filters['branch_id']) && $warehouse->branch ? ' (' . $warehouse->branch->name . ')' : '' }}
+                    </option>
                 @endforeach
             </select>
         </label>
@@ -39,7 +58,28 @@
                 <option value="cancelled" @selected(($filters['status'] ?? null) === 'cancelled')>Cancelled</option>
             </select>
         </label>
-        <div class="flex gap-2">
+        <label class="form-control">
+            <span class="label-text mb-2 text-sm font-semibold text-black">Date From</span>
+            <input type="date" name="date_from" value="{{ $filters['date_from'] ?? '' }}" class="input input-bordered min-h-11 w-full text-base text-black" />
+        </label>
+        <label class="form-control">
+            <span class="label-text mb-2 text-sm font-semibold text-black">Date To</span>
+            <input type="date" name="date_to" value="{{ $filters['date_to'] ?? '' }}" class="input input-bordered min-h-11 w-full text-base text-black" />
+        </label>
+    </div>
+    <div class="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-base-content/10 pt-3">
+        <div class="text-xs text-base-content/60">
+            @if(!empty($filters['date_from']) || !empty($filters['date_to']) || !empty($filters['warehouse_id']) || !empty($filters['branch_id']) || !empty($filters['status']))
+                Filtering by assigned date, branch, warehouse, and status.
+            @else
+                Filter rice milling progress by branch, warehouse, status, or date range.
+            @endif
+        </div>
+        <div class="flex items-center gap-2">
+            <button type="submit" class="btn btn-primary min-h-11 px-5 text-sm gap-2">
+                <span class="icon-[tabler--filter] size-4"></span>
+                Filter
+            </button>
             <a href="{{ route('millings.index') }}" class="btn btn-outline min-h-11 px-4 text-sm">Reset Filters</a>
         </div>
     </div>
@@ -48,7 +88,13 @@
 @if ($millings->isEmpty())
     <div class="card border border-dashed border-base-content/20 bg-base-100 p-10 text-center text-black shadow-sm">
         <h2 class="font-semibold">No rice-milling assignments found.</h2>
-        <p class="mt-1 text-sm text-black">@can('manage-millings')Assign a milling to an approved-GMR pile to begin. @elseNo milling assignments have been created yet.@endcan</p>
+        <p class="mt-1 text-sm text-black">
+            @if(!empty($filters['date_from']) || !empty($filters['date_to']) || !empty($filters['warehouse_id']) || !empty($filters['branch_id']) || !empty($filters['status']))
+                No records match the selected filter criteria. Try resetting or adjusting the filters.
+            @else
+                @can('manage-millings')Assign a milling to an approved-GMR pile to begin. @elseNo milling assignments have been created yet.@endcan
+            @endif
+        </p>
     </div>
 @else
     <section class="card border border-base-content/10 bg-base-100 p-4 text-black shadow-sm">
@@ -147,7 +193,7 @@
 
                     <label class="form-control">
                         <span class="label-text mb-2 text-sm font-semibold text-black">Miller / Rice Mill</span>
-                        <input type="text" name="miller" class="input input-bordered min-h-11 w-full text-black" placeholder="e.g. North Cotabato Rice Mill" />
+                        <x-miller-combobox name="miller" class="input input-bordered min-h-11 w-full text-black" placeholder="e.g. North Cotabato Rice Mill" />
                     </label>
 
                     <label class="form-control">

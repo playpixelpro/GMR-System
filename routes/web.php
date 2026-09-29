@@ -8,6 +8,7 @@ use App\Http\Controllers\GmrApprovalController;
 use App\Http\Controllers\GmrReportConfigController;
 use App\Http\Controllers\GmrReportPrintController;
 use App\Http\Controllers\GmrSummaryController;
+use App\Http\Controllers\MillerController;
 use App\Http\Controllers\MillingController;
 use App\Http\Controllers\PmrRecordController;
 use App\Http\Controllers\SettingsController;
@@ -189,6 +190,32 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
         DataEntryController::class,
         'updatePileStatus',
     ])->name('piles.status');
+
+    Route::get('/millers', [MillerController::class, 'index'])->name(
+        'millers.index',
+    );
+    Route::post('/millers', [MillerController::class, 'store'])->name(
+        'millers.store',
+    );
+
+    Route::middleware('can:manage-millings')->group(function (): void {
+        Route::get('/settings/millers', [
+            MillerController::class,
+            'manage',
+        ])->name('settings.millers');
+        Route::get('/settings/millers/{miller}/edit', [
+            MillerController::class,
+            'edit',
+        ])->name('settings.millers.edit');
+        Route::patch('/settings/millers/{miller}', [
+            MillerController::class,
+            'update',
+        ])->name('settings.millers.update');
+        Route::delete('/settings/millers/{miller}', [
+            MillerController::class,
+            'destroy',
+        ])->name('settings.millers.destroy');
+    });
 
     Route::get('/amr/report', [AmrRecordController::class, 'index'])->name(
         'amr.index',

@@ -1,5 +1,6 @@
 import "flyonui/flyonui";
 import flatpickr from "flatpickr";
+import "./miller-combobox.js";
 
 window.flatpickr = flatpickr;
 

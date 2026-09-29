@@ -51,7 +51,7 @@
 
         <label class="form-control">
             <span class="label-text mb-2 text-sm font-semibold text-black">Miller / Rice Mill</span>
-            <input type="text" name="miller" class="input input-bordered min-h-11 w-full text-black" placeholder="e.g. North Cotabato Rice Mill" />
+            <x-miller-combobox name="miller" class="input input-bordered min-h-11 w-full text-black" placeholder="e.g. North Cotabato Rice Mill" />
         </label>
 
         <label class="form-control">

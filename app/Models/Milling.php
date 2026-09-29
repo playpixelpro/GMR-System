@@ -12,6 +12,7 @@ class Milling extends Model
         'branch_id',
         'pile_id',
         'miller',
+        'miller_id',
         'reference_number',
         'status',
         'target_volume_kg',
@@ -50,6 +51,15 @@ class Milling extends Model
     public function assignedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_by');
+    }
+
+    /**
+     * The miller profile behind the free-text miller name (null when the name
+     * is not (yet) part of the millers master list).
+     */
+    public function millerProfile(): BelongsTo
+    {
+        return $this->belongsTo(Miller::class, 'miller_id');
     }
 
     public function progress(): HasMany
