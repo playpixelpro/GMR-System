@@ -307,10 +307,11 @@
             const normalized = value.replace(/[^0-9.]/g, '');
             const parts = normalized.split('.');
             const integerPart = parts.shift() || '';
-            const decimalPart = parts.join('').slice(0, 3);
+            const hasDot = parts.length > 0;
+            const decimalPart = parts.join('').slice(0, 6);
             const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
-            return decimalPart ? `${formattedInteger}.${decimalPart}` : formattedInteger;
+            return hasDot ? `${formattedInteger}.${decimalPart}` : formattedInteger;
         }
 
         function getPileVolume() {
