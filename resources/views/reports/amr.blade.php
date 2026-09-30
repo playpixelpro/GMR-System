@@ -113,68 +113,95 @@
           $pmrRateValue = is_array($group) || $group instanceof \ArrayAccess ? ($group['pmr_rate'] ?? null) : null;
           $modalId = 'amr-calc-modal-' . ($pile?->id ?? $firstRecord?->pile_id ?? 'group-' . $groupIndex);
           $hasAmrTrials = $records->isNotEmpty();
+          $isMri = $calculation->isMriEstablished();
+          $isLowVolEligible = ($volumeKg > 0 && (float) $volumeKg <= 50000);
+          $isSingleRow = $isMri || ($records->isEmpty() && $isLowVolEligible);
+          $totalRows = $isSingleRow ? 1 : 3;
         @endphp
-        @for ($trial = 1; $trial <= 3; $trial++)
-          @php $record = $trialRecords->get($trial); @endphp
-          <tr class="{{ $trial === 3 ? 'border-b-2 border-base-content/20' : 'border-b border-base-content/10' }} hover:bg-base-200/30">
+        @for ($trial = 1; $trial <= $totalRows; $trial++)
+          @php $record = $isMri ? $records->first() : $trialRecords->get($trial); @endphp
+          <tr class="{{ $trial === $totalRows ? 'border-b-2 border-base-content/20' : 'border-b border-base-content/10' }} hover:bg-base-200/30">
             @if ($trial === 1)
-              <td rowspan="3" class="text-center font-medium align-middle border-e border-base-content/10 px-2 py-1">
+              <td rowspan="{{ $totalRows }}" class="text-center font-medium align-middle border-e border-base-content/10 px-2 py-1">
                 {{ $groupIndex }}
               </td>
-              <td rowspan="3" class="align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td rowspan="{{ $totalRows }}" class="align-middle border-e border-base-content/10 px-2.5 py-1">
                 {{ $branchName }}
               </td>
-              <td rowspan="3" class="align-middle font-medium border-e border-base-content/10 px-2.5 py-1">
+              <td rowspan="{{ $totalRows }}" class="align-middle font-medium border-e border-base-content/10 px-2.5 py-1">
                 {{ $warehouseName }}
               </td>
-              <td rowspan="3" class="text-center align-middle border-e border-base-content/10 px-2 py-1">
+              <td rowspan="{{ $totalRows }}" class="text-center align-middle border-e border-base-content/10 px-2 py-1">
                 <span class="font-semibold text-base-content">{{ $pileNumber }}</span>
               </td>
-              <td rowspan="3" class="align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td rowspan="{{ $totalRows }}" class="align-middle border-e border-base-content/10 px-2.5 py-1">
                 {{ $variety }}
               </td>
-              <td rowspan="3" class="text-end font-mono align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td rowspan="{{ $totalRows }}" class="text-end font-mono align-middle border-e border-base-content/10 px-2.5 py-1">
                 {{ $purity !== null ? number_format((float) $purity, 2) : '—' }}
               </td>
-              <td rowspan="3" class="text-end font-mono align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td rowspan="{{ $totalRows }}" class="text-end font-mono align-middle border-e border-base-content/10 px-2.5 py-1">
                 {{ $mc !== null ? number_format((float) $mc, 1) : '—' }}
               </td>
-              <td rowspan="3" class="text-center align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td rowspan="{{ $totalRows }}" class="text-center align-middle border-e border-base-content/10 px-2.5 py-1">
                 @if ($quality)
                   <span class="badge badge-soft badge-primary text-xs uppercase">{{ strtoupper(str_replace('_', ' ', $quality)) }}</span>
                 @else
                   —
                 @endif
               </td>
-              <td rowspan="3" class="text-center align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td rowspan="{{ $totalRows }}" class="text-center align-middle border-e border-base-content/10 px-2.5 py-1">
                 {{ $agedMonths }}
               </td>
-              <td rowspan="3" class="text-end font-mono align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td rowspan="{{ $totalRows }}" class="text-end font-mono align-middle border-e border-base-content/10 px-2.5 py-1">
                 {{ number_format((float) $volumeKg / 50, 3) }}
               </td>
-              <td rowspan="3" class="align-middle border-e border-base-content/20 font-medium px-2.5 py-1">
+              <td rowspan="{{ $totalRows }}" class="align-middle border-e border-base-content/20 font-medium px-2.5 py-1">
                 {{ $riceMillers }}
               </td>
             @endif
 
-            <td class="text-center align-middle px-2 py-1">
-              <span class="badge badge-soft badge-neutral text-xs font-semibold px-1.5 py-0.5">Trial {{ $trial }}</span>
-            </td>
-            <td class="text-end font-mono align-middle px-2.5 py-1">
-              {{ $record && $record->palay_input_kg !== null ? number_format((float) $record->palay_input_kg, 2) : '—' }}
-            </td>
-            <td class="text-end font-mono align-middle px-2.5 py-1">
-              {{ $record && $record->rice_recovery_kg !== null ? number_format((float) $record->rice_recovery_kg, 2) : '—' }}
-            </td>
-            <td class="text-end font-mono font-medium align-middle border-e border-base-content/20 px-2.5 py-1 {{ $record ? 'text-primary' : '' }}">
-              {{ $record && $record->milling_recovery_percentage > 0 ? number_format($record->milling_recovery_percentage, 2) . '%' : '—' }}
-            </td>
+            @if ($isMri)
+              <td class="text-center align-middle px-2 py-1">
+                <span class="badge badge-soft badge-info text-xs font-semibold px-1.5 py-0.5" title="Milling Recovery Index deduction per NFA Guideline C.3.10">C.3.10 (MRI)</span>
+              </td>
+              <td class="text-center font-mono text-base-content/40 align-middle px-2.5 py-1">
+                <span class="text-xs italic" title="Commercial test milling exempt for &le; 50,000 kg">Exempt</span>
+              </td>
+              <td class="text-center font-mono text-base-content/40 align-middle px-2.5 py-1">
+                <span class="text-xs italic" title="Commercial test milling exempt for &le; 50,000 kg">Exempt</span>
+              </td>
+              <td class="text-end font-mono font-medium align-middle border-e border-base-content/20 px-2.5 py-1 text-primary">
+                <div>{{ number_format((float) $record->milling_recovery, 2) }}%</div>
+                <div class="text-[10px] text-base-content/60 font-normal">PMR {{ number_format((float) $record->pmr_rate, 2) }}% &minus; {{ number_format((float) $record->mri_rate, 2) }}%</div>
+              </td>
+            @elseif ($isSingleRow && ! $hasAmrTrials)
+              <td class="text-center align-middle px-2 py-1">
+                <span class="badge badge-soft badge-neutral text-xs">Exempt / MRI</span>
+              </td>
+              <td class="text-center font-mono text-base-content/40 align-middle px-2.5 py-1">—</td>
+              <td class="text-center font-mono text-base-content/40 align-middle px-2.5 py-1">—</td>
+              <td class="text-center font-mono text-base-content/40 align-middle border-e border-base-content/20 px-2.5 py-1">—</td>
+            @else
+              <td class="text-center align-middle px-2 py-1">
+                <span class="badge badge-soft badge-neutral text-xs font-semibold px-1.5 py-0.5">Trial {{ $trial }}</span>
+              </td>
+              <td class="text-end font-mono align-middle px-2.5 py-1">
+                {{ $record && $record->palay_input_kg !== null ? number_format((float) $record->palay_input_kg, 2) : '—' }}
+              </td>
+              <td class="text-end font-mono align-middle px-2.5 py-1">
+                {{ $record && $record->rice_recovery_kg !== null ? number_format((float) $record->rice_recovery_kg, 2) : '—' }}
+              </td>
+              <td class="text-end font-mono font-medium align-middle border-e border-base-content/20 px-2.5 py-1 {{ $record ? 'text-primary' : '' }}">
+                {{ $record && $record->milling_recovery_percentage > 0 ? number_format($record->milling_recovery_percentage, 2) . '%' : '—' }}
+              </td>
+            @endif
 
             @if ($trial === 1)
-              <td rowspan="3" class="text-end font-mono font-semibold text-primary align-middle border-e border-base-content/10 px-2.5 py-1">
-                {{ $mean !== null ? number_format($mean, 2) . '%' : '—' }}
+              <td rowspan="{{ $totalRows }}" class="text-end font-mono font-semibold text-primary align-middle border-e border-base-content/10 px-2.5 py-1">
+                {{ $isMri ? number_format((float) $amrRateValue, 2) . '%' : ($mean !== null ? number_format($mean, 2) . '%' : '—') }}
               </td>
-              <td rowspan="3" class="text-end font-mono font-semibold align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td rowspan="{{ $totalRows }}" class="text-end font-mono font-semibold align-middle border-e border-base-content/10 px-2.5 py-1">
                 @if (! $hasAmrTrials)
                   <span class="text-base-content/50">—</span>
                 @elseif ($calculation->isValid)
@@ -206,7 +233,7 @@
                   </a>
                 @endif
               </td>
-              <td rowspan="3" class="text-center align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td rowspan="{{ $totalRows }}" class="text-center align-middle border-e border-base-content/10 px-2.5 py-1">
                 @php
                   $reestablishment = app(\App\Services\PmrCalculationService::class)->evaluateReestablishment($pmrRateValue, $amrRateValue);
                   $isAmrLowerThan60 = $amrRateValue !== null && $amrRateValue <= 60.0;
@@ -218,9 +245,9 @@
                   @if (! $hasAmrTrials)
                     <span class="badge badge-soft badge-neutral text-xs font-medium px-2 py-0.5 whitespace-nowrap">
                       <span class="icon-[tabler--clock] size-3.5 mr-1"></span>
-                      Pending AMR Trials (0/3)
+                      {{ $isLowVolEligible ? 'Pending MRI (Exempt)' : 'Pending AMR Trials (0/3)' }}
                     </span>
-                  @elseif ($records->count() < 3 && $amrRateValue === null)
+                  @elseif (! $isMri && $records->count() < 3 && $amrRateValue === null)
                     <span class="badge badge-soft badge-neutral text-xs px-1.5 py-0.5">{{ $records->count() }}/3 trials</span>
                   @else
                     @if ($isAmrLowerThan60)
@@ -268,7 +295,7 @@
                   @endif
                 </div>
               </td>
-              <td rowspan="3" class="align-middle text-center px-2 py-1">
+              <td rowspan="{{ $totalRows }}" class="align-middle text-center px-2 py-1">
                 <div class="flex items-center justify-center gap-1">
                   @if ($pile && strtolower((string)$pile->amr_status) === 'retest')
                     @if (auth()->user()?->hasRole('STAFF', 'RMEC', 'ADMINISTRATOR'))
@@ -350,7 +377,7 @@
                               </li>
                             @endforeach
                           @else
-                            <li class="dropdown-item text-xs text-base-content/60">Complete 3 trials first</li>
+                            <li class="dropdown-item text-xs text-base-content/60">{{ $isLowVolEligible ? 'Pending MRI establishment' : 'Complete 3 trials first' }}</li>
                           @endif
                         </ul>
                       </div>
@@ -424,7 +451,52 @@
       <div class="p-4 space-y-4 overflow-y-auto text-xs">
 
         {{-- Status Alert Banner --}}
-        @if ($calculation->isValid)
+        @if ($calculation->isMriEstablished())
+          <div class="alert alert-soft alert-info text-xs py-2.5 px-3 flex items-start gap-2.5">
+            <span class="icon-[tabler--certificate] size-5 text-info shrink-0 mt-0.5"></span>
+            <div>
+              <span class="font-bold text-sm block">NFA Guideline C.3.10 — Stockpiles &lt; 50,000 kg (&lt; 1,000 bags)</span>
+              <p class="mt-0.5 text-base-content/80">
+                Piles with total quantity below 50,000 kg are exempt from commercial test milling. AMR is established directly by deducting the Milling Recovery Index (MRI) of up to 3.00% from PMR (PNS/BAFS 303:2020).
+              </p>
+            </div>
+          </div>
+
+          {{-- MRI Computation Breakdown Card --}}
+          <div class="bg-base-200/50 rounded-xl p-4 border border-base-content/10 space-y-3">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-base-content/70">Milling Recovery Index (MRI) Deduction Breakdown</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
+              <div class="bg-base-100 rounded-lg p-3 border border-base-content/10">
+                <span class="text-xs text-base-content/60 block font-medium">1. Base PMR Rate</span>
+                <span class="font-mono font-bold text-base-content text-base">{{ number_format((float) $calculation->pmrRate, 2) }}%</span>
+                <span class="text-[10px] text-base-content/50 block mt-0.5">Potential Milling Recovery</span>
+              </div>
+              <div class="bg-base-100 rounded-lg p-3 border border-base-content/10">
+                <span class="text-xs text-secondary block font-medium">2. Rate of MRI (Deduction)</span>
+                <span class="font-mono font-bold text-secondary text-base">&minus;{{ number_format((float) $calculation->mriRate, 2) }}%</span>
+                <span class="text-[10px] text-base-content/50 block mt-0.5">Standard Deduction (Max 3.00%)</span>
+              </div>
+              <div class="bg-primary/10 rounded-lg p-3 border border-primary/30">
+                <span class="text-xs text-primary block font-bold">3. Established AMR</span>
+                <span class="font-mono font-bold text-primary text-lg">{{ $calculation->getFormattedAmrRate() }}</span>
+                <span class="text-[10px] text-primary/80 block mt-0.5">AMR = PMR &minus; MRI</span>
+              </div>
+            </div>
+            <div class="p-2.5 bg-base-100 rounded-lg border border-base-content/10 text-xs text-base-content/70 flex items-center justify-between">
+              <span>Formula: <strong>AMR (%) = PMR (%) &minus; MRI Rate (%)</strong></span>
+              <span class="badge badge-soft badge-primary font-semibold">Valid C.3.10 Establishment</span>
+            </div>
+            @if ($calculation->getMriRemarks())
+              <div class="p-3 bg-amber-50 rounded-lg border border-amber-200 text-xs space-y-1">
+                <div class="flex items-center gap-1.5 font-semibold text-amber-800">
+                  <span class="icon-[tabler--file-description] size-4 shrink-0"></span>
+                  <span>Explanation / Basis of MRI Rate Used</span>
+                </div>
+                <p class="text-amber-900/80 leading-relaxed pl-5.5">{{ $calculation->getMriRemarks() }}</p>
+              </div>
+            @endif
+          </div>
+        @elseif ($calculation->isValid)
           <div class="alert alert-soft alert-primary text-xs py-2 px-3 flex items-center gap-2">
             <span class="icon-[tabler--circle-check] size-4 shrink-0"></span>
             <div>
@@ -450,6 +522,7 @@
           </div>
         @endif
 
+        @if (! $calculation->isMriEstablished())
         {{-- Statistical Summary Cards --}}
         <div>
           <h4 class="text-xs font-semibold uppercase tracking-wider text-base-content/60 mb-1.5">1. Statistical Distribution (±2% Tolerance)</h4>
@@ -518,6 +591,7 @@
             </table>
           </div>
         </div>
+        @endif
 
         {{-- Final Result & Re-establishment Checks --}}
         <div class="bg-base-200/40 p-3 rounded-lg border border-base-content/10 space-y-2">

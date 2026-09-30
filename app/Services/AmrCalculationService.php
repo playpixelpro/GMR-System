@@ -20,7 +20,7 @@ class AmrCalculationService
      *
      * @param  iterable<mixed>  $trials
      */
-    public function calculate(iterable $trials): AmrCalculationResult
+    public function calculate(iterable $trials, ?Pile $pile = null): AmrCalculationResult
     {
         $normalizedTrials = [];
 
@@ -72,6 +72,30 @@ class AmrCalculationService
                             ? (float) $trial->rice_recovery_kg
                             : null));
 
+            $pmrRate =
+                $trial instanceof AmrRecord
+                    ? ($trial->pmr_rate !== null ? (float) $trial->pmr_rate : null)
+                    : (is_array($trial)
+                        ? (isset($trial['pmr_rate']) && $trial['pmr_rate'] !== '' && $trial['pmr_rate'] !== null ? (float) $trial['pmr_rate'] : null)
+                        : (isset($trial->pmr_rate) && $trial->pmr_rate !== null ? (float) $trial->pmr_rate : null));
+
+            $mriRate =
+                $trial instanceof AmrRecord
+                    ? ($trial->mri_rate !== null ? (float) $trial->mri_rate : null)
+                    : (is_array($trial)
+                        ? (isset($trial['mri_rate']) && $trial['mri_rate'] !== '' && $trial['mri_rate'] !== null ? (float) $trial['mri_rate'] : null)
+                        : (isset($trial->mri_rate) && $trial->mri_rate !== null ? (float) $trial->mri_rate : null));
+
+            $establishmentType =
+                $trial instanceof AmrRecord
+                    ? $trial->establishment_type
+                    : (is_array($trial) ? ($trial['establishment_type'] ?? null) : ($trial->establishment_type ?? null));
+
+            $mriRemarks =
+                $trial instanceof AmrRecord
+                    ? $trial->mri_remarks
+                    : (is_array($trial) ? ($trial['mri_remarks'] ?? null) : ($trial->mri_remarks ?? null));
+
             $providedRecovery =
                 $trial instanceof AmrRecord
                     ? ($trial->milling_recovery !== null
@@ -95,7 +119,9 @@ class AmrCalculationService
                                 ? (float) $trial->recovery_rate
                                 : null)));
 
-            if (
+            if ($pmrRate !== null && $mriRate !== null) {
+                $millingRecovery = round($pmrRate - $mriRate, 2);
+            } elseif (
                 $palayInput !== null &&
                 $riceRecovery !== null &&
                 $palayInput > 0
@@ -114,6 +140,10 @@ class AmrCalculationService
                 'trial_number' => $trialNumber,
                 'palay_input_kg' => $palayInput !== null ? round($palayInput, 2) : null,
                 'rice_recovery_kg' => $riceRecovery !== null ? round($riceRecovery, 2) : null,
+                'pmr_rate' => $pmrRate,
+                'mri_rate' => $mriRate,
+                'mri_remarks' => $mriRemarks,
+                'establishment_type' => $establishmentType,
                 'milling_recovery' => $millingRecovery,
                 'is_outlier' => false,
                 'status' => 'PENDING',
@@ -123,6 +153,125 @@ class AmrCalculationService
 
         ksort($normalizedTrials);
         $trialCount = count($normalizedTrials);
+
+        $pileVolume = $pile?->volume_kg;
+        if ($pileVolume === null) {
+            foreach ($trials as $t) {
+                if ($t instanceof AmrRecord) {
+                    $pileVolume = $t->pile?->volume_kg ?? $t->volume_kg;
+                } elseif (is_array($t) && isset($t['volume_kg'])) {
+                    $pileVolume = $t['volume_kg'];
+                } elseif (is_array($t) && isset($t['volume'])) {
+                    $pileVolume = $t['volume'];
+                } elseif (is_object($t) && isset($t->volume_kg)) {
+                    $pileVolume = $t->volume_kg;
+                }
+                if ($pileVolume !== null) {
+                    break;
+                }
+            }
+        }
+        $isLowVolume = $pileVolume !== null && (float) $pileVolume < 50000;
+
+        if ($trialCount === 0) {
+            $snapshot = [
+                'formula' => $isLowVolume ? 'NFA Guideline C.3.10 (Milling Recovery Index)' : 'NFA Actual Milling Recovery (AMR)',
+                'rule_version' => 'NFA-AMR-2026',
+                'is_mri_established' => false,
+                'required_trials' => $isLowVolume ? 1 : self::REQUIRED_TRIALS,
+                'entered_trials' => 0,
+                'median' => null,
+                'lower_limit' => null,
+                'upper_limit' => null,
+                'trials' => [],
+                'valid_trial_count' => 0,
+                'outlier_count' => 0,
+                'amr_rate' => null,
+                'status' => 'INCOMPLETE',
+                'status_label' => $isLowVolume ? 'Pending AMR Establishment' : 'Incomplete (0/3 Trials)',
+                'status_message' => $isLowVolume
+                    ? 'No AMR establishment record found for this pile.'
+                    : 'At least 3 actual milling trials are required to compute AMR.',
+                'calculated_at' => now()->toIso8601String(),
+            ];
+
+            return new AmrCalculationResult(
+                trials: [],
+                median: null,
+                lowerLimit: null,
+                upperLimit: null,
+                validTrialCount: 0,
+                outlierCount: 0,
+                amrRate: null,
+                isValid: false,
+                status: 'INCOMPLETE',
+                statusLabel: $isLowVolume ? 'Pending AMR Establishment' : 'Incomplete (0/3 Trials)',
+                statusMessage: $isLowVolume
+                    ? 'No AMR establishment record found for this pile.'
+                    : 'At least 3 actual milling trials are required to compute AMR.',
+                snapshot: $snapshot,
+            );
+        }
+
+        $firstNormalized = reset($normalizedTrials);
+        $hasMriExplicit = ($firstNormalized['establishment_type'] ?? null) === 'mri'
+            || (($firstNormalized['pmr_rate'] ?? null) !== null && ($firstNormalized['mri_rate'] ?? null) !== null);
+
+        // C.3.10: Piles < 50,000 kg (< 1,000 bags) established via MRI or single trial without palay input
+        if ($isLowVolume && ($hasMriExplicit || ($trialCount === 1 && empty($firstNormalized['palay_input_kg'])))) {
+            $validRecoveries = array_column($normalizedTrials, 'milling_recovery');
+            $amrRate = round(array_sum($validRecoveries) / count($validRecoveries), 2);
+            $recordedPmr = $firstNormalized['pmr_rate'] ?? null;
+            $recordedMri = $firstNormalized['mri_rate'] ?? null;
+
+            foreach ($normalizedTrials as $index => $item) {
+                $normalizedTrials[$index]['is_outlier'] = false;
+                $normalizedTrials[$index]['status'] = 'VALID';
+            }
+
+            $evaluatedTrialsList = array_values($normalizedTrials);
+            $statusLabel = 'Established via MRI (C.3.10)';
+            $statusMessage = "AMR of {$amrRate}% established via Milling Recovery Index (MRI) per NFA Guideline C.3.10 (< 1,000 bags).";
+
+            $snapshot = [
+                'formula' => 'NFA Guideline C.3.10 (Milling Recovery Index)',
+                'rule_version' => 'NFA-AMR-2026-C310',
+                'is_mri_established' => true,
+                'stockpile_exemption' => 'Quantity < 1,000 bags (< 50,000 kg)',
+                'required_trials' => 1,
+                'entered_trials' => $trialCount,
+                'pmr_rate' => $recordedPmr,
+                'mri_rate' => $recordedMri,
+                'mri_remarks' => $firstNormalized['mri_remarks'] ?? null,
+                'median' => $amrRate,
+                'lower_limit' => null,
+                'upper_limit' => null,
+                'trials' => $evaluatedTrialsList,
+                'valid_trial_count' => $trialCount,
+                'outlier_count' => 0,
+                'amr_rate' => $amrRate,
+                'is_valid' => true,
+                'status' => 'VALID',
+                'status_label' => $statusLabel,
+                'status_message' => $statusMessage,
+                'calculated_at' => now()->toIso8601String(),
+            ];
+
+            return new AmrCalculationResult(
+                trials: $evaluatedTrialsList,
+                median: $amrRate,
+                lowerLimit: null,
+                upperLimit: null,
+                validTrialCount: $trialCount,
+                outlierCount: 0,
+                amrRate: $amrRate,
+                isValid: true,
+                status: 'VALID',
+                statusLabel: $statusLabel,
+                statusMessage: $statusMessage,
+                snapshot: $snapshot,
+            );
+        }
 
         if ($trialCount < self::REQUIRED_TRIALS) {
             $snapshot = [
@@ -261,15 +410,22 @@ class AmrCalculationService
         $recommended = $pile->amrRecords->filter(
             fn (AmrRecord $r): bool => $r->included_in_computation && $r->status === 'RECOMMENDED',
         );
-        $result = $this->calculate($recommended->isNotEmpty() ? $recommended : $pile->amrRecords);
+        $result = $this->calculate($recommended->isNotEmpty() ? $recommended : $pile->amrRecords, $pile);
 
         // Update trial records with individual audit flags
         foreach ($result->trials as $trialData) {
             if (! empty($trialData['record_id'])) {
-                AmrRecord::where('id', $trialData['record_id'])->update([
+                $updateTrialData = [
                     'milling_recovery' => $trialData['milling_recovery'],
                     'is_outlier' => $trialData['is_outlier'],
-                ]);
+                ];
+                if (isset($trialData['pmr_rate'])) {
+                    $updateTrialData['pmr_rate'] = $trialData['pmr_rate'];
+                }
+                if (isset($trialData['mri_rate'])) {
+                    $updateTrialData['mri_rate'] = $trialData['mri_rate'];
+                }
+                AmrRecord::where('id', $trialData['record_id'])->update($updateTrialData);
             }
         }
 
@@ -283,6 +439,9 @@ class AmrCalculationService
                         'trial_number' => $t['trial_number'],
                         'palay_input_kg' => $t['palay_input_kg'],
                         'rice_recovery_kg' => $t['rice_recovery_kg'],
+                        'pmr_rate' => $t['pmr_rate'] ?? null,
+                        'mri_rate' => $t['mri_rate'] ?? null,
+                        'establishment_type' => $t['establishment_type'] ?? null,
                     ],
                     $result->trials,
                 ),

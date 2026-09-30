@@ -43,7 +43,7 @@ class DataEntryController extends Controller
 
         $branchesQuery = Branch::orderBy('name');
         $warehousesQuery = Warehouse::orderBy('name');
-        $pilesQuery = Pile::with(['amrRecords', 'pmrRecords', 'warehouse'])->orderBy('number');
+        $pilesQuery = Pile::with(['amrRecords', 'pmrRecords', 'warehouse', 'pmrCalculation'])->orderBy('number');
 
         if ($userBranchId) {
             $branchesQuery->where('id', $userBranchId);
@@ -79,6 +79,16 @@ class DataEntryController extends Controller
                 $pmrLatestIsRetest = $pmrRecordsForConduct->contains('status', 'RETEST');
                 $pmrActiveRecords = $pmrLatestIsRetest ? collect() : $pmrRecordsForConduct;
 
+                $pilePmrRate = null;
+                if ($pile->pmrCalculation?->pmr_rate !== null) {
+                    $pilePmrRate = (float) $pile->pmrCalculation->pmr_rate;
+                } elseif ($pmrActiveRecords->isNotEmpty()) {
+                    $validPmr = $pmrActiveRecords
+                        ->filter(fn (PmrRecord $r) => (float) $r->recovery_rate_percentage > 0)
+                        ->map(fn (PmrRecord $r) => (float) $r->recovery_rate_percentage);
+                    $pilePmrRate = $validPmr->isNotEmpty() ? round((float) $validPmr->avg(), 2) : null;
+                }
+
                 return [
                     'id' => $pile->id,
                     'warehouse_id' => $pile->warehouse_id,
@@ -87,8 +97,10 @@ class DataEntryController extends Controller
                     'pile_number' => $pile->pile_number ?? $pile->number,
                     'is_gmr_locked' => $pile->isGmrLocked(),
                     'shared' => $sharedData,
+                    'pmr_rate' => $pilePmrRate,
                     'amr' => [
                         ...$sharedData,
+                        'pmr_rate' => $pilePmrRate,
                         'rice_millers' => $amrRecords->first()?->rice_millers,
                         'trials' => $amrActiveRecords
                             ->pluck('trial_number')
@@ -98,6 +110,10 @@ class DataEntryController extends Controller
                                 fn (AmrRecord $record): array => [
                                     'id' => $record->id,
                                     'trial_number' => $record->trial_number,
+                                    'establishment_type' => $record->establishment_type,
+                                    'pmr_rate' => $record->pmr_rate !== null ? (float) $record->pmr_rate : null,
+                                    'mri_rate' => $record->mri_rate !== null ? (float) $record->mri_rate : null,
+                                    'mri_remarks' => $record->mri_remarks,
                                     'test_milling_date' => $record->test_milling_date?->format(
                                         'Y-m-d',
                                     ),
@@ -278,6 +294,17 @@ class DataEntryController extends Controller
                 2,
             );
         } elseif (
+            isset($validated['pmr_rate'], $validated['mri_rate']) &&
+            $validated['pmr_rate'] !== '' &&
+            $validated['pmr_rate'] !== null &&
+            $validated['mri_rate'] !== '' &&
+            $validated['mri_rate'] !== null
+        ) {
+            $millingRecovery = round(
+                (float) $validated['pmr_rate'] - (float) $validated['mri_rate'],
+                2,
+            );
+        } elseif (
             isset($validated['recovery_rate']) &&
             $validated['recovery_rate'] !== '' &&
             $validated['recovery_rate'] !== null
@@ -299,6 +326,20 @@ class DataEntryController extends Controller
 
         if ($formType === 'amr') {
             $updateData['rice_millers'] = $validated['rice_millers'] ?? null;
+            if (isset($validated['pmr_rate'])) {
+                $updateData['pmr_rate'] = $validated['pmr_rate'] !== null && $validated['pmr_rate'] !== '' ? (float) $validated['pmr_rate'] : null;
+            }
+            if (isset($validated['mri_rate'])) {
+                $updateData['mri_rate'] = $validated['mri_rate'] !== null && $validated['mri_rate'] !== '' ? (float) $validated['mri_rate'] : null;
+            }
+            if (isset($validated['establishment_type'])) {
+                $updateData['establishment_type'] = $validated['establishment_type'];
+            } elseif (isset($validated['pmr_rate'], $validated['mri_rate'])) {
+                $updateData['establishment_type'] = 'mri';
+            }
+            if (array_key_exists('mri_remarks', $validated)) {
+                $updateData['mri_remarks'] = $validated['mri_remarks'];
+            }
 
             $millerName = trim((string) ($validated['rice_millers'] ?? ''));
             if ($millerName !== '') {
@@ -595,6 +636,17 @@ class DataEntryController extends Controller
                         2,
                     );
                 } elseif (
+                    isset($trial['pmr_rate'], $trial['mri_rate']) &&
+                    $trial['pmr_rate'] !== '' &&
+                    $trial['pmr_rate'] !== null &&
+                    $trial['mri_rate'] !== '' &&
+                    $trial['mri_rate'] !== null
+                ) {
+                    $millingRecovery = round(
+                        (float) $trial['pmr_rate'] - (float) $trial['mri_rate'],
+                        2,
+                    );
+                } elseif (
                     isset($trial['recovery_rate']) &&
                     $trial['recovery_rate'] !== '' &&
                     $trial['recovery_rate'] !== null
@@ -624,6 +676,18 @@ class DataEntryController extends Controller
                     'volume_kg' => $validated['volume'],
                     'rice_millers' => $validated['form_type'] === 'amr'
                             ? $trial['rice_millers'] ?? null
+                            : null,
+                    'establishment_type' => $validated['form_type'] === 'amr'
+                            ? ($trial['establishment_type'] ?? ((float) $validated['volume'] < 50000 && isset($trial['mri_rate']) ? 'mri' : 'test_milling'))
+                            : null,
+                    'pmr_rate' => $validated['form_type'] === 'amr' && isset($trial['pmr_rate']) && $trial['pmr_rate'] !== ''
+                            ? (float) $trial['pmr_rate']
+                            : null,
+                    'mri_rate' => $validated['form_type'] === 'amr' && isset($trial['mri_rate']) && $trial['mri_rate'] !== ''
+                            ? (float) $trial['mri_rate']
+                            : null,
+                    'mri_remarks' => $validated['form_type'] === 'amr' && isset($trial['mri_remarks'])
+                            ? $trial['mri_remarks']
                             : null,
                     'trial_number' => $trialNumber,
                     'test_milling_date' => $trial['test_milling_date'],

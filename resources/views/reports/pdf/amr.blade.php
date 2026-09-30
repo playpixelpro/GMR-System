@@ -165,10 +165,15 @@
                     $isPmrLowerThanAmr = $reestablishment['is_pmr_below_amr'];
                     $isAmrDivergent = $reestablishment['is_amr_divergent_from_pmr'];
 
+                    $isMri = $calculation->isMriEstablished();
+                    $isLowVolEligible = ($volumeKg > 0 && (float) $volumeKg <= 50000);
+                    $isSingleRow = $isMri || ($records->isEmpty() && $isLowVolEligible);
+                    $totalRows = $isSingleRow ? 1 : 3;
+
                     if ($records->isEmpty()) {
                         $statusBadge = 'badge-neutral';
-                        $statusText = 'Pending (0/3)';
-                    } elseif ($records->count() < 3 && $amrRateValue === null) {
+                        $statusText = $isLowVolEligible ? 'Pending MRI' : 'Pending (0/3)';
+                    } elseif (! $isMri && $records->count() < 3 && $amrRateValue === null) {
                         $statusBadge = 'badge-neutral';
                         $statusText = $records->count() . '/3 trials';
                     } elseif ($isAmrLowerThan60) {
@@ -182,7 +187,7 @@
                         $statusText = 'Divergent';
                     } elseif ($calculation->isValid) {
                         $statusBadge = 'badge-success';
-                        $statusText = 'Recommended';
+                        $statusText = $isMri ? 'Recommended (MRI)' : 'Recommended';
                     } elseif ($calculation->isInvalidOutliers()) {
                         $statusBadge = 'badge-danger';
                         $statusText = 'Invalid Outliers';
@@ -192,35 +197,47 @@
                     }
                 @endphp
 
-                @for ($trial = 1; $trial <= 3; $trial++)
+                @for ($trial = 1; $trial <= $totalRows; $trial++)
                     @php
-                        $record = $trialRecords->get($trial);
-                        $isLastTrial = ($trial === 3);
+                        $record = $isMri ? $records->first() : $trialRecords->get($trial);
+                        $isLastTrial = ($trial === $totalRows);
                     @endphp
                     <tr class="{{ $isLastTrial ? 'group-separator' : '' }}">
                         @if ($trial === 1)
-                            <td rowspan="3" class="text-center font-bold">{{ $groupIndex }}</td>
-                            <td rowspan="3" class="text-left">{{ $branchName }}</td>
-                            <td rowspan="3" class="text-left font-bold">{{ $warehouseName }}</td>
-                            <td rowspan="3" class="text-center font-bold">{{ $pileNumber }}</td>
-                            <td rowspan="3" class="text-left">{{ $variety }}</td>
-                            <td rowspan="3" class="text-right">{{ $purity !== null ? number_format((float) $purity, 2) : '—' }}</td>
-                            <td rowspan="3" class="text-right">{{ $mc !== null ? number_format((float) $mc, 1) : '—' }}</td>
-                            <td rowspan="3" class="text-center">{{ strtoupper(str_replace('_', ' ', $quality ?: '—')) }}</td>
-                            <td rowspan="3" class="text-center">{{ $agedMonths }}</td>
-                            <td rowspan="3" class="text-right font-bold">{{ number_format((float) $volumeKg / 50, 3) }}</td>
-                            <td rowspan="3" class="text-left">{{ $riceMillers }}</td>
+                            <td rowspan="{{ $totalRows }}" class="text-center font-bold">{{ $groupIndex }}</td>
+                            <td rowspan="{{ $totalRows }}" class="text-left">{{ $branchName }}</td>
+                            <td rowspan="{{ $totalRows }}" class="text-left font-bold">{{ $warehouseName }}</td>
+                            <td rowspan="{{ $totalRows }}" class="text-center font-bold">{{ $pileNumber }}</td>
+                            <td rowspan="{{ $totalRows }}" class="text-left">{{ $variety }}</td>
+                            <td rowspan="{{ $totalRows }}" class="text-right">{{ $purity !== null ? number_format((float) $purity, 2) : '—' }}</td>
+                            <td rowspan="{{ $totalRows }}" class="text-right">{{ $mc !== null ? number_format((float) $mc, 1) : '—' }}</td>
+                            <td rowspan="{{ $totalRows }}" class="text-center">{{ strtoupper(str_replace('_', ' ', $quality ?: '—')) }}</td>
+                            <td rowspan="{{ $totalRows }}" class="text-center">{{ $agedMonths }}</td>
+                            <td rowspan="{{ $totalRows }}" class="text-right font-bold">{{ number_format((float) $volumeKg / 50, 3) }}</td>
+                            <td rowspan="{{ $totalRows }}" class="text-left">{{ $riceMillers }}</td>
                         @endif
 
-                        <td class="text-center">Trial {{ $trial }}</td>
-                        <td class="text-right">{{ $record && $record->palay_input_kg !== null ? number_format((float) $record->palay_input_kg, 2) : '—' }}</td>
-                        <td class="text-right">{{ $record && $record->rice_recovery_kg !== null ? number_format((float) $record->rice_recovery_kg, 2) : '—' }}</td>
-                        <td class="text-right font-bold text-primary">{{ $record && $record->milling_recovery_percentage > 0 ? number_format($record->milling_recovery_percentage, 2) . '%' : '—' }}</td>
+                        @if ($isMri)
+                            <td class="text-center font-bold text-primary">C.3.10 (MRI)</td>
+                            <td class="text-center" style="color: #6b7280; font-style: italic;">Exempt</td>
+                            <td class="text-center" style="color: #6b7280; font-style: italic;">Exempt</td>
+                            <td class="text-right font-bold text-primary">{{ $record && $record->milling_recovery !== null ? number_format((float) $record->milling_recovery, 2) . '%' : '—' }}</td>
+                        @elseif ($isSingleRow && $records->isEmpty())
+                            <td class="text-center">Exempt / MRI</td>
+                            <td class="text-center">—</td>
+                            <td class="text-center">—</td>
+                            <td class="text-center">—</td>
+                        @else
+                            <td class="text-center">Trial {{ $trial }}</td>
+                            <td class="text-right">{{ $record && $record->palay_input_kg !== null ? number_format((float) $record->palay_input_kg, 2) : '—' }}</td>
+                            <td class="text-right">{{ $record && $record->rice_recovery_kg !== null ? number_format((float) $record->rice_recovery_kg, 2) : '—' }}</td>
+                            <td class="text-right font-bold text-primary">{{ $record && $record->milling_recovery_percentage > 0 ? number_format($record->milling_recovery_percentage, 2) . '%' : '—' }}</td>
+                        @endif
 
                         @if ($trial === 1)
-                            <td rowspan="3" class="text-right font-bold">{{ $mean !== null ? number_format($mean, 2) . '%' : '—' }}</td>
-                            <td rowspan="3" class="text-right font-bold text-primary">{{ $amrRateValue !== null ? number_format($amrRateValue, 2) . '%' : '—' }}</td>
-                            <td rowspan="3" class="text-center">
+                            <td rowspan="{{ $totalRows }}" class="text-right font-bold">{{ $isMri && $amrRateValue !== null ? number_format((float) $amrRateValue, 2) . '%' : ($mean !== null ? number_format($mean, 2) . '%' : '—') }}</td>
+                            <td rowspan="{{ $totalRows }}" class="text-right font-bold text-primary">{{ $amrRateValue !== null ? number_format((float) $amrRateValue, 2) . '%' : '—' }}</td>
+                            <td rowspan="{{ $totalRows }}" class="text-center">
                                 <span class="badge {{ $statusBadge }}">{{ $statusText }}</span>
                             </td>
                         @endif

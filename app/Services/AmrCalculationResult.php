@@ -40,6 +40,40 @@ class AmrCalculationResult implements JsonSerializable
         return $this->status === 'INVALID_FEWER_VALID_TRIALS';
     }
 
+    public function isMriEstablished(): bool
+    {
+        return ($this->snapshot['is_mri_established'] ?? false) === true;
+    }
+
+    public function __get(string $name): mixed
+    {
+        return match ($name) {
+            'pmrRate', 'pmr_rate' => $this->getPmrRate(),
+            'mriRate', 'mri_rate' => $this->getMriRate(),
+            'mriRemarks', 'mri_remarks' => $this->getMriRemarks(),
+            default => null,
+        };
+    }
+
+    public function getPmrRate(): ?float
+    {
+        return isset($this->snapshot['pmr_rate']) && $this->snapshot['pmr_rate'] !== null
+            ? (float) $this->snapshot['pmr_rate']
+            : null;
+    }
+
+    public function getMriRate(): ?float
+    {
+        return isset($this->snapshot['mri_rate']) && $this->snapshot['mri_rate'] !== null
+            ? (float) $this->snapshot['mri_rate']
+            : null;
+    }
+
+    public function getMriRemarks(): ?string
+    {
+        return $this->snapshot['mri_remarks'] ?? null;
+    }
+
     public function getFormattedAmrRate(): string
     {
         if ($this->amrRate === null) {
