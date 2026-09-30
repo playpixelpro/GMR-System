@@ -130,9 +130,14 @@ class AmrExportService
             $isPmrLowerThanAmr = $reestablishment['is_pmr_below_amr'];
             $isAmrDivergent = $reestablishment['is_amr_divergent_from_pmr'];
 
+            $isMri = $calculation->isMriEstablished();
+            $isLowVolEligible = ($volumeKg > 0 && (float) $volumeKg <= 50000);
+            $isSingleRow = $isMri || ($records->isEmpty() && $isLowVolEligible);
+            $numRows = $isSingleRow ? 1 : 3;
+
             if ($records->isEmpty()) {
-                $statusText = 'Pending (0/3)';
-            } elseif ($records->count() < 3 && $amrRateValue === null) {
+                $statusText = $isLowVolEligible ? 'Pending MRI' : 'Pending (0/3)';
+            } elseif (! $isMri && $records->count() < 3 && $amrRateValue === null) {
                 $statusText = $records->count().'/3 trials';
             } elseif ($isAmrLowerThan60) {
                 $statusText = 'AMR ≤ 60%';
@@ -141,7 +146,7 @@ class AmrExportService
             } elseif ($isAmrDivergent) {
                 $statusText = 'Divergent';
             } elseif ($calculation->isValid) {
-                $statusText = 'Recommended';
+                $statusText = $isMri ? 'Recommended (MRI)' : 'Recommended';
             } elseif ($calculation->isInvalidOutliers()) {
                 $statusText = 'Invalid Outliers';
             } else {
@@ -149,11 +154,13 @@ class AmrExportService
             }
 
             $startRow = $row;
-            $endRow = $row + 2;
+            $endRow = $row + ($numRows - 1);
 
-            // Merged columns A-K and P-R
-            foreach (['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'P', 'Q', 'R'] as $mergeCol) {
-                $sheet->mergeCells("{$mergeCol}{$startRow}:{$mergeCol}{$endRow}");
+            // Merged columns A-K and P-R if multiple rows
+            if ($startRow !== $endRow) {
+                foreach (['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'P', 'Q', 'R'] as $mergeCol) {
+                    $sheet->mergeCells("{$mergeCol}{$startRow}:{$mergeCol}{$endRow}");
+                }
             }
 
             // Set pile-level values
@@ -169,22 +176,35 @@ class AmrExportService
             $sheet->setCellValue("J{$startRow}", round((float) $volumeKg / 50, 3));
             $sheet->setCellValue("K{$startRow}", $riceMillers);
 
-            $sheet->setCellValue("P{$startRow}", $mean !== null ? round($mean, 2).'%' : '—');
+            $sheet->setCellValue("P{$startRow}", $isMri && $amrRateValue !== null ? round($amrRateValue, 2).'%' : ($mean !== null ? round($mean, 2).'%' : '—'));
             $sheet->setCellValue("Q{$startRow}", $amrRateValue !== null ? round($amrRateValue, 2).'%' : '—');
             $sheet->setCellValue("R{$startRow}", $statusText);
 
-            // Per trial rows
-            for ($trial = 1; $trial <= 3; $trial++) {
-                $currentRow = $startRow + ($trial - 1);
-                $rec = $trialRecords->get($trial);
+            if ($isMri) {
+                $rec = $records->first();
+                $sheet->setCellValue("L{$startRow}", 'C.3.10 (MRI)');
+                $sheet->setCellValue("M{$startRow}", 'Exempt');
+                $sheet->setCellValue("N{$startRow}", 'Exempt');
+                $sheet->setCellValue("O{$startRow}", $rec && $rec->milling_recovery !== null ? round((float) $rec->milling_recovery, 2).'%' : '—');
+            } elseif ($isSingleRow && $records->isEmpty()) {
+                $sheet->setCellValue("L{$startRow}", 'Exempt / MRI');
+                $sheet->setCellValue("M{$startRow}", '—');
+                $sheet->setCellValue("N{$startRow}", '—');
+                $sheet->setCellValue("O{$startRow}", '—');
+            } else {
+                // Per trial rows
+                for ($trial = 1; $trial <= 3; $trial++) {
+                    $currentRow = $startRow + ($trial - 1);
+                    $rec = $trialRecords->get($trial);
 
-                $sheet->setCellValue("L{$currentRow}", "Trial {$trial}");
-                $sheet->setCellValue("M{$currentRow}", $rec && $rec->palay_input_kg !== null ? round((float) $rec->palay_input_kg, 2) : '—');
-                $sheet->setCellValue("N{$currentRow}", $rec && $rec->rice_recovery_kg !== null ? round((float) $rec->rice_recovery_kg, 2) : '—');
-                $sheet->setCellValue("O{$currentRow}", $rec && $rec->milling_recovery_percentage > 0 ? round($rec->milling_recovery_percentage, 2).'%' : '—');
+                    $sheet->setCellValue("L{$currentRow}", "Trial {$trial}");
+                    $sheet->setCellValue("M{$currentRow}", $rec && $rec->palay_input_kg !== null ? round((float) $rec->palay_input_kg, 2) : '—');
+                    $sheet->setCellValue("N{$currentRow}", $rec && $rec->rice_recovery_kg !== null ? round((float) $rec->rice_recovery_kg, 2) : '—');
+                    $sheet->setCellValue("O{$currentRow}", $rec && $rec->milling_recovery_percentage > 0 ? round($rec->milling_recovery_percentage, 2).'%' : '—');
+                }
             }
 
-            // Apply formatting for the 3 rows
+            // Apply formatting for the rows
             $groupRange = "A{$startRow}:R{$endRow}";
             $sheet->getStyle($groupRange)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
             $sheet->getStyle("A{$startRow}:A{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
@@ -200,7 +220,7 @@ class AmrExportService
             $sheet->getStyle($groupRange)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('D1D5DB');
             $sheet->getStyle("A{$endRow}:R{$endRow}")->getBorders()->getBottom()->setBorderStyle(Border::BORDER_MEDIUM)->getColor()->setRGB('064E3B');
 
-            $row += 3;
+            $row += $numRows;
         }
 
         // Auto-fit column widths

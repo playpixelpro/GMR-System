@@ -140,20 +140,82 @@
         </div>
 
         <div data-test-section="amr" class="rounded-lg border border-blue-100 bg-blue-50 p-6">
-            <h2 class="mb-4 text-base font-semibold text-gray-900">Test Milling Details</h2>
-            <div data-trial-rows class="space-y-3">
-                <div data-trial-row class="grid grid-cols-1 gap-3 rounded-md border border-blue-200 bg-white p-3 sm:grid-cols-6">
-                    <div><label class="block text-sm font-medium text-gray-700">Trial</label><input type="hidden" name="trials[0][trial_number]" data-trial-value value="1"><span data-trial-label class="mt-1 block px-3 py-2 text-sm text-gray-700">Trial 1</span></div>
-                    <div><label class="block text-sm font-medium text-gray-700">Test Milling Date</label><input type="text" name="trials[0][test_milling_date]" data-test-field data-flatpickr-date required class="input max-w-sm mt-1 block min-h-10 w-full border border-blue-500! focus:border-green-500! focus:ring-green-500!" placeholder="Month DD, YYYY"></div>
-                    <div><label class="block text-sm font-medium text-gray-700">Rice Miller</label><x-miller-combobox name="trials[0][rice_millers]" data-amr-required class="mt-1 block min-h-10 w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm" placeholder="Type to search or add a miller" /></div>
-                    <div><label class="block text-sm font-medium text-gray-700">Palay Input (kg)</label><input type="text" name="trials[0][palay_input]" data-test-field data-number-format inputmode="decimal" autocomplete="off" required class="mt-1 block w-full rounded-md border border-blue-500! px-3 py-2 text-sm"></div>
-                    <div><label class="block text-sm font-medium text-gray-700">Rice Output (kg)</label><input type="text" name="trials[0][rice_recovery]" data-test-field data-number-format inputmode="decimal" autocomplete="off" required class="mt-1 block w-full rounded-md border border-blue-500! px-3 py-2 text-sm"></div>
-                    <div data-amr-recovery-col class="hidden"><label class="block text-sm font-medium text-gray-700">Recovery Rate (%)</label><input type="number" name="trials[0][recovery_rate]" data-test-field min="0" max="100" step="any" disabled class="mt-1 block w-full rounded-md border border-blue-500! px-3 py-2 text-sm" placeholder="e.g. 63.00"></div>
-                    <div data-row-action class="flex items-end gap-2"><button type="button" disabled class="w-full rounded-md border border-blue-500! bg-gray-100 px-3 py-2 text-sm font-medium text-gray-400 disabled:cursor-not-allowed">Edit</button><button type="button" data-delete-trial aria-label="Delete trial" title="Delete trial" class="rounded-md border border-red-200 p-2 text-red-600 hover:bg-red-50"><span class="icon-[tabler--trash] h-5 w-5" aria-hidden="true"></span></button></div>
+            {{-- Section A: Piles < 50,000 kg (Established via MRI per C.3.10) --}}
+            <div data-amr-mri-section class="hidden">
+                <div class="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between border-b border-teal-200 pb-3">
+                    <div>
+                        <h2 class="text-base font-semibold text-teal-950 flex items-center gap-2">
+                            <span>Establishment of AMR via Milling Recovery Index (MRI)</span>
+                            <span class="inline-flex items-center rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-semibold text-teal-800 border border-teal-300">NFA Guideline C.3.10</span>
+                        </h2>
+                        <p class="mt-1 text-xs text-teal-800">
+                            Piles with &lt; 50,000 kg (less than 1,000 bags) are exempt from commercial test milling. AMR is established by deducting the MRI (up to 3.00%) from PMR.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="rounded-lg border border-teal-300 bg-teal-50/80 p-5 shadow-xs space-y-4">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <div>
+                            <label for="mri_test_milling_date" class="block text-sm font-medium text-gray-700">Establishment Date</label>
+                            <input type="text" name="mri_test_milling_date" id="mri_test_milling_date" data-flatpickr-date required
+                                   class="input mt-1 block min-h-10 w-full border border-blue-500! bg-white text-sm focus:border-green-500! focus:ring-green-500!"
+                                   placeholder="Month DD, YYYY" value="{{ date('Y-m-d') }}">
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between">
+                                <label for="mri_pmr_rate" class="block text-sm font-medium text-gray-700">PMR Rate (%)</label>
+                                <span id="mri_pmr_badge" class="text-xs font-semibold text-teal-700"></span>
+                            </div>
+                            <input type="number" step="0.01" min="0" max="100" name="pmr_rate" id="mri_pmr_rate" required
+                                   class="mt-1 block min-h-10 w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!"
+                                   placeholder="e.g. 65.20">
+                            <p class="mt-1 text-xs text-gray-500">Auto-prefilled from PMR or manually entered.</p>
+                        </div>
+                        <div>
+                            <label for="mri_rate" class="block text-sm font-medium text-gray-700">Rate of MRI / Deduction (%)</label>
+                            <input type="number" step="0.01" min="0" max="3" name="mri_rate" id="mri_rate" required
+                                   class="mt-1 block min-h-10 w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!"
+                                   placeholder="0.00 to 3.00">
+                            <p class="mt-1 text-xs text-gray-500">Deduct up to 3.00% (PNS/BAFS 303:2020).</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Resulting AMR (%)</label>
+                            <input type="text" id="mri_computed_amr" readonly
+                                   class="mt-1 block min-h-10 w-full rounded-md border border-teal-300 bg-teal-100/60 px-3 py-2 font-mono text-base font-bold text-teal-950 shadow-sm cursor-not-allowed"
+                                   placeholder="—">
+                            <p class="mt-1 text-xs text-teal-800 font-medium">AMR = PMR &minus; MRI</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 gap-4 pt-2 border-t border-teal-200">
+                        <div>
+                            <label for="mri_remarks" class="block text-sm font-medium text-gray-700">Explanation / Basis of MRI Rate Used <span class="text-red-500">*</span></label>
+                            <textarea name="mri_remarks" id="mri_remarks" rows="3" required
+                                   class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!"
+                                   placeholder="e.g. Based on PNS/BAFS 303:2020 standard deduction of 1.50% applied to NFA palay stocks aged 6 months with MC of 14%."></textarea>
+                            <p class="mt-1 text-xs text-gray-500">Provide the basis or justification for the MRI deduction rate applied. This will be included in the AMR report.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <button type="button" data-add-trial class="mt-3 rounded-md border border-blue-300 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100">Add AMR Trial</button>
-            <p class="mt-3 text-xs text-gray-600" data-trial-help></p>
+
+            {{-- Section B: Piles > 50,000 kg (Commercial Test Milling - 3 Trials) --}}
+            <div data-amr-standard-trials>
+                <h2 class="mb-4 text-base font-semibold text-gray-900">Commercial Test Milling Details</h2>
+                <div data-trial-rows class="space-y-3">
+                    <div data-trial-row class="grid grid-cols-1 gap-3 rounded-md border border-blue-200 bg-white p-3 sm:grid-cols-6">
+                        <div><label class="block text-sm font-medium text-gray-700">Trial</label><input type="hidden" name="trials[0][trial_number]" data-trial-value value="1"><span data-trial-label class="mt-1 block px-3 py-2 text-sm text-gray-700">Trial 1</span></div>
+                        <div><label class="block text-sm font-medium text-gray-700">Test Milling Date</label><input type="text" name="trials[0][test_milling_date]" data-test-field data-flatpickr-date required class="input max-w-sm mt-1 block min-h-10 w-full border border-blue-500! focus:border-green-500! focus:ring-green-500!" placeholder="Month DD, YYYY"></div>
+                        <div><label class="block text-sm font-medium text-gray-700">Rice Miller</label><x-miller-combobox name="trials[0][rice_millers]" data-amr-required class="mt-1 block min-h-10 w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm" placeholder="Type to search or add a miller" /></div>
+                        <div><label class="block text-sm font-medium text-gray-700">Palay Input (kg)</label><input type="text" name="trials[0][palay_input]" data-test-field data-number-format inputmode="decimal" autocomplete="off" required class="mt-1 block w-full rounded-md border border-blue-500! px-3 py-2 text-sm"></div>
+                        <div><label class="block text-sm font-medium text-gray-700">Rice Output (kg)</label><input type="text" name="trials[0][rice_recovery]" data-test-field data-number-format inputmode="decimal" autocomplete="off" required class="mt-1 block w-full rounded-md border border-blue-500! px-3 py-2 text-sm"></div>
+                        <div data-amr-recovery-col class="hidden"><label class="block text-sm font-medium text-gray-700">Recovery Rate (%)</label><input type="number" name="trials[0][recovery_rate]" data-test-field min="0" max="100" step="any" disabled class="mt-1 block w-full rounded-md border border-blue-500! px-3 py-2 text-sm" placeholder="e.g. 63.00"></div>
+                        <div data-row-action class="flex items-end gap-2"><button type="button" disabled class="w-full rounded-md border border-blue-500! bg-gray-100 px-3 py-2 text-sm font-medium text-gray-400 disabled:cursor-not-allowed">Edit</button><button type="button" data-delete-trial aria-label="Delete trial" title="Delete trial" class="rounded-md border border-red-200 p-2 text-red-600 hover:bg-red-50"><span class="icon-[tabler--trash] h-5 w-5" aria-hidden="true"></span></button></div>
+                    </div>
+                </div>
+                <button type="button" data-add-trial class="mt-3 rounded-md border border-blue-300 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100">Add AMR Trial</button>
+                <p class="mt-3 text-xs text-gray-600" data-trial-help></p>
+            </div>
         </div>
 
         <div data-test-section="pmr" class="hidden rounded-lg border border-red-100 bg-red-50 p-6">
@@ -325,7 +387,7 @@
 
         function isAmrLowVolume() {
             const vol = getPileVolume();
-            return vol !== null && vol <= 50000;
+            return vol !== null && vol < 50000;
         }
 
         function updateTrialRecoveryRate(row) {
@@ -348,69 +410,163 @@
             }
         }
 
+        function calculateMriAmr() {
+            const pmrInput = document.querySelector('#mri_pmr_rate');
+            const mriInput = document.querySelector('#mri_rate');
+            const computedInput = document.querySelector('#mri_computed_amr');
+            if (!pmrInput || !mriInput || !computedInput) return;
+
+            const pmrVal = parseFloat(pmrInput.value);
+            const mriVal = parseFloat(mriInput.value);
+
+            if (!isNaN(pmrVal) && !isNaN(mriVal)) {
+                const amrVal = pmrVal - mriVal;
+                computedInput.value = (amrVal >= 0 ? amrVal.toFixed(2) : '0.00') + '%';
+            } else {
+                computedInput.value = '—';
+            }
+        }
+
         function updateAmrVolumeLayout() {
             const isAmr = formType.value === 'amr';
             const lowVol = isAmr && isAmrLowVolume();
             const amrSection = document.querySelector('[data-test-section="amr"]');
             if (!amrSection) return;
 
-            const rows = amrSection.querySelectorAll('[data-trial-row]');
-            rows.forEach((row) => {
-                const isExisting = row?.dataset.existing === 'true';
-                const isEditing = row?.dataset.editing === 'true';
-                const shouldDisable = isExisting && !isEditing;
+            const mriSection = amrSection.querySelector('[data-amr-mri-section]');
+            const standardSection = amrSection.querySelector('[data-amr-standard-trials]');
+            const selectedPile = pileData.find((pile) => String(pile.id) === pileSelect.value);
 
-                const recCol = row.querySelector('[data-amr-recovery-col]');
-                const palayInput = row.querySelector('[name$="[palay_input]"]');
-                const riceRecovery = row.querySelector('[name$="[rice_recovery]"]');
-                const recRateInput = row.querySelector('[name$="[recovery_rate]"]');
-                const riceMillers = row.querySelector('[data-amr-required]');
+            if (lowVol) {
+                // Show Section A (MRI establishment), hide Section B (standard trials)
+                if (mriSection) {
+                    mriSection.classList.remove('hidden');
+                    mriSection.querySelectorAll('input, select, textarea').forEach((field) => {
+                        field.disabled = false;
+                        if (field.tagName === 'TEXTAREA') {
+                            field.required = true;
+                        }
+                        if (field._flatpickr?.altInput) {
+                            field._flatpickr.altInput.disabled = false;
+                        }
+                    });
+                    const pmrField = document.querySelector('#mri_pmr_rate');
+                    const mriField = document.querySelector('#mri_rate');
+                    const dateField = document.querySelector('#mri_test_milling_date');
+                    const badge = document.querySelector('#mri_pmr_badge');
 
-                if (lowVol) {
-                    if (recCol) recCol.classList.remove('hidden');
-                    row.classList.remove('sm:grid-cols-6');
-                    row.classList.add('sm:grid-cols-7');
-
-                    if (palayInput) {
-                        palayInput.required = false;
-                        palayInput.placeholder = 'Optional';
-                    }
-                    if (riceRecovery) {
-                        riceRecovery.required = false;
-                        riceRecovery.placeholder = 'Optional';
-                    }
-                    if (riceMillers) {
-                        riceMillers.required = false;
-                        riceMillers.placeholder = 'Optional';
-                    }
-                    if (recRateInput) {
-                        recRateInput.disabled = shouldDisable || !isAmr;
-                        if (!recRateInput.value && palayInput && riceRecovery) {
-                            updateTrialRecoveryRate(row);
+                    if (pmrField) pmrField.required = true;
+                    if (mriField) mriField.required = true;
+                    if (dateField) {
+                        if (dateField._flatpickr?.altInput) {
+                            dateField._flatpickr.altInput.required = true;
+                        } else {
+                            dateField.required = true;
                         }
                     }
-                } else {
-                    if (recCol) recCol.classList.add('hidden');
-                    row.classList.remove('sm:grid-cols-7');
-                    row.classList.add('sm:grid-cols-6');
 
-                    if (palayInput) {
-                        palayInput.required = isAmr && !isExisting;
-                        palayInput.placeholder = '';
+                    // Check for existing MRI record or prefill from PMR
+                    const existingMriRecord = selectedPile?.amr?.records?.find(
+                        (r) => r.establishment_type === 'mri' || (r.pmr_rate !== null && r.pmr_rate !== undefined)
+                    );
+
+                    if (existingMriRecord) {
+                        if (pmrField && existingMriRecord.pmr_rate !== null) {
+                            pmrField.value = Number(existingMriRecord.pmr_rate).toFixed(2);
+                        }
+                        if (mriField && existingMriRecord.mri_rate !== null) {
+                            mriField.value = Number(existingMriRecord.mri_rate).toFixed(2);
+                        }
+                        if (dateField && existingMriRecord.test_milling_date) {
+                            if (dateField._flatpickr) {
+                                dateField._flatpickr.setDate(existingMriRecord.test_milling_date, true);
+                            } else {
+                                dateField.value = existingMriRecord.test_milling_date;
+                            }
+                        }
+                        const remarksField = document.querySelector('#mri_remarks');
+                        if (remarksField && existingMriRecord.mri_remarks) {
+                            remarksField.value = existingMriRecord.mri_remarks;
+                        }
+                        if (badge) {
+                            badge.textContent = existingMriRecord.pmr_rate ? '(From Existing Record)' : '';
+                        }
+                    } else if (selectedPile?.pmr_rate !== null && selectedPile?.pmr_rate !== undefined) {
+                        if (pmrField && !pmrField.value) {
+                            pmrField.value = Number(selectedPile.pmr_rate).toFixed(2);
+                        }
+                        if (badge) {
+                            badge.textContent = '(Prefilled from PMR)';
+                        }
+                    } else {
+                        if (badge) {
+                            badge.textContent = '';
+                        }
                     }
-                    if (riceRecovery) {
-                        riceRecovery.required = isAmr && !isExisting;
-                        riceRecovery.placeholder = '';
-                    }
-                    if (riceMillers) {
-                        riceMillers.required = isAmr && !isExisting;
-                        riceMillers.placeholder = '';
-                    }
-                    if (recRateInput) {
-                        recRateInput.disabled = true;
+
+                    calculateMriAmr();
+                }
+
+                if (standardSection) {
+                    standardSection.classList.add('hidden');
+                    standardSection.querySelectorAll('input, select, textarea').forEach((field) => {
+                        field.disabled = true;
+                        field.required = false;
+                        if (field._flatpickr?.altInput) {
+                            field._flatpickr.altInput.disabled = true;
+                            field._flatpickr.altInput.required = false;
+                        }
+                    });
+                }
+            } else {
+                // High volume or not AMR: hide Section A, show Section B
+                if (mriSection) {
+                    mriSection.classList.add('hidden');
+                    mriSection.querySelectorAll('input, select, textarea').forEach((field) => {
+                        field.disabled = true;
+                        field.required = false;
+                        if (field._flatpickr?.altInput) {
+                            field._flatpickr.altInput.disabled = true;
+                            field._flatpickr.altInput.required = false;
+                        }
+                    });
+                }
+
+                if (standardSection) {
+                    standardSection.classList.remove('hidden');
+                    if (isAmr) {
+                        const rows = standardSection.querySelectorAll('[data-trial-row]');
+                        rows.forEach((row) => {
+                            const isExisting = row.dataset.existing === 'true';
+                            const isEditing = row.dataset.editing === 'true';
+                            const shouldDisable = isExisting && !isEditing;
+
+                            row.querySelectorAll('input, select, textarea').forEach((field) => {
+                                field.disabled = shouldDisable;
+                                if (field._flatpickr?.altInput) {
+                                    field._flatpickr.altInput.disabled = shouldDisable;
+                                }
+                            });
+
+                            row.querySelectorAll('[data-test-field]').forEach((field) => {
+                                if (field._flatpickr) {
+                                    field.required = false;
+                                    if (field._flatpickr.altInput) {
+                                        field._flatpickr.altInput.required = !isExisting;
+                                    }
+                                } else {
+                                    field.required = !isExisting;
+                                }
+                            });
+
+                            row.querySelectorAll('[data-amr-required]').forEach((field) => {
+                                field.required = !isExisting;
+                                field.disabled = shouldDisable;
+                            });
+                        });
                     }
                 }
-            });
+            }
         }
 
         function trialActionMarkup(isSaved = false, canEdit = true) {
@@ -1142,6 +1298,10 @@
                 if (recoveryRateInput && (formType.value === 'pmr' || isAmrLowVolume())) {
                     payload.set('recovery_rate', recoveryRateInput.value);
                 }
+                const remarksField = document.querySelector('#mri_remarks');
+                if (remarksField && !remarksField.disabled) {
+                    payload.set('mri_remarks', remarksField.value);
+                }
 
                 try {
                     const url = updateRoute
@@ -1293,11 +1453,39 @@
             });
         }
 
+        const mriPmrInput = document.querySelector('#mri_pmr_rate');
+        const mriRateInput = document.querySelector('#mri_rate');
+        if (mriPmrInput) {
+            mriPmrInput.addEventListener('input', calculateMriAmr);
+        }
+        if (mriRateInput) {
+            mriRateInput.addEventListener('input', calculateMriAmr);
+        }
+
         document.querySelector('[data-entry-form]').addEventListener('submit', (event) => {
             const isPmr = formType.value === 'pmr';
             const isAmrLow = formType.value === 'amr' && isAmrLowVolume();
-            if (isPmr || isAmrLow) {
-                const activeSection = document.querySelector(`[data-test-section="${formType.value}"]`);
+
+            if (isAmrLow) {
+                const pmrField = document.querySelector('#mri_pmr_rate');
+                const mriField = document.querySelector('#mri_rate');
+                const pmrVal = parseFloat(pmrField?.value);
+                const mriVal = parseFloat(mriField?.value);
+
+                if (isNaN(pmrVal) || pmrVal < 0 || pmrVal > 100) {
+                    event.preventDefault();
+                    pmrField?.setCustomValidity('Please enter a valid PMR Rate between 0 and 100%.');
+                    pmrField?.reportValidity();
+                    return;
+                }
+                if (isNaN(mriVal) || mriVal < 0 || mriVal > 3) {
+                    event.preventDefault();
+                    mriField?.setCustomValidity('Rate of MRI must be between 0.00% and 3.00%.');
+                    mriField?.reportValidity();
+                    return;
+                }
+            } else if (isPmr) {
+                const activeSection = document.querySelector(`[data-test-section="pmr"]`);
                 const rows = activeSection ? activeSection.querySelectorAll('[data-trial-row]') : [];
                 for (const row of rows) {
                     if (row.dataset.existing === 'true' && row.dataset.editing !== 'true') continue;

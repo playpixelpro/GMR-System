@@ -29,7 +29,7 @@ class StoreDataEntryRequest extends FormRequest
             $volume = $existingPile ? (float) $existingPile->volume_kg : null;
         }
 
-        return $volume !== null && $volume <= 50000;
+        return $volume !== null && $volume < 50000;
     }
 
     protected function prepareForValidation(): void
@@ -86,6 +86,40 @@ class StoreDataEntryRequest extends FormRequest
 
         $allowsOptionalInputs = $formType === 'pmr' || $this->isAmrLowVolume();
 
+        if ($this->filled('mri_test_milling_date') && ! $this->filled('test_milling_date')) {
+            $this->merge(['test_milling_date' => $this->input('mri_test_milling_date')]);
+        }
+
+        $pmrRate = $this->input('pmr_rate');
+        $mriRate = $this->input('mri_rate');
+        if ($this->isAmrLowVolume() && ! $this->has('trials') && ($this->filled('pmr_rate') || $this->filled('mri_rate'))) {
+            $computedRate = null;
+            if ($this->filled('pmr_rate') && $this->filled('mri_rate')) {
+                $computedRate = round((float) $pmrRate - (float) $mriRate, 2);
+            } elseif ($this->filled('recovery_rate')) {
+                $computedRate = (float) $this->input('recovery_rate');
+            }
+
+            $this->merge([
+                'trials' => [
+                    [
+                        'trial_number' => 1,
+                        'establishment_type' => 'mri',
+                        'pmr_rate' => $pmrRate,
+                        'mri_rate' => $mriRate,
+                        'mri_remarks' => $this->input('mri_remarks'),
+                        'test_milling_date' => $this->input('test_milling_date') ?? now()->format('Y-m-d'),
+                        'rice_millers' => $this->input('rice_millers'),
+                        'palay_input' => null,
+                        'rice_recovery' => null,
+                        'recovery_rate' => $computedRate,
+                    ],
+                ],
+            ]);
+
+            return;
+        }
+
         if ($this->has('trials')) {
             $trials = $this->input('trials');
             if (is_array($trials)) {
@@ -112,6 +146,18 @@ class StoreDataEntryRequest extends FormRequest
                         $usedTrialNumbers[] = $next;
                     } else {
                         $trial['trial_number'] = (int) $trial['trial_number'];
+                    }
+
+                    // Auto-compute recovery rate for MRI (AMR volume <= 50,000) when PMR and MRI rates are provided
+                    if ($this->isAmrLowVolume()) {
+                        $trialPmr = $trial['pmr_rate'] ?? $this->input('pmr_rate');
+                        $trialMri = $trial['mri_rate'] ?? $this->input('mri_rate');
+                        if ($trialPmr !== null && $trialPmr !== '' && $trialMri !== null && $trialMri !== '') {
+                            $trial['pmr_rate'] = (float) $trialPmr;
+                            $trial['mri_rate'] = (float) $trialMri;
+                            $trial['recovery_rate'] = round((float) $trialPmr - (float) $trialMri, 2);
+                            $trial['establishment_type'] = 'mri';
+                        }
                     }
 
                     // Auto-compute recovery rate for PMR or AMR (volume <= 50,000) when both palay and rice inputs are provided
@@ -171,16 +217,33 @@ class StoreDataEntryRequest extends FormRequest
             );
         }
 
+        $singleTrial = [
+            'trial_number' => $trialNum,
+            'test_milling_date' => $this->input('test_milling_date'),
+            'rice_millers' => $this->input('rice_millers'),
+            'palay_input' => $palayInput,
+            'rice_recovery' => $riceRecovery,
+            'recovery_rate' => $recoveryRate,
+        ];
+        if ($this->isAmrLowVolume()) {
+            if ($this->filled('pmr_rate')) {
+                $singleTrial['pmr_rate'] = (float) $this->input('pmr_rate');
+            }
+            if ($this->filled('mri_rate')) {
+                $singleTrial['mri_rate'] = (float) $this->input('mri_rate');
+            }
+            if ($this->filled('mri_remarks')) {
+                $singleTrial['mri_remarks'] = $this->input('mri_remarks');
+            }
+            if (isset($singleTrial['pmr_rate'], $singleTrial['mri_rate'])) {
+                $singleTrial['establishment_type'] = 'mri';
+                $singleTrial['recovery_rate'] = round($singleTrial['pmr_rate'] - $singleTrial['mri_rate'], 2);
+            }
+        }
+
         $this->merge([
             'trials' => [
-                [
-                    'trial_number' => $trialNum,
-                    'test_milling_date' => $this->input('test_milling_date'),
-                    'rice_millers' => $this->input('rice_millers'),
-                    'palay_input' => $palayInput,
-                    'rice_recovery' => $riceRecovery,
-                    'recovery_rate' => $recoveryRate,
-                ],
+                $singleTrial,
             ],
         ]);
     }
@@ -317,6 +380,14 @@ class StoreDataEntryRequest extends FormRequest
                 'numeric',
                 'between:0,100',
             ];
+            $rules['trials.*.pmr_rate'] = ['nullable', 'numeric', 'between:0,100'];
+            $rules['trials.*.mri_rate'] = ['nullable', 'numeric', 'between:0,3'];
+            $rules['trials.*.mri_remarks'] = ['nullable', 'string', 'max:1000'];
+            $rules['trials.*.establishment_type'] = ['nullable', 'string', 'max:50'];
+            $rules['pmr_rate'] = ['nullable', 'numeric', 'between:0,100'];
+            $rules['mri_rate'] = ['nullable', 'numeric', 'between:0,3'];
+            $rules['mri_remarks'] = ['nullable', 'string', 'max:1000'];
+            $rules['establishment_type'] = ['nullable', 'string', 'max:50'];
         } else {
             $rules['trials.*.palay_input'] = ['required', 'numeric', 'gt:0'];
             $rules['trials.*.rice_recovery'] = ['required', 'numeric', 'gte:0'];
@@ -359,6 +430,10 @@ class StoreDataEntryRequest extends FormRequest
                         isset($trial['recovery_rate']) &&
                         $trial['recovery_rate'] !== '' &&
                         $trial['recovery_rate'] !== null;
+                    $hasPmrMri =
+                        isset($trial['pmr_rate'], $trial['mri_rate']) &&
+                        $trial['pmr_rate'] !== '' && $trial['pmr_rate'] !== null &&
+                        $trial['mri_rate'] !== '' && $trial['mri_rate'] !== null;
 
                     $palay = $hasPalay ? (float) $trial['palay_input'] : null;
                     $rice = $hasRice ? (float) $trial['rice_recovery'] : null;
@@ -381,19 +456,23 @@ class StoreDataEntryRequest extends FormRequest
                     }
 
                     if ($allowsOptionalInputs) {
-                        // When Palay Input and Rice Output are not both provided, Recovery Rate must be entered
-                        if (! ($hasPalay && $hasRice) && ! $hasRate) {
+                        // When Palay Input and Rice Output are not both provided, either (PMR and MRI) or Recovery Rate must be entered
+                        if (! ($hasPalay && $hasRice) && ! $hasRate && ! $hasPmrMri) {
                             $validator
                                 ->errors()
                                 ->add(
                                     'trials.'.$index.'.recovery_rate',
-                                    'Please enter both Palay Input and Rice Output, or enter the Recovery Rate (%) directly.',
+                                    $this->isAmrLowVolume()
+                                        ? 'Please enter PMR and MRI rates, or enter the Recovery Rate (%) directly.'
+                                        : 'Please enter both Palay Input and Rice Output, or enter the Recovery Rate (%) directly.',
                                 );
                             $validator
                                 ->errors()
                                 ->add(
                                     'recovery_rate',
-                                    'Please enter both Palay Input and Rice Output, or enter the Recovery Rate (%) directly.',
+                                    $this->isAmrLowVolume()
+                                        ? 'Please enter PMR and MRI rates, or enter the Recovery Rate (%) directly.'
+                                        : 'Please enter both Palay Input and Rice Output, or enter the Recovery Rate (%) directly.',
                                 );
                         }
                     }

@@ -43,13 +43,18 @@ class EmrGmrGateService
         $latestConduct = $records->max('conduct_number') ?? 1;
         $conductRecords = $records->where('conduct_number', $latestConduct);
 
-        if ($conductRecords->count() < 3) {
+        $isLowVolume = $pile->volume_kg !== null && (float) $pile->volume_kg <= 50000;
+        $requiredCount = $isLowVolume ? 1 : 3;
+
+        if ($conductRecords->count() < $requiredCount) {
             return [
                 'eligible' => false,
                 'status' => 'INCOMPLETE',
                 'rate' => null,
                 'conduct_number' => $latestConduct,
-                'message' => 'AMR Test Milling Data incomplete ('.$conductRecords->count().'/3 trials)',
+                'message' => $isLowVolume
+                    ? 'AMR Test Milling / MRI Data missing'
+                    : 'AMR Test Milling Data incomplete ('.$conductRecords->count().'/3 trials)',
             ];
         }
 
