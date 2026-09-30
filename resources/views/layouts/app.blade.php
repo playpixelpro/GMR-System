@@ -180,10 +180,20 @@
         </div>
 
         <!-- Working Area (expands left when sidebar is minified) -->
-        <div class="main-content-wrapper min-w-0 flex-1 pt-16 transition-all duration-300">
-            <main class="w-full px-4 py-6 sm:px-6 lg:px-8">
+        <div class="main-content-wrapper min-w-0 flex-1 pt-16 transition-all duration-300 flex flex-col min-h-screen">
+            <main class="w-full flex-1 px-4 py-6 sm:px-6 lg:px-8">
                 @yield('content')
             </main>
+
+            <footer class="mt-auto border-t border-base-content/10 bg-base-100/70 py-4 px-4 sm:px-6 lg:px-8 text-xs text-base-content/70">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-2">
+                    <p>&copy; {{ date('Y') }} National Food Authority &bull; GMR System. All rights reserved.</p>
+                    <p class="flex items-center gap-1.5 font-medium text-base-content/80">
+                        <span class="icon-[tabler--code] size-4 text-primary"></span>
+                        <span>Developer: <strong class="text-base-content font-semibold">Dindo O. Quitor - R12 RECO</strong></span>
+                    </p>
+                </div>
+            </footer>
         </div>
     </div>
 

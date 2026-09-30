@@ -95,7 +95,7 @@ class AmrMriEstablishmentTest extends TestCase
             'mri_test_milling_date' => '2026-09-30',
             'pmr_rate' => 66.20,
             'mri_rate' => 3.00,
-            'mri_rice_millers' => 'San Juan Rice Mill',
+            'mri_remarks' => 'Deduction per C.3.10 based on standard PNS/BAFS guidelines',
         ]);
 
         $response->assertSessionHasNoErrors();
@@ -108,7 +108,7 @@ class AmrMriEstablishmentTest extends TestCase
             'pmr_rate' => 66.20,
             'mri_rate' => 3.00,
             'milling_recovery' => 63.20,
-            'rice_millers' => 'San Juan Rice Mill',
+            'mri_remarks' => 'Deduction per C.3.10 based on standard PNS/BAFS guidelines',
         ]);
     }
 
@@ -380,7 +380,8 @@ class AmrMriEstablishmentTest extends TestCase
         $response->assertOk();
         $response->assertSee('C.3.10 (MRI)');
         $response->assertSee('63.50%');
-        $response->assertSee('PMR 66.50% &minus; 3.00%', false);
-        $response->assertSee('NFA Guideline C.3.10 — Stockpiles &le; 50,000 kg', false);
+        $response->assertSee('NFA Guideline C.3.10 — Stockpiles &lt; 50,000 kg', false);
+        $response->assertSee('Explanation of the MRI Used');
+        $response->assertSee('Dindo O. Quitor - R12 RECO');
     }
 }

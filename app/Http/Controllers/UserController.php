@@ -351,4 +351,53 @@ class UserController extends Controller
 
         return back()->with('status', "Branch updated for {$user->name}.");
     }
+
+    public function updateRole(Request $request, User $user): RedirectResponse
+    {
+        /** @var User|null $currentUser */
+        $currentUser = Auth::user();
+        abort_unless($currentUser?->hasRole('ADMINISTRATOR'), 403);
+
+        if ($user->id === $currentUser->id) {
+            return back()->withErrors([
+                'user' => 'You cannot change your own role.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'role' => ['required', 'in:STAFF,RMEC,ADMINISTRATOR'],
+        ]);
+
+        $newRole = $validated['role'];
+        $oldRole = $user->role;
+
+        if ($oldRole === $newRole) {
+            return back()->with('status', 'No role change was made.');
+        }
+
+        if ($oldRole === 'ADMINISTRATOR' && User::where('role', 'ADMINISTRATOR')->count() <= 1) {
+            return back()->withErrors([
+                'user' => 'Cannot demote the only administrator account.',
+            ]);
+        }
+
+        $user->update([
+            'role' => $newRole,
+        ]);
+
+        AuditLog::record('USER_ROLE_UPDATED', $user, [
+            'old_role' => $oldRole,
+            'new_role' => $newRole,
+            'changed_by' => $currentUser->id,
+        ], 'user', "User '{$user->name}' role changed from {$oldRole} to {$newRole}");
+
+        $actionVerb = match (true) {
+            $newRole === 'ADMINISTRATOR' => 'promoted to Administrator',
+            $newRole === 'RMEC' && $oldRole === 'STAFF' => 'promoted to RMEC',
+            $oldRole === 'ADMINISTRATOR' && $newRole === 'RMEC' => 'reassigned to RMEC',
+            default => 'reassigned to Staff',
+        };
+
+        return back()->with('status', "User '{$user->name}' was successfully {$actionVerb}.");
+    }
 }

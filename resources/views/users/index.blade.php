@@ -100,9 +100,25 @@
                             <div class="text-xs text-base-content/60">{{ $user->email }}</div>
                         </td>
                         <td>
-                            <span class="badge badge-soft {{ $user->role === 'ADMINISTRATOR' ? 'badge-primary' : ($user->role === 'RMEC' ? 'badge-secondary' : 'badge-neutral') }} text-xs">
-                                {{ $user->role }}
-                            </span>
+                            @if ($user->id === auth()->id())
+                                <span class="badge badge-soft {{ $user->role === 'ADMINISTRATOR' ? 'badge-primary' : ($user->role === 'RMEC' ? 'badge-secondary' : 'badge-neutral') }} text-xs inline-flex items-center gap-1" title="Current user (cannot change own role)">
+                                    <span class="icon-[tabler--lock] size-3"></span>
+                                    <span>{{ $user->role }} (You)</span>
+                                </span>
+                            @else
+                                <form method="POST" action="{{ route('users.role', $user) }}" class="flex items-center gap-1">
+                                    @csrf
+                                    @method('PATCH')
+                                    <select name="role" data-current-role="{{ $user->role }}"
+                                            class="select select-xs select-bordered font-medium w-36 {{ $user->role === 'ADMINISTRATOR' ? 'text-primary font-semibold' : ($user->role === 'RMEC' ? 'text-secondary font-semibold' : 'text-base-content') }}"
+                                            onchange="if (confirm('Are you sure you want to change the role of \x27{{ addslashes($user->name) }}\x27 from {{ $user->role }} to ' + this.value + '?')) { this.form.submit(); } else { this.value = this.dataset.currentRole; }"
+                                            title="Promote or reassign user role">
+                                        <option value="STAFF" @selected($user->role === 'STAFF')>Staff</option>
+                                        <option value="RMEC" @selected($user->role === 'RMEC')>RMEC</option>
+                                        <option value="ADMINISTRATOR" @selected($user->role === 'ADMINISTRATOR')>Administrator</option>
+                                    </select>
+                                </form>
+                            @endif
                         </td>
                         <td>
                             @if ($user->role === 'STAFF')
