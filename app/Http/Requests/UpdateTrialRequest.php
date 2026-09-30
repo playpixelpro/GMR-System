@@ -22,7 +22,7 @@ class UpdateTrialRequest extends FormRequest
         if ($recordId) {
             $record = AmrRecord::with('pile')->find($recordId);
             $volume = $record?->pile?->volume_kg ?? $record?->volume_kg;
-            if ($volume !== null && (float) $volume <= 50000) {
+            if ($volume !== null && (float) $volume < 50000) {
                 return true;
             }
         }
@@ -53,6 +53,10 @@ class UpdateTrialRequest extends FormRequest
                 'palay_input' => ['nullable', 'numeric', 'gt:0'],
                 'rice_recovery' => ['nullable', 'numeric', 'gte:0'],
                 'recovery_rate' => ['nullable', 'numeric', 'between:0,100'],
+                'pmr_rate' => ['nullable', 'numeric', 'between:0,100'],
+                'mri_rate' => ['nullable', 'numeric', 'between:0,3'],
+                'mri_remarks' => ['nullable', 'string', 'max:1000'],
+                'establishment_type' => ['nullable', 'string', 'max:50'],
             ];
         }
 
@@ -85,6 +89,7 @@ class UpdateTrialRequest extends FormRequest
                 $hasPalay = $this->filled('palay_input');
                 $hasRice = $this->filled('rice_recovery');
                 $hasRate = $this->filled('recovery_rate');
+                $hasPmrMri = $this->filled('pmr_rate') && $this->filled('mri_rate');
 
                 if ($hasPalay && $hasRice) {
                     if (
@@ -101,12 +106,14 @@ class UpdateTrialRequest extends FormRequest
                 }
 
                 if ($allowsOptionalInputs) {
-                    if (! ($hasPalay && $hasRice) && ! $hasRate) {
+                    if (! ($hasPalay && $hasRice) && ! $hasRate && ! $hasPmrMri) {
                         $validator
                             ->errors()
                             ->add(
                                 'recovery_rate',
-                                'Please enter both Palay Input and Rice Output, or enter the Recovery Rate (%) directly.',
+                                $this->isAmrLowVolume()
+                                    ? 'Please enter PMR and MRI rates, or enter the Recovery Rate (%) directly.'
+                                    : 'Please enter both Palay Input and Rice Output, or enter the Recovery Rate (%) directly.',
                             );
                     }
                 }

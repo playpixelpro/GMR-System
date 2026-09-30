@@ -26,6 +26,10 @@ class AmrRecord extends Model
         'aged_months',
         'volume_kg',
         'rice_millers',
+        'establishment_type',
+        'pmr_rate',
+        'mri_rate',
+        'mri_remarks',
         'trial_number',
         'test_milling_date',
         'palay_input_kg',
@@ -60,6 +64,8 @@ class AmrRecord extends Model
             'mc' => 'decimal:2',
             'aged_months' => 'float',
             'volume_kg' => 'decimal:3',
+            'pmr_rate' => 'decimal:2',
+            'mri_rate' => 'decimal:2',
             'trial_number' => 'integer',
             'test_milling_date' => 'date:Y-m-d',
             'palay_input_kg' => 'decimal:2',
@@ -73,6 +79,12 @@ class AmrRecord extends Model
             'actioned_at' => 'datetime',
             'reset_at' => 'datetime',
         ];
+    }
+
+    public function isMriEstablished(): bool
+    {
+        return $this->establishment_type === 'mri' ||
+            ($this->volume_kg !== null && (float) $this->volume_kg < 50000 && $this->mri_rate !== null);
     }
 
     public function pile(): BelongsTo
