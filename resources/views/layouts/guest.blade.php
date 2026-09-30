@@ -13,9 +13,15 @@
         <style>@import 'tailwindcss';</style>
     @endif
 </head>
-<body class="grid min-h-dvh place-items-center bg-base-200 px-4 py-8 text-base-content antialiased">
-    <main class="w-full max-w-sm">
-        @yield('content')
-    </main>
+<body class="flex min-h-dvh flex-col justify-between items-center bg-base-200 px-4 py-8 text-base-content antialiased">
+    <div class="w-full flex-1 flex items-center justify-center">
+        <main class="w-full max-w-sm">
+            @yield('content')
+        </main>
+    </div>
+    <footer class="mt-6 text-center text-xs text-base-content/60 space-y-1">
+        <div>&copy; {{ date('Y') }} National Food Authority &bull; GMR System. All rights reserved.</div>
+        <div>Developer: <strong class="font-medium text-base-content/80">Dindo O. Quitor - R12 RECO</strong></div>
+    </footer>
 </body>
 </html>

@@ -126,6 +126,10 @@ Route::middleware('auth')->group(function (): void {
             UserController::class,
             'updateBranch',
         ])->name('users.branch');
+        Route::patch('/users/{user}/role', [
+            UserController::class,
+            'updateRole',
+        ])->name('users.role');
 
         Route::get('/settings/blocked-ips', [
             SettingsController::class,

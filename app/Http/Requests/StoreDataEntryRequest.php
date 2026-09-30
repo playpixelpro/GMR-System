@@ -365,7 +365,6 @@ class StoreDataEntryRequest extends FormRequest
             ],
             'trials.*.test_milling_date' => ['required', 'date_format:Y-m-d'],
             'trials.*.rice_millers' => [
-                $allowsOptionalInputs ? 'nullable' : 'required_if:form_type,amr',
                 'nullable',
                 'string',
                 'max:191',
