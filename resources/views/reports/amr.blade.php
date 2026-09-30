@@ -482,19 +482,21 @@
                 <span class="text-[10px] text-primary/80 block mt-0.5">AMR = PMR &minus; MRI</span>
               </div>
             </div>
+            @php
+              $mriExplanation = $calculation->getMriRemarks() ?: ($records->first()?->mri_remarks ?? null);
+            @endphp
+            {{-- Explanation of the MRI Used (Positioned directly below the 3 cards in the highlighted area) --}}
+            <div class="p-3 bg-base-100 rounded-lg border border-base-content/10 text-xs space-y-1">
+              <div class="flex items-center gap-1.5 font-semibold text-base-content/80">
+                <span class="icon-[tabler--file-description] size-4 text-primary shrink-0"></span>
+                <span>Explanation of the MRI Used</span>
+              </div>
+              <p class="text-base-content/70 leading-relaxed pl-5.5 whitespace-pre-line">{{ $mriExplanation ?: 'No explanation provided.' }}</p>
+            </div>
             <div class="p-2.5 bg-base-100 rounded-lg border border-base-content/10 text-xs text-base-content/70 flex items-center justify-between">
               <span>Formula: <strong>AMR (%) = PMR (%) &minus; MRI Rate (%)</strong></span>
               <span class="badge badge-soft badge-primary font-semibold">Valid C.3.10 Establishment</span>
             </div>
-            @if ($calculation->getMriRemarks())
-              <div class="p-3 bg-amber-50 rounded-lg border border-amber-200 text-xs space-y-1">
-                <div class="flex items-center gap-1.5 font-semibold text-amber-800">
-                  <span class="icon-[tabler--file-description] size-4 shrink-0"></span>
-                  <span>Explanation / Basis of MRI Rate Used</span>
-                </div>
-                <p class="text-amber-900/80 leading-relaxed pl-5.5">{{ $calculation->getMriRemarks() }}</p>
-              </div>
-            @endif
           </div>
         @elseif ($calculation->isValid)
           <div class="alert alert-soft alert-primary text-xs py-2 px-3 flex items-center gap-2">

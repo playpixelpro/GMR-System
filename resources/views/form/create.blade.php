@@ -189,11 +189,11 @@
                     </div>
                     <div class="grid grid-cols-1 gap-4 pt-2 border-t border-teal-200">
                         <div>
-                            <label for="mri_remarks" class="block text-sm font-medium text-gray-700">Explanation / Basis of MRI Rate Used <span class="text-red-500">*</span></label>
+                            <label for="mri_remarks" class="block text-sm font-medium text-gray-700">Explanation of the MRI Used <span class="text-red-500">*</span></label>
                             <textarea name="mri_remarks" id="mri_remarks" rows="3" required
                                    class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!"
                                    placeholder="e.g. Based on PNS/BAFS 303:2020 standard deduction of 1.50% applied to NFA palay stocks aged 6 months with MC of 14%."></textarea>
-                            <p class="mt-1 text-xs text-gray-500">Provide the basis or justification for the MRI deduction rate applied. This will be included in the AMR report.</p>
+                            <p class="mt-1 text-xs text-gray-500">Provide the explanation or basis of the MRI rate used. This will be shown in the AMR breakdown popup.</p>
                         </div>
                     </div>
                 </div>
@@ -209,7 +209,7 @@
                         <div><label class="block text-sm font-medium text-gray-700">Rice Miller</label><x-miller-combobox name="trials[0][rice_millers]" data-amr-required class="mt-1 block min-h-10 w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm" placeholder="Type to search or add a miller" /></div>
                         <div><label class="block text-sm font-medium text-gray-700">Palay Input (kg)</label><input type="text" name="trials[0][palay_input]" data-test-field data-number-format inputmode="decimal" autocomplete="off" required class="mt-1 block w-full rounded-md border border-blue-500! px-3 py-2 text-sm"></div>
                         <div><label class="block text-sm font-medium text-gray-700">Rice Output (kg)</label><input type="text" name="trials[0][rice_recovery]" data-test-field data-number-format inputmode="decimal" autocomplete="off" required class="mt-1 block w-full rounded-md border border-blue-500! px-3 py-2 text-sm"></div>
-                        <div data-amr-recovery-col class="hidden"><label class="block text-sm font-medium text-gray-700">Recovery Rate (%)</label><input type="number" name="trials[0][recovery_rate]" data-test-field min="0" max="100" step="any" disabled class="mt-1 block w-full rounded-md border border-blue-500! px-3 py-2 text-sm" placeholder="e.g. 63.00"></div>
+                        <div data-amr-recovery-col class="hidden"><label class="block text-sm font-medium text-gray-700">Recovery Rate (%)</label><input type="number" name="trials[0][recovery_rate]" min="0" max="100" step="any" disabled class="mt-1 block w-full rounded-md border border-blue-500! px-3 py-2 text-sm" placeholder="e.g. 63.00"></div>
                         <div data-row-action class="flex items-end gap-2"><button type="button" disabled class="w-full rounded-md border border-blue-500! bg-gray-100 px-3 py-2 text-sm font-medium text-gray-400 disabled:cursor-not-allowed">Edit</button><button type="button" data-delete-trial aria-label="Delete trial" title="Delete trial" class="rounded-md border border-red-200 p-2 text-red-600 hover:bg-red-50"><span class="icon-[tabler--trash] h-5 w-5" aria-hidden="true"></span></button></div>
                     </div>
                 </div>
@@ -563,6 +563,11 @@
                                 field.required = !isExisting;
                                 field.disabled = shouldDisable;
                             });
+
+                            row.querySelectorAll('[data-amr-recovery-col] input').forEach((field) => {
+                                field.disabled = true;
+                                field.required = false;
+                            });
                         });
                     }
                 }
@@ -705,6 +710,11 @@
                             field.disabled = true;
                         }
                     });
+
+                    row.querySelectorAll('[data-amr-recovery-col] input').forEach((field) => {
+                        field.disabled = true;
+                        field.required = false;
+                    });
                 });
             });
 
@@ -789,6 +799,10 @@
                 input.disabled = false;
                 input.classList.remove('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
             });
+            clone.querySelectorAll('[data-amr-recovery-col] input').forEach((field) => {
+                field.disabled = true;
+                field.required = false;
+            });
             clone.querySelector('[data-row-action]').innerHTML = trialActionMarkup();
             rows.appendChild(clone);
             initializeNumberFormatting(clone);
@@ -832,6 +846,10 @@
                 }
                 input.disabled = false;
                 input.classList.remove('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
+            });
+            firstRow.querySelectorAll('[data-amr-recovery-col] input').forEach((field) => {
+                field.disabled = true;
+                field.required = false;
             });
             const firstDateInput = firstRow.querySelector('[name$="[test_milling_date]"]');
             if (firstDateInput) {
@@ -1507,6 +1525,10 @@
                     }
                 }
             }
+
+            document.querySelectorAll('[data-amr-recovery-col] input, .hidden input, .hidden select, .hidden textarea').forEach((field) => {
+                field.required = false;
+            });
 
             document.querySelectorAll('[data-number-format]').forEach((field) => {
                 field.value = field.value.replace(/,/g, '');
