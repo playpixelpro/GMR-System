@@ -10,13 +10,10 @@
     </div>
 
     @if (session('status'))
-        <div class="alert alert-success flex items-start gap-2">
-            <span class="icon-[tabler--circle-check] size-5 shrink-0 mt-0.5" aria-hidden="true"></span>
-            <div>{{ session('status') }}</div>
-        </div>
+        <x-alert-box type="success" :message="session('status')" dismissible class="mb-4" />
     @endif
     @if (isset($errors) && $errors->any())
-        <div class="alert alert-error">
+        <x-alert-box type="error" dismissible class="mb-4">
             @if ($errors->count() === 1)
                 {{ $errors->first() }}
             @else
@@ -26,7 +23,7 @@
                     @endforeach
                 </ul>
             @endif
-        </div>
+        </x-alert-box>
     @endif
 
     <form method="POST" action="{{ route('millers.store') }}" class="grid gap-3 rounded-lg border border-base-content/10 bg-base-100 p-4 md:grid-cols-4 items-end">

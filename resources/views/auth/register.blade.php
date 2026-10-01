@@ -11,7 +11,7 @@
     <p class="mt-1 text-sm text-base-content/70">Create an account to access your assigned branch. A temporary password will be emailed to you, and an Administrator must confirm your account.</p>
 
     @if ($errors->any())
-        <div class="mt-4 alert alert-error">
+        <x-alert-box type="error" class="mt-4" dismissible>
             @if ($errors->count() === 1)
                 {{ $errors->first() }}
             @else
@@ -21,7 +21,7 @@
                     @endforeach
                 </ul>
             @endif
-        </div>
+        </x-alert-box>
     @endif
 
     <form method="POST" action="{{ route('register.store') }}" class="mt-6 space-y-4">
@@ -44,9 +44,9 @@
             </select>
         </label>
 
-        <div class="alert alert-info text-xs">
+        <x-alert-box type="info" size="sm">
             Your account is active for <strong>8 hours</strong> from creation. It will be disabled if an Administrator does not confirm it within that time.
-        </div>
+        </x-alert-box>
 
         <button class="btn btn-primary w-full" type="submit">Register</button>
     </form>

@@ -25,31 +25,21 @@
     </div>
 
     @if (session('status'))
-        <div class="alert alert-success shadow-sm">
-            <span class="icon-[tabler--circle-check] size-5"></span>
-            <span>{{ session('status') }}</span>
-        </div>
+        <x-alert-box type="success" :message="session('status')" dismissible class="mb-4" />
     @endif
 
     @if (session('error'))
-        <div class="alert alert-error shadow-sm">
-            <span class="icon-[tabler--alert-circle] size-5"></span>
-            <span>{{ session('error') }}</span>
-        </div>
+        <x-alert-box type="error" :message="session('error')" dismissible class="mb-4" />
     @endif
 
     @if ($errors->any())
-        <div class="alert alert-error shadow-sm">
-            <span class="icon-[tabler--alert-circle] size-5"></span>
-            <div>
-                <span class="font-bold">Please correct the following errors:</span>
-                <ul class="mt-1 list-disc list-inside text-xs">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        </div>
+        <x-alert-box type="error" title="Please correct the following errors:" dismissible class="mb-4">
+            <ul class="mt-1 list-disc list-inside text-xs">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </x-alert-box>
     @endif
 
     <!-- Main Configuration Form -->

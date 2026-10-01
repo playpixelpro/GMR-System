@@ -9,20 +9,17 @@
     </div>
 
     @if (session('status'))
-        <div class="mb-6 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-            {{ session('status') }}
-        </div>
+        <x-alert-box type="success" :message="session('status')" class="mb-6" dismissible />
     @endif
 
     @if ($errors->any())
-        <div class="mb-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            <p class="font-medium">Please correct the following:</p>
-            <ul class="mt-1 list-disc pl-5">
+        <x-alert-box type="error" title="Please correct the following:" class="mb-6" dismissible>
+            <ul class="mt-1 list-disc pl-5 space-y-0.5 text-xs">
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
                 @endforeach
             </ul>
-        </div>
+        </x-alert-box>
     @endif
 
     <form method="POST" action="{{ route('records.store') }}" class="space-y-6" data-entry-form>
@@ -1257,7 +1254,7 @@
                                 pileTrials.trials = pileTrials.trials.filter((trial) => Number(trial) !== trialNumber);
                             }
                         } catch (error) {
-                            window.alert(error.message);
+                            window.showAlert(error.message, 'error');
                             deleteButton.disabled = false;
                             return;
                         }
@@ -1360,7 +1357,7 @@
                     });
                     button.textContent = 'Edit';
                 } catch (error) {
-                    window.alert(error.message);
+                    window.showAlert(error.message, 'error');
                 } finally {
                     button.disabled = false;
                 }
@@ -1432,7 +1429,7 @@
                 updateAmrVolumeLayout();
                 updateTrialOptions();
             } catch (error) {
-                window.alert(error.message);
+                window.showAlert(error.message, 'error');
                 editPileDetailsButton.disabled = false;
             }
         });

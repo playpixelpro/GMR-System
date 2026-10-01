@@ -30,7 +30,7 @@
         <label class="form-control">
             <span class="label-text mb-2 text-sm font-semibold text-black">Branch</span>
             @php
-                $isStaffUser = auth()->user()?->hasRole('STAFF') && auth()->user()?->branch_id;
+                $isStaffUser = (bool) auth()->user()?->isBranchRestricted();
             @endphp
             <select name="branch_id" class="select select-bordered min-h-11 w-full text-base text-black @if($isStaffUser) bg-gray-100 text-gray-500 cursor-not-allowed @endif" onchange="this.form.submit()" @disabled($isStaffUser)>
                 @unless($isStaffUser)
@@ -301,13 +301,15 @@
                     @else
                       <span class="text-xs text-base-content/60 font-medium">Locked</span>
                     @endif
-                  @elseif (! $hasPmrTrials)
+                  @elseif (! $hasPmrTrials && ! auth()->user()?->hasRole('VIEWER'))
                     <a href="{{ route('records.create', ['type' => 'pmr', 'pile_id' => $pile?->id]) }}"
                        class="btn btn-secondary btn-xs inline-flex items-center gap-1"
                        title="Add PMR Trials for this Pile">
                       <span class="icon-[tabler--plus] size-3.5"></span>
                       <span>Add Trials</span>
                     </a>
+                  @elseif (! $hasPmrTrials)
+                    <span class="text-xs text-base-content/40 italic">No trials</span>
                   @else
                     @if (auth()->user()?->hasRole('STAFF') && $records->every(fn($r) => ! $r->is_locked))
                       <a href="{{ route('records.create', ['type' => 'pmr', 'pile_id' => $pile?->id]) }}"
@@ -433,45 +435,19 @@
       <div class="p-4 space-y-3.5 overflow-y-auto flex-1 text-xs">
         {{-- Status Summary Alert --}}
         @if (! $hasPmrTrials)
-          <div class="alert alert-soft alert-neutral flex items-center gap-2.5 p-2.5 rounded-lg text-xs">
-            <span class="icon-[tabler--clock] size-4.5 text-base-content/60 shrink-0"></span>
-            <div>
-              <p class="font-semibold text-base-content">Pending PMR Trials (0/3)</p>
-              <p class="text-base-content/70 text-xs mt-0.5">No laboratory milling trials have been entered yet for this pile. Exactly 3 laboratory milling trials are required to establish the PMR.</p>
-            </div>
-          </div>
+          <x-alert-box type="neutral" size="sm" icon="icon-[tabler--clock]" title="Pending PMR Trials (0/3)">
+            <p class="text-xs mt-0.5 opacity-80">No laboratory milling trials have been entered yet for this pile. Exactly 3 laboratory milling trials are required to establish the PMR.</p>
+          </x-alert-box>
         @elseif ($calculation->isHistoricalLegacy())
-          <div class="alert alert-soft alert-neutral flex items-center gap-2.5 p-2.5 rounded-lg text-xs">
-            <span class="icon-[tabler--history] size-4.5 text-base-content/70 shrink-0"></span>
-            <div>
-              <p class="font-semibold text-base-content">Historical Legacy Record ({{ count($calculation->trials) }} Trials)</p>
-              <p class="text-base-content/70 text-xs mt-0.5">This PMR was recorded under a legacy requirement. Under current NFA guidelines, PMR requires 3 laboratory milling trials and must be re-established.</p>
-            </div>
-          </div>
+          <x-alert-box type="neutral" size="sm" icon="icon-[tabler--history]" title="Historical Legacy Record ({{ count($calculation->trials) }} Trials)">
+            <p class="text-xs mt-0.5 opacity-80">This PMR was recorded under a legacy requirement. Under current NFA guidelines, PMR requires 3 laboratory milling trials and must be re-established.</p>
+          </x-alert-box>
         @elseif ($calculation->isValid)
-          <div class="alert alert-soft alert-primary flex items-center gap-2.5 p-2.5 rounded-lg text-xs">
-            <span class="icon-[tabler--circle-check] size-4.5 text-primary shrink-0"></span>
-            <div>
-              <p class="font-semibold text-primary">Recommended PMR: {{ $calculation->getFormattedPmrRate() }}</p>
-              <p class="text-base-content/70 text-xs mt-0.5">{{ $calculation->statusMessage }}</p>
-            </div>
-          </div>
+          <x-alert-box type="primary" size="sm" icon="icon-[tabler--circle-check]" title="Recommended PMR: {{ $calculation->getFormattedPmrRate() }}" :message="$calculation->statusMessage" />
         @elseif ($calculation->isInvalid())
-          <div class="alert alert-soft alert-secondary flex items-center gap-2.5 p-2.5 rounded-lg text-xs">
-            <span class="icon-[tabler--alert-triangle] size-4.5 text-secondary shrink-0"></span>
-            <div>
-              <p class="font-semibold text-secondary">Retest Required: {{ $calculation->outlierCount }} Outliers / Rule Failure</p>
-              <p class="text-base-content/70 text-xs mt-0.5">{{ $calculation->statusMessage }}</p>
-            </div>
-          </div>
+          <x-alert-box type="error" size="sm" icon="icon-[tabler--alert-triangle]" title="Retest Required: {{ $calculation->outlierCount }} Outliers / Rule Failure" :message="$calculation->statusMessage" />
         @else
-          <div class="alert alert-soft alert-neutral flex items-center gap-2.5 p-2.5 rounded-lg text-xs">
-            <span class="icon-[tabler--clock] size-4.5 text-base-content/60 shrink-0"></span>
-            <div>
-              <p class="font-semibold text-base-content">Calculation Incomplete</p>
-              <p class="text-base-content/70 text-xs mt-0.5">{{ $calculation->statusMessage }}</p>
-            </div>
-          </div>
+          <x-alert-box type="neutral" size="sm" icon="icon-[tabler--clock]" title="Calculation Incomplete" :message="$calculation->statusMessage" />
         @endif
 
         {{-- Statistical Boundary Cards (±2% of Median) --}}
@@ -486,12 +462,12 @@
             <div class="bg-base-200/50 p-2 rounded-lg border border-base-content/10 text-center">
               <span class="text-xs text-base-content/60 block">Lower Limit (-2%)</span>
               <span class="text-sm font-mono font-bold text-base-content mt-0.5 block">{{ $calculation->getFormattedLowerLimit() }}</span>
-              <span class="text-xs text-base-content/50 block">Median Ã— 0.98</span>
+              <span class="text-xs text-base-content/50 block">Median &times; 0.98</span>
             </div>
             <div class="bg-base-200/50 p-2 rounded-lg border border-base-content/10 text-center">
               <span class="text-xs text-base-content/60 block">Upper Limit (+2%)</span>
               <span class="text-sm font-mono font-bold text-base-content mt-0.5 block">{{ $calculation->getFormattedUpperLimit() }}</span>
-              <span class="text-xs text-base-content/50 block">Median Ã— 1.02</span>
+              <span class="text-xs text-base-content/50 block">Median &times; 1.02</span>
             </div>
           </div>
         </div>
@@ -566,7 +542,7 @@
                 <span class="text-sm font-mono font-bold mt-0.5 block {{ $calculation->isCvValid ? 'text-primary' : ($calculation->coefficientOfVariation !== null ? 'text-secondary' : 'text-base-content') }}">
                   {{ $calculation->getFormattedCv() }}
                 </span>
-                <span class="text-xs text-base-content/50 block">(s / Mean) Ã— 100</span>
+                <span class="text-xs text-base-content/50 block">(s / Mean) &times; 100</span>
               </div>
             </div>
 

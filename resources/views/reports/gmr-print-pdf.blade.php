@@ -181,7 +181,7 @@
                         {{ $row['pmr'] !== null ? number_format((float) $row['pmr'], 2) : '—' }}
                     </td>
                     <td class="text-center font-bold">
-                        {{ $row['emr'] ?? '—' }}
+                        {{ str_replace('%', '', (string) ($row['emr'] ?? '—')) }}
                     </td>
                     <td class="text-center font-bold">
                         {{ $row['gmr'] !== null ? number_format((float) $row['gmr'], 2) : '—' }}

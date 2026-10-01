@@ -61,10 +61,14 @@
 </div>
 
 @if ($approval->remarks)
-    <div class="alert alert-soft alert-info mb-4 text-sm"><strong>Remarks:</strong> {{ $approval->remarks }}</div>
+    <x-alert-box type="info" class="mb-4">
+        <strong>Remarks:</strong> {{ $approval->remarks }}
+    </x-alert-box>
 @endif
 @if ($approval->rejection_reason)
-    <div class="alert alert-soft alert-error mb-4 text-sm"><strong>Rejection reason:</strong> {{ $approval->rejection_reason }}</div>
+    <x-alert-box type="error" class="mb-4">
+        <strong>Rejection reason:</strong> {{ $approval->rejection_reason }}
+    </x-alert-box>
 @endif
 
 @php

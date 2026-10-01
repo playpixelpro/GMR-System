@@ -75,6 +75,11 @@ class User extends Authenticatable
         return in_array(strtoupper((string) $this->role), $roles, true);
     }
 
+    public function isBranchRestricted(): bool
+    {
+        return (bool) ($this->branch_id && $this->hasRole('STAFF', 'VIEWER'));
+    }
+
     public function isEditLocked(): bool
     {
         return (bool) $this->is_edit_locked;

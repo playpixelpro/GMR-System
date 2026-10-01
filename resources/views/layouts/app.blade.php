@@ -45,7 +45,7 @@
             </button>
 
             <div>
-                <a href="{{ route('home') }}" class="text-sm font-semibold text-base-content hover:text-primary transition-colors block leading-tight">NFA GMR</a>
+                <a href="{{ auth()->user()?->hasRole('VIEWER') ? route('amr.index') : route('home') }}" class="text-sm font-semibold text-base-content hover:text-primary transition-colors block leading-tight">NFA GMR</a>
             </div>
         </div>
 
@@ -80,24 +80,26 @@
         <aside id="collapsible-mini-sidebar" class="overlay [--auto-close:sm] transition-all duration-300 overlay-minified:w-17 sm:shadow-none overlay-open:translate-x-0 drawer drawer-start hidden w-66 sm:fixed sm:top-16 sm:bottom-0 sm:start-0 sm:z-30 sm:flex sm:translate-x-0 border-e border-base-content/20 bg-base-100 overflow-y-auto" role="dialog" tabindex="-1">
             <div class="drawer-body px-2 py-4">
                 <ul class="menu p-0">
-                    <li>
-                        <a href="{{ route('home') }}" class="{{ request()->routeIs('home') ? 'menu-active' : '' }}" title="Home">
-                            <span class="icon-[tabler--home] size-5"></span>
-                            <span class="overlay-minified:hidden">Home</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('records.create') }}" class="{{ request()->routeIs('records.*') ? 'menu-active' : '' }}" title="Data Entry">
-                            <span class="icon-[tabler--edit] size-5"></span>
-                            <span class="overlay-minified:hidden">Data Entry</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('millings.index') }}" class="{{ request()->routeIs('millings.*') ? 'menu-active' : '' }}" title="Rice Milling">
-                            <span class="icon-[tabler--building-factory-2] size-5"></span>
-                            <span class="overlay-minified:hidden">Rice Milling</span>
-                        </a>
-                    </li>
+                    @unless (auth()->user()?->hasRole('VIEWER'))
+                        <li>
+                            <a href="{{ route('home') }}" class="{{ request()->routeIs('home') ? 'menu-active' : '' }}" title="Home">
+                                <span class="icon-[tabler--home] size-5"></span>
+                                <span class="overlay-minified:hidden">Home</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('records.create') }}" class="{{ request()->routeIs('records.*') ? 'menu-active' : '' }}" title="Data Entry">
+                                <span class="icon-[tabler--edit] size-5"></span>
+                                <span class="overlay-minified:hidden">Data Entry</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('millings.index') }}" class="{{ request()->routeIs('millings.*') ? 'menu-active' : '' }}" title="Rice Milling">
+                                <span class="icon-[tabler--building-factory-2] size-5"></span>
+                                <span class="overlay-minified:hidden">Rice Milling</span>
+                            </a>
+                        </li>
+                    @endunless
                     @php($isReportActive = request()->routeIs('amr.*', 'pmr.*', 'emr.*', 'gmr.*', 'gmr-approvals.*'))
                     <li class="dropdown relative {{ $isReportActive ? 'open' : '' }} [--adaptive:none] [--strategy:static]" data-flyout-title="Reports">
                         <button id="reports-dropdown" type="button" class="dropdown-toggle {{ $isReportActive ? 'menu-active' : '' }}" aria-haspopup="menu" aria-expanded="{{ $isReportActive ? 'true' : 'false' }}" aria-label="Reports" title="Reports">
@@ -388,6 +390,7 @@
             });
         });
     </script>
+    <x-alert-dialog />
     @stack('modals')
 </body>
 

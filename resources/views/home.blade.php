@@ -8,17 +8,19 @@
 </div>
 
 <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-    <div class="card bg-base-100 shadow-sm border border-base-content/10 p-6 flex flex-col justify-between">
-        <div>
-            <div class="size-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-4">
-                <span class="icon-[tabler--edit] size-6"></span>
+    @unless (auth()->user()?->hasRole('VIEWER'))
+        <div class="card bg-base-100 shadow-sm border border-base-content/10 p-6 flex flex-col justify-between">
+            <div>
+                <div class="size-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-4">
+                    <span class="icon-[tabler--edit] size-6"></span>
+                </div>
+                <h2 class="text-lg font-semibold text-base-content">Data Entry Form</h2>
             </div>
-            <h2 class="text-lg font-semibold text-base-content">Data Entry Form</h2>
+            <div class="mt-6">
+                <a href="{{ route('records.create') }}" class="btn btn-primary w-full">Open Data Entry</a>
+            </div>
         </div>
-        <div class="mt-6">
-            <a href="{{ route('records.create') }}" class="btn btn-primary w-full">Open Data Entry</a>
-        </div>
-    </div>
+    @endunless
 
     <div class="card bg-base-100 shadow-sm border border-base-content/10 p-6 flex flex-col justify-between">
         <div>

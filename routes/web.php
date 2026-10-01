@@ -182,55 +182,63 @@ Route::middleware('auth')->group(function (): void {
 
 Route::middleware(['auth', 'password.changed'])->group(function (): void {
     Route::get('/', function () {
+        if (auth()->user()?->hasRole('VIEWER')) {
+            return redirect()->route('amr.index');
+        }
+
         return view('home');
     })->name('home');
 
-    Route::get('/records/create', [DataEntryController::class, 'create'])->name(
-        'records.create',
-    );
-    Route::post('/records', [DataEntryController::class, 'store'])->name(
-        'records.store',
-    );
-    Route::patch('/records/{formType}/{record}', [
-        DataEntryController::class,
-        'update',
-    ])->name('records.update');
-    Route::delete('/records/{formType}/{record}', [
-        DataEntryController::class,
-        'destroy',
-    ])->name('records.destroy');
-    Route::patch('/piles/{pile}/details', [
-        DataEntryController::class,
-        'updatePileDetails',
-    ])->name('piles.details.update');
+    Route::middleware('can:access-data-entry')->group(function (): void {
+        Route::get('/records/create', [DataEntryController::class, 'create'])->name(
+            'records.create',
+        );
+        Route::post('/records', [DataEntryController::class, 'store'])->name(
+            'records.store',
+        );
+        Route::patch('/records/{formType}/{record}', [
+            DataEntryController::class,
+            'update',
+        ])->name('records.update');
+        Route::delete('/records/{formType}/{record}', [
+            DataEntryController::class,
+            'destroy',
+        ])->name('records.destroy');
+        Route::patch('/piles/{pile}/details', [
+            DataEntryController::class,
+            'updatePileDetails',
+        ])->name('piles.details.update');
 
-    Route::get('/branches/{branch}/warehouses', [
-        DataEntryController::class,
-        'warehouses',
-    ])->name('branches.warehouses');
-    Route::get('/warehouses/{warehouse}/piles', [
-        DataEntryController::class,
-        'piles',
-    ])->name('warehouses.piles');
+        Route::get('/branches/{branch}/warehouses', [
+            DataEntryController::class,
+            'warehouses',
+        ])->name('branches.warehouses');
+        Route::get('/warehouses/{warehouse}/piles', [
+            DataEntryController::class,
+            'piles',
+        ])->name('warehouses.piles');
 
-    Route::post('/warehouses', [
-        DataEntryController::class,
-        'createWarehouse',
-    ])->name('warehouses.store');
-    Route::post('/piles', [DataEntryController::class, 'createPile'])->name(
-        'piles.store',
-    );
-    Route::post('/piles/{pile}/status', [
-        DataEntryController::class,
-        'updatePileStatus',
-    ])->name('piles.status');
+        Route::post('/warehouses', [
+            DataEntryController::class,
+            'createWarehouse',
+        ])->name('warehouses.store');
+        Route::post('/piles', [DataEntryController::class, 'createPile'])->name(
+            'piles.store',
+        );
+        Route::post('/piles/{pile}/status', [
+            DataEntryController::class,
+            'updatePileStatus',
+        ])->name('piles.status');
+    });
 
-    Route::get('/millers', [MillerController::class, 'index'])->name(
-        'millers.index',
-    );
-    Route::post('/millers', [MillerController::class, 'store'])->name(
-        'millers.store',
-    );
+    Route::middleware('can:access-milling')->group(function (): void {
+        Route::get('/millers', [MillerController::class, 'index'])->name(
+            'millers.index',
+        );
+        Route::post('/millers', [MillerController::class, 'store'])->name(
+            'millers.store',
+        );
+    });
 
     Route::middleware('can:manage-millings')->group(function (): void {
         Route::get('/settings/millers', [
@@ -338,7 +346,7 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
     Route::post('/piles/{pile}/retest', [
         TestWorkflowController::class,
         'requestRetest',
-    ])->name('piles.workflow.retest');
+    ])->name('piles.workflow.retest')->middleware('can:access-data-entry');
 
     // Central-Office GMR approval workflow
     Route::get('/gmr-approvals', [GmrApprovalController::class, 'index'])->name('gmr-approvals.index');
@@ -348,11 +356,13 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
     Route::post('/gmr-approvals/{approval}/reject', [GmrApprovalController::class, 'reject'])->name('gmr-approvals.reject')->middleware('can:manage-gmr-approvals');
 
     // Rice-milling progress monitoring
-    Route::get('/millings', [MillingController::class, 'index'])->name('millings.index');
-    Route::get('/millings/create', [MillingController::class, 'create'])->name('millings.create')->middleware('can:manage-millings');
-    Route::post('/millings', [MillingController::class, 'store'])->name('millings.store')->middleware('can:manage-millings');
-    Route::get('/millings/{milling}', [MillingController::class, 'show'])->name('millings.show');
-    Route::patch('/millings/{milling}', [MillingController::class, 'update'])->name('millings.update')->middleware('can:manage-millings');
-    Route::post('/millings/{milling}/progress', [MillingController::class, 'storeProgress'])->name('millings.progress.store')->middleware('can:record-milling-progress');
-    Route::delete('/millings/progress/{progress}', [MillingController::class, 'destroyProgress'])->name('millings.progress.destroy')->middleware('can:manage-millings');
+    Route::middleware('can:access-milling')->group(function (): void {
+        Route::get('/millings', [MillingController::class, 'index'])->name('millings.index');
+        Route::get('/millings/create', [MillingController::class, 'create'])->name('millings.create')->middleware('can:manage-millings');
+        Route::post('/millings', [MillingController::class, 'store'])->name('millings.store')->middleware('can:manage-millings');
+        Route::get('/millings/{milling}', [MillingController::class, 'show'])->name('millings.show');
+        Route::patch('/millings/{milling}', [MillingController::class, 'update'])->name('millings.update')->middleware('can:manage-millings');
+        Route::post('/millings/{milling}/progress', [MillingController::class, 'storeProgress'])->name('millings.progress.store')->middleware('can:record-milling-progress');
+        Route::delete('/millings/progress/{progress}', [MillingController::class, 'destroyProgress'])->name('millings.progress.destroy')->middleware('can:manage-millings');
+    });
 });

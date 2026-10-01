@@ -79,7 +79,11 @@ class GmrReportService
         $amr = $gate['can_compute'] ? $gate['amr_rate'] : null;
         $pmr = $gate['can_compute'] ? $gate['pmr_rate'] : null;
         $gmr = $gate['can_compute'] ? $gate['gmr'] : null;
-        $emr = $gate['can_compute'] ? $gate['emr_display'] : 'N/A';
+        $emr = $gate['can_compute']
+            ? ($amr !== null && $pmr !== null
+                ? number_format((float) $amr, 2).' – '.number_format((float) $pmr, 2)
+                : str_replace('%', '', (string) $gate['emr_display']))
+            : '—';
 
         return [
             'id' => $pile->id,

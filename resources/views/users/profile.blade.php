@@ -10,7 +10,7 @@
     </div>
 
     @if (session('status'))
-        <div class="alert alert-success">{{ session('status') }}</div>
+        <x-alert-box type="success" :message="session('status')" dismissible class="mb-4" />
     @endif
 
     <form method="POST" action="{{ route('profile.update') }}" enctype="multipart/form-data" class="space-y-5 rounded-lg border border-base-content/10 bg-base-100 p-6">

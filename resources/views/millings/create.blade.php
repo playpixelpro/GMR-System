@@ -77,7 +77,7 @@
     </label>
 
     @if ($piles->isEmpty())
-        <div class="alert alert-soft alert-warning mt-4 text-sm">No piles with an approved GMR are currently available for milling in the selected branch.</div>
+        <x-alert-box type="warning" message="No piles with an approved GMR are currently available for milling in the selected branch." class="mt-4" />
     @endif
 
     <div class="mt-5">

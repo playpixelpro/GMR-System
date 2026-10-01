@@ -32,11 +32,11 @@ class AmrRecordController extends Controller
         $filters = $this->filters($request);
         $groups = $this->getRecordGroups($filters);
         $user = $request->user();
-        $isStaff = $user && $user->hasRole('STAFF') && $user->branch_id;
+        $isBranchRestricted = (bool) $user?->isBranchRestricted();
 
         return view('reports.amr', [
             'branches' => Branch::query()
-                ->when($isStaff, fn ($query) => $query->whereKey($user->branch_id))
+                ->when($isBranchRestricted, fn ($query) => $query->whereKey($user->branch_id))
                 ->orderBy('name')
                 ->get(['id', 'name']),
             'warehouses' => Warehouse::query()
@@ -354,7 +354,7 @@ class AmrRecordController extends Controller
     private function filters(Request $request): array
     {
         $user = $request->user();
-        $branchId = ($user && $user->hasRole('STAFF') && $user->branch_id)
+        $branchId = ($user?->isBranchRestricted())
             ? (int) $user->branch_id
             : ($request->integer('branch_id') ?: null);
 

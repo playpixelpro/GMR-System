@@ -23,7 +23,7 @@
     </div>
 
     @if (session('status'))
-        <div class="alert alert-success">{{ session('status') }}</div>
+        <x-alert-box type="success" :message="session('status')" dismissible class="mb-4" />
     @endif
 
     <form method="GET" action="{{ route('settings.activity-logs') }}" class="grid gap-3 rounded-lg border border-base-content/10 bg-base-100 p-4 md:grid-cols-6 items-end">

@@ -10,10 +10,7 @@
     </div>
 
     @if (session('status'))
-        <div class="alert alert-success flex items-start gap-2">
-            <span class="icon-[tabler--circle-check] size-5 shrink-0 mt-0.5" aria-hidden="true"></span>
-            <div>{{ session('status') }}</div>
-        </div>
+        <x-alert-box type="success" :message="session('status')" dismissible class="mb-4" />
     @endif
 
     <div class="overflow-x-auto rounded-lg border border-base-content/10 bg-base-100">

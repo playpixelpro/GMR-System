@@ -32,7 +32,7 @@
         <label class="form-control">
             <span class="label-text mb-2 text-sm font-semibold text-black">Branch</span>
             @php
-                $isStaffUser = auth()->user()?->hasRole('STAFF') && auth()->user()?->branch_id;
+                $isStaffUser = (bool) auth()->user()?->isBranchRestricted();
             @endphp
             <select name="branch_id" class="select select-bordered min-h-11 w-full text-base text-black @if($isStaffUser) bg-gray-100 text-gray-500 cursor-not-allowed @endif" onchange="this.form.submit()" @disabled($isStaffUser)>
                 @unless($isStaffUser)

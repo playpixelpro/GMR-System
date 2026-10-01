@@ -229,7 +229,7 @@
                 </label>
 
                 @if ($availablePiles->isEmpty())
-                    <div class="alert alert-soft alert-warning mt-4 text-sm">No piles with an approved GMR are currently available for milling.</div>
+                    <x-alert-box type="warning" message="No piles with an approved GMR are currently available for milling." class="mt-4" />
                 @endif
 
                 <div class="mt-5 flex items-center justify-end gap-2">

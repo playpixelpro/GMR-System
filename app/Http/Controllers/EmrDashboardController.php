@@ -33,7 +33,7 @@ class EmrDashboardController extends Controller
         $rows = $this->rows($filters);
         $paginator = $this->paginate($rows, $request);
         $user = $request->user();
-        $isStaff = $user && $user->hasRole('STAFF') && $user->branch_id;
+        $isBranchRestricted = (bool) $user?->isBranchRestricted();
 
         $warehouses = Warehouse::query()
             ->when(
@@ -45,7 +45,7 @@ class EmrDashboardController extends Controller
 
         return view('reports.emr', [
             'branches' => Branch::query()
-                ->when($isStaff, fn ($query) => $query->whereKey($user->branch_id))
+                ->when($isBranchRestricted, fn ($query) => $query->whereKey($user->branch_id))
                 ->orderBy('name')
                 ->get(['id', 'name']),
             'warehouses' => $warehouses,
@@ -339,9 +339,9 @@ class EmrDashboardController extends Controller
     private function filters(Request $request): array
     {
         $user = $request->user();
-        $isStaff = $user && $user->hasRole('STAFF') && $user->branch_id;
+        $isBranchRestricted = (bool) $user?->isBranchRestricted();
 
-        $branchId = $isStaff ? (int) $user->branch_id : ($request->integer('branch_id') ?: null);
+        $branchId = $isBranchRestricted ? (int) $user->branch_id : ($request->integer('branch_id') ?: null);
         $warehouseId = $request->integer('warehouse_id') ?: null;
 
         if ($warehouseId !== null) {

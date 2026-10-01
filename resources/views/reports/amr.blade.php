@@ -30,7 +30,7 @@
         <label class="form-control">
             <span class="label-text mb-2 text-sm font-semibold text-black">Branch</span>
             @php
-                $isStaffUser = auth()->user()?->hasRole('STAFF') && auth()->user()?->branch_id;
+                $isStaffUser = (bool) auth()->user()?->isBranchRestricted();
             @endphp
             <select name="branch_id" class="select select-bordered min-h-11 w-full text-base text-black @if($isStaffUser) bg-gray-100 text-gray-500 cursor-not-allowed @endif" onchange="this.form.submit()" @disabled($isStaffUser)>
                 @unless($isStaffUser)
@@ -327,13 +327,15 @@
                     @else
                       <span class="text-xs text-base-content/60 font-medium">Locked</span>
                     @endif
-                  @elseif (! $hasAmrTrials)
+                  @elseif (! $hasAmrTrials && ! auth()->user()?->hasRole('VIEWER'))
                     <a href="{{ route('records.create', ['type' => 'amr', 'pile_id' => $pile?->id]) }}"
                        class="btn btn-secondary btn-xs inline-flex items-center gap-1"
                        title="Add AMR Trials for this Pile">
                       <span class="icon-[tabler--plus] size-3.5"></span>
                       <span>Add Trials</span>
                     </a>
+                  @elseif (! $hasAmrTrials)
+                    <span class="text-xs text-base-content/40 italic">No trials</span>
                   @else
                     @if (auth()->user()?->hasRole('STAFF') && $records->every(fn($r) => ! $r->is_locked))
                       <a href="{{ route('records.create', ['type' => 'amr', 'pile_id' => $pile?->id]) }}"
@@ -452,15 +454,14 @@
 
         {{-- Status Alert Banner --}}
         @if ($calculation->isMriEstablished())
-          <div class="alert alert-soft alert-info text-xs py-2.5 px-3 flex items-start gap-2.5">
-            <span class="icon-[tabler--certificate] size-5 text-info shrink-0 mt-0.5"></span>
+          <x-alert-box type="info" size="sm" icon="icon-[tabler--certificate]">
             <div>
               <span class="font-bold text-sm block">NFA Guideline C.3.10 — Stockpiles &lt; 50,000 kg (&lt; 1,000 bags)</span>
               <p class="mt-0.5 text-base-content/80">
                 Piles with total quantity below 50,000 kg are exempt from commercial test milling. AMR is established directly by deducting the Milling Recovery Index (MRI) of up to 3.00% from PMR (PNS/BAFS 303:2020).
               </p>
             </div>
-          </div>
+          </x-alert-box>
 
           {{-- MRI Computation Breakdown Card --}}
           <div class="bg-base-200/50 rounded-xl p-4 border border-base-content/10 space-y-3">
@@ -499,29 +500,11 @@
             </div>
           </div>
         @elseif ($calculation->isValid)
-          <div class="alert alert-soft alert-primary text-xs py-2 px-3 flex items-center gap-2">
-            <span class="icon-[tabler--circle-check] size-4 shrink-0"></span>
-            <div>
-              <span class="font-semibold">Calculation Valid:</span>
-              {{ $calculation->statusMessage }}
-            </div>
-          </div>
+          <x-alert-box type="primary" size="sm" icon="icon-[tabler--circle-check]" title="Calculation Valid:" :message="$calculation->statusMessage" />
         @elseif ($calculation->isInvalidOutliers())
-          <div class="alert alert-soft alert-secondary text-xs py-2 px-3 flex items-center gap-2">
-            <span class="icon-[tabler--alert-triangle] size-4 shrink-0"></span>
-            <div>
-              <span class="font-semibold">Invalid — Outliers Detected:</span>
-              {{ $calculation->statusMessage }}
-            </div>
-          </div>
+          <x-alert-box type="error" size="sm" icon="icon-[tabler--alert-triangle]" title="Invalid — Outliers Detected:" :message="$calculation->statusMessage" />
         @else
-          <div class="alert alert-soft alert-neutral text-xs py-2 px-3 flex items-center gap-2">
-            <span class="icon-[tabler--clock] size-4 shrink-0"></span>
-            <div>
-              <span class="font-semibold">Incomplete Trials:</span>
-              {{ $calculation->statusMessage }}
-            </div>
-          </div>
+          <x-alert-box type="neutral" size="sm" icon="icon-[tabler--clock]" title="Incomplete Trials:" :message="$calculation->statusMessage" />
         @endif
 
         @if (! $calculation->isMriEstablished())

@@ -23,5 +23,6 @@
         <div>&copy; {{ date('Y') }} National Food Authority &bull; GMR System. All rights reserved.</div>
         <div>Developer: <strong class="font-medium text-base-content/80">Dindo O. Quitor - R12 RECO</strong></div>
     </footer>
+    <x-alert-dialog />
 </body>
 </html>

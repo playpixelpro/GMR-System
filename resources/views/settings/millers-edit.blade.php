@@ -16,7 +16,7 @@
     </div>
 
     @if (isset($errors) && $errors->any())
-        <div class="alert alert-error">
+        <x-alert-box type="error" dismissible class="mb-4">
             @if ($errors->count() === 1)
                 {{ $errors->first() }}
             @else
@@ -26,7 +26,7 @@
                     @endforeach
                 </ul>
             @endif
-        </div>
+        </x-alert-box>
     @endif
 
     <form method="POST" action="{{ route('settings.millers.update', $miller) }}" class="grid gap-4 rounded-lg border border-base-content/10 bg-base-100 p-5">
