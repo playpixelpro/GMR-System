@@ -104,14 +104,19 @@ class EmrExportService
             $sheet->setCellValue("H{$row}", $data['volume_bags'] !== null ? round((float) $data['volume_bags'], 3) : '—');
             $sheet->setCellValue("I{$row}", $data['purity'] !== null ? round((float) $data['purity'], 2) : '—');
             $sheet->setCellValue("J{$row}", strtoupper(str_replace('_', ' ', $data['quality'] ?? '—')));
-            $sheet->setCellValue("K{$row}", $data['amr'] !== null ? round((float) $data['amr'], 2).'%' : '—');
-            $sheet->setCellValue("L{$row}", $data['pmr'] !== null ? round((float) $data['pmr'], 2).'%' : '—');
-            $sheet->setCellValue("M{$row}", $data['emr_display'] ?? '—');
+            $sheet->setCellValue("K{$row}", $data['amr'] !== null ? round((float) $data['amr'], 2) : '—');
+            $sheet->setCellValue("L{$row}", $data['pmr'] !== null ? round((float) $data['pmr'], 2) : '—');
+            $emrClean = isset($data['emr_display']) ? str_replace('%', '', (string) $data['emr_display']) : '—';
+            $sheet->setCellValue("M{$row}", $emrClean);
 
             $sheet->getStyle("A{$row}:M{$row}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('D1D5DB');
             $sheet->getStyle("A{$row}:A{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $sheet->getStyle("F{$row}:I{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-            $sheet->getStyle("K{$row}:M{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            $sheet->getStyle("K{$row}:L{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            $sheet->getStyle("M{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+            $sheet->getStyle("I{$row}")->getNumberFormat()->setFormatCode('0.00');
+            $sheet->getStyle("K{$row}:L{$row}")->getNumberFormat()->setFormatCode('0.00');
 
             $row++;
         }

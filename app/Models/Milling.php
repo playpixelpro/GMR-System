@@ -14,6 +14,7 @@ class Milling extends Model
         'miller',
         'miller_id',
         'reference_number',
+        'lot_number',
         'status',
         'target_volume_kg',
         'target_volume_bags',
@@ -77,6 +78,10 @@ class Milling extends Model
      */
     public function cumulativeMilledKg(): float
     {
+        if (array_key_exists('progress_sum_milled_rice_kg', $this->attributes)) {
+            return (float) ($this->progress_sum_milled_rice_kg ?? 0);
+        }
+
         return (float) $this->progress()->sum('milled_rice_kg');
     }
 
@@ -85,7 +90,44 @@ class Milling extends Model
      */
     public function cumulativePalayKg(): float
     {
+        if (array_key_exists('progress_sum_palay_input_kg', $this->attributes)) {
+            return (float) ($this->progress_sum_palay_input_kg ?? 0);
+        }
+
         return (float) $this->progress()->sum('palay_input_kg');
+    }
+
+    /**
+     * Remaining balance to be milled in kg.
+     */
+    public function balanceKg(): ?float
+    {
+        return $this->balancePalayKg();
+    }
+
+    /**
+     * Remaining balance of palay to be milled in kg (Target Palay - Issued Palay).
+     */
+    public function balancePalayKg(): ?float
+    {
+        if ($this->target_volume_kg === null) {
+            return null;
+        }
+
+        return max(0.0, (float) $this->target_volume_kg - $this->cumulativePalayKg());
+    }
+
+    /**
+     * Overall actual recovery rate percentage ((Rice Recovery / Issued Palay) * 100).
+     */
+    public function actualRecoveryRate(): ?float
+    {
+        $palay = $this->cumulativePalayKg();
+        if ($palay <= 0) {
+            return null;
+        }
+
+        return round(($this->cumulativeMilledKg() / $palay) * 100, 2);
     }
 
     public function progressPercentage(): ?float

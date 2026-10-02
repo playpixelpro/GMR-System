@@ -176,8 +176,8 @@ class AmrExportService
             $sheet->setCellValue("J{$startRow}", round((float) $volumeKg / 50, 3));
             $sheet->setCellValue("K{$startRow}", $riceMillers);
 
-            $sheet->setCellValue("P{$startRow}", $isMri && $amrRateValue !== null ? round($amrRateValue, 2).'%' : ($mean !== null ? round($mean, 2).'%' : '—'));
-            $sheet->setCellValue("Q{$startRow}", $amrRateValue !== null ? round($amrRateValue, 2).'%' : '—');
+            $sheet->setCellValue("P{$startRow}", $isMri && $amrRateValue !== null ? round($amrRateValue, 2) : ($mean !== null ? round($mean, 2) : '—'));
+            $sheet->setCellValue("Q{$startRow}", $amrRateValue !== null ? round($amrRateValue, 2) : '—');
             $sheet->setCellValue("R{$startRow}", $statusText);
 
             if ($isMri) {
@@ -185,7 +185,7 @@ class AmrExportService
                 $sheet->setCellValue("L{$startRow}", 'C.3.10 (MRI)');
                 $sheet->setCellValue("M{$startRow}", 'Exempt');
                 $sheet->setCellValue("N{$startRow}", 'Exempt');
-                $sheet->setCellValue("O{$startRow}", $rec && $rec->milling_recovery !== null ? round((float) $rec->milling_recovery, 2).'%' : '—');
+                $sheet->setCellValue("O{$startRow}", $rec && $rec->milling_recovery !== null ? round((float) $rec->milling_recovery, 2) : '—');
             } elseif ($isSingleRow && $records->isEmpty()) {
                 $sheet->setCellValue("L{$startRow}", 'Exempt / MRI');
                 $sheet->setCellValue("M{$startRow}", '—');
@@ -200,7 +200,7 @@ class AmrExportService
                     $sheet->setCellValue("L{$currentRow}", "Trial {$trial}");
                     $sheet->setCellValue("M{$currentRow}", $rec && $rec->palay_input_kg !== null ? round((float) $rec->palay_input_kg, 2) : '—');
                     $sheet->setCellValue("N{$currentRow}", $rec && $rec->rice_recovery_kg !== null ? round((float) $rec->rice_recovery_kg, 2) : '—');
-                    $sheet->setCellValue("O{$currentRow}", $rec && $rec->milling_recovery_percentage > 0 ? round($rec->milling_recovery_percentage, 2).'%' : '—');
+                    $sheet->setCellValue("O{$currentRow}", $rec && $rec->milling_recovery_percentage > 0 ? round($rec->milling_recovery_percentage, 2) : '—');
                 }
             }
 
@@ -215,6 +215,12 @@ class AmrExportService
             $sheet->getStyle("L{$startRow}:L{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $sheet->getStyle("M{$startRow}:Q{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
             $sheet->getStyle("R{$startRow}:R{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+            // Explicit 0.00 number format for numeric rates (ensuring pure numbers with no % symbol)
+            $sheet->getStyle("F{$startRow}:G{$endRow}")->getNumberFormat()->setFormatCode('0.00');
+            $sheet->getStyle("J{$startRow}:J{$endRow}")->getNumberFormat()->setFormatCode('#,##0.000');
+            $sheet->getStyle("M{$startRow}:N{$endRow}")->getNumberFormat()->setFormatCode('#,##0.00');
+            $sheet->getStyle("O{$startRow}:Q{$endRow}")->getNumberFormat()->setFormatCode('0.00');
 
             // Borders for group
             $sheet->getStyle($groupRange)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('D1D5DB');

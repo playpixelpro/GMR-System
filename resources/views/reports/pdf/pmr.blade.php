@@ -102,7 +102,7 @@
 <body>
     <div class="header">
         <h1>National Food Authority</h1>
-        <h2>Performance Milling Recovery (PMR) Report</h2>
+        <h2>Potential Milling Recovery (PMR) Report</h2>
         <div class="meta">
             Branch: <strong>{{ $filterBranch ?? 'All Branches' }}</strong> &nbsp;|&nbsp;
             Warehouse: <strong>{{ $filterWarehouse ?? 'All Warehouses' }}</strong> &nbsp;|&nbsp;
@@ -209,11 +209,11 @@
                         @endif
 
                         <td class="text-center">{{ $trial }}</td>
-                        <td class="text-right font-bold text-primary">{{ $record ? number_format($record->recovery_rate_percentage, 2) . '%' : '—' }}</td>
+                        <td class="text-right font-bold text-primary">{{ $record ? number_format($record->recovery_rate_percentage, 2) : '—' }}</td>
 
                         @if ($trial === 1)
-                            <td rowspan="{{ $maxTrials }}" class="text-right font-bold">{{ $mean !== null ? number_format($mean, 2) . '%' : '—' }}</td>
-                            <td rowspan="{{ $maxTrials }}" class="text-right font-bold text-primary">{{ $pmrRateValue !== null ? number_format($pmrRateValue, 2) . '%' : '—' }}</td>
+                            <td rowspan="{{ $maxTrials }}" class="text-right font-bold">{{ $mean !== null ? number_format($mean, 2) : '—' }}</td>
+                            <td rowspan="{{ $maxTrials }}" class="text-right font-bold text-primary">{{ $pmrRateValue !== null ? number_format($pmrRateValue, 2) : '—' }}</td>
                             <td rowspan="{{ $maxTrials }}" class="text-center">
                                 <span class="badge {{ $statusBadge }}">{{ $statusText }}</span>
                             </td>
@@ -230,7 +230,7 @@
 
     <div class="footer">
         <div class="footer-left">NFA GMR System &bull; Confidential</div>
-        <div class="footer-center">Performance Milling Recovery (PMR) Report</div>
+        <div class="footer-center">Potential Milling Recovery (PMR) Report</div>
         <div class="footer-right">Page <script type="text/php">echo $pdf->get_page_number();</script> of <script type="text/php">echo $pdf->get_page_count();</script></div>
     </div>
 </body>

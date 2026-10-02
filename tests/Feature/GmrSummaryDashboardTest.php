@@ -93,6 +93,35 @@ class GmrSummaryDashboardTest extends TestCase
             ->assertSee('GMR is 60% or lower');
     }
 
+    public function test_summary_dashboard_renders_excel_export_button(): void
+    {
+        $this->get(route('gmr.summary'))
+            ->assertOk()
+            ->assertSee(route('gmr.summary.export.excel'), false)
+            ->assertSee('Excel Export');
+    }
+
+    public function test_summary_dashboard_exports_excel(): void
+    {
+        $branch = Branch::create(['name' => 'Export Branch']);
+        $warehouse = Warehouse::create([
+            'branch_id' => $branch->id,
+            'name' => 'Export Warehouse',
+        ]);
+        $pile = $this->createPile($warehouse, '101', 50000);
+        $this->createAmrRecord($pile, 65.0);
+        $this->createPmrRecord($pile, 66.0);
+
+        $response = $this->get(route('gmr.summary.export.excel', [
+            'branch_id' => $branch->id,
+            'warehouse_id' => $warehouse->id,
+        ]));
+
+        $response->assertOk();
+        $this->assertStringContainsString('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', (string) $response->headers->get('Content-Type'));
+        $this->assertStringContainsString('attachment; filename=GMR_Summary_', (string) $response->headers->get('Content-Disposition'));
+    }
+
     private function createPile(
         Warehouse $warehouse,
         string $number,

@@ -106,11 +106,13 @@ class GmrApprovalController extends Controller
         foreach ($piles as $pile) {
             if ($pile->isGmrLocked()) {
                 $ineligible[] = $pile->pile_number ?? ($pile->number ?? '#'.$pile->id).' (already approved)';
+
                 continue;
             }
 
             if ($pile->isGmrSubmitted()) {
                 $ineligible[] = $pile->pile_number ?? ($pile->number ?? '#'.$pile->id).' (already submitted)';
+
                 continue;
             }
 
@@ -118,6 +120,7 @@ class GmrApprovalController extends Controller
 
             if (! $gate['can_compute']) {
                 $ineligible[] = $pile->pile_number ?? ($pile->number ?? '#'.$pile->id).' (GMR not computed)';
+
                 continue;
             }
 
@@ -279,7 +282,7 @@ class GmrApprovalController extends Controller
 
             $perPileAudit = [];
 
-            $approval->piles->each(function (GmrApprovalPile $approvalPile) use ($validated, $request, &$perPileAudit): void {
+            $approval->piles->each(function (GmrApprovalPile $approvalPile) use ($validated, &$perPileAudit): void {
                 $coGmr = $validated['co_approved_gmr'][$approvalPile->id] ?? null;
 
                 $approvalPile->update([

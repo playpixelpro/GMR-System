@@ -29,7 +29,7 @@ class PmrExportService
 
         // Document header
         $sheet->setCellValue('A1', 'NATIONAL FOOD AUTHORITY');
-        $sheet->setCellValue('A2', 'PERFORMANCE MILLING RECOVERY (PMR) REPORT');
+        $sheet->setCellValue('A2', 'POTENTIAL MILLING RECOVERY (PMR) REPORT');
 
         $filterText = 'Branch: '.($filters['branch'] ?? 'All Branches').' | Warehouse: '.($filters['warehouse'] ?? 'All Warehouses').' | Generated on: '.now()->format('Y-m-d H:i:s');
         $sheet->setCellValue('A3', $filterText);
@@ -164,8 +164,8 @@ class PmrExportService
             $sheet->setCellValue("I{$startRow}", (float) $agedMonths);
             $sheet->setCellValue("J{$startRow}", round((float) $volumeKg / 50, 3));
 
-            $sheet->setCellValue("M{$startRow}", $mean !== null ? round($mean, 2).'%' : '—');
-            $sheet->setCellValue("N{$startRow}", $pmrRateValue !== null ? round($pmrRateValue, 2).'%' : '—');
+            $sheet->setCellValue("M{$startRow}", $mean !== null ? round($mean, 2) : '—');
+            $sheet->setCellValue("N{$startRow}", $pmrRateValue !== null ? round($pmrRateValue, 2) : '—');
             $sheet->setCellValue("O{$startRow}", $statusText);
 
             // Per trial rows
@@ -174,7 +174,7 @@ class PmrExportService
                 $rec = $trialRecords->get($trial);
 
                 $sheet->setCellValue("K{$currentRow}", "Trial {$trial}");
-                $sheet->setCellValue("L{$currentRow}", $rec ? round($rec->recovery_rate_percentage, 2).'%' : '—');
+                $sheet->setCellValue("L{$currentRow}", $rec ? round($rec->recovery_rate_percentage, 2) : '—');
             }
 
             // Apply formatting for the group rows
@@ -188,6 +188,11 @@ class PmrExportService
             $sheet->getStyle("K{$startRow}:K{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $sheet->getStyle("L{$startRow}:N{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
             $sheet->getStyle("O{$startRow}:O{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+            // Explicit 0.00 number format for numeric rates (ensuring pure numbers with no % symbol)
+            $sheet->getStyle("F{$startRow}:G{$endRow}")->getNumberFormat()->setFormatCode('0.00');
+            $sheet->getStyle("J{$startRow}:J{$endRow}")->getNumberFormat()->setFormatCode('#,##0.000');
+            $sheet->getStyle("L{$startRow}:N{$endRow}")->getNumberFormat()->setFormatCode('0.00');
 
             // Borders for group
             $sheet->getStyle($groupRange)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('D1D5DB');

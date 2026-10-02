@@ -33,6 +33,14 @@ class UpdatePileDetailsRequest extends FormRequest
                 'volume' => str_replace(',', '', (string) $this->input('volume')),
             ]);
         }
+
+        if ($this->has('test_milling_volume')) {
+            $this->merge([
+                'test_milling_volume' => $this->filled('test_milling_volume')
+                    ? str_replace(',', '', (string) $this->input('test_milling_volume'))
+                    : null,
+            ]);
+        }
     }
 
     /**
@@ -49,6 +57,7 @@ class UpdatePileDetailsRequest extends FormRequest
             'mc' => ['required', 'numeric', 'between:0,100'],
             'quality' => ['required', 'string'],
             'volume' => ['required', 'numeric', 'min:0'],
+            'test_milling_volume' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 }

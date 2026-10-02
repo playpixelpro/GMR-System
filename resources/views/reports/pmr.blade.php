@@ -6,9 +6,42 @@
 <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
     <div>
         <h1 class="text-xl font-semibold text-base-content">PMR Report</h1>
-        <p class="text-xs text-base-content/60">Performance Milling Recovery (PMR) — 3 laboratory test milling trials under NFA recovery standards</p>
+        <p class="text-xs text-base-content/60">Potential Milling Recovery (PMR) — 3 laboratory test milling trials under NFA recovery standards</p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
+        <div class="dropdown relative inline-flex [--placement:bottom-end]">
+            <button id="pmr-columns-dropdown-btn" type="button" class="dropdown-toggle btn btn-outline btn-neutral btn-sm" aria-haspopup="menu" aria-expanded="false" title="Show or hide table columns">
+                <span class="icon-[tabler--columns] size-4"></span>
+                Columns
+                <span class="icon-[tabler--chevron-down] size-3.5 ms-1"></span>
+            </button>
+            <div class="dropdown-menu dropdown-open:opacity-100 hidden min-w-64 max-h-96 overflow-y-auto p-3 shadow-xl bg-base-100 border border-base-content/15 rounded-box z-50" role="menu" aria-labelledby="pmr-columns-dropdown-btn">
+                <div class="flex items-center justify-between pb-2 mb-2 border-b border-base-content/10">
+                    <span class="text-xs font-bold uppercase tracking-wider text-base-content/70">Toggle Columns</span>
+                    <button type="button" id="pmr-reset-columns-btn" class="text-xs text-primary hover:underline font-semibold">Reset to Default</button>
+                </div>
+                <div class="space-y-1.5" id="pmr-column-checkboxes">
+                    @foreach (\App\Models\ReportColumnSetting::availableColumns('pmr') as $colKey => $colMeta)
+                        <label class="flex items-center gap-2.5 px-1 py-1 rounded hover:bg-base-200/50 cursor-pointer text-xs">
+                            <input type="checkbox"
+                                   class="checkbox checkbox-primary checkbox-xs col-toggle-cb"
+                                   data-target-col="{{ $colKey }}"
+                                   {{ in_array($colKey, $visibleColumns ?? []) ? 'checked' : '' }}>
+                            <span class="text-base-content font-medium">{{ $colMeta['label'] }}</span>
+                        </label>
+                    @endforeach
+                </div>
+                <div class="pt-2 mt-2 border-t border-base-content/10 flex justify-between items-center text-[11px] text-base-content/60">
+                    <span>Saved in browser</span>
+                    @if (auth()->user()?->hasRole('ADMINISTRATOR', 'RMEC'))
+                        <a href="{{ route('settings.reports.columns') }}" class="text-primary hover:underline font-medium inline-flex items-center gap-0.5">
+                            <span class="icon-[tabler--settings] size-3"></span>
+                            Defaults
+                        </a>
+                    @endif
+                </div>
+            </div>
+        </div>
         <a href="{{ route('pmr.export.excel', request()->query()) }}" class="btn btn-outline btn-success btn-sm" title="Export PMR report to Excel (.xlsx)">
             <span class="icon-[tabler--file-spreadsheet] size-4"></span>
             Excel Export
@@ -64,22 +97,22 @@
     <table class="table table-sm w-full text-sm">
       <thead>
         <tr class="bg-base-200/60 text-base-content border-b border-base-content/15 text-xs font-semibold uppercase tracking-wider">
-          <th class="w-8 text-center px-2 py-2">NO.</th>
-          <th class="px-2.5 py-2">BRANCH</th>
-          <th class="px-2.5 py-2">WAREHOUSE NAME</th>
-          <th class="text-center px-2 py-2">PILE <br> NUMBER</th>
-          <th class="px-2.5 py-2">VARIETY</th>
-          <th class="text-end px-2.5 py-2">PURITY</th>
-          <th class="text-end px-2.5 py-2">MC</th>
-          <th class="text-center px-2.5 py-2">QUALITY <br> (CONDITION)</th>
-          <th class="text-center px-2.5 py-2">AGED <br>( in months)</th>
-          <th class="text-center px-2.5 py-2">VOLUME <br> (bags)</th>
-          <th class="text-center px-2.5 py-2">NO. OF <br> TRIAL</th>
-          <th class="text-center px-2.0 py-2">RECOVERY<br> RATE (%)</th>
-          <th class="text-center px-2.5 py-2">MEAN (%)</th>
-          <th class="text-center px-2.5 py-2">PMR <br> (%)</th>
-          <th class="text-center px-2.5 py-2">STATUS</th>
-          <th class="text-center w-24 px-2 py-2">ACTIONS</th>
+          <th data-col="no" class="w-8 text-center px-2 py-2">NO.</th>
+          <th data-col="branch" class="px-2.5 py-2">BRANCH</th>
+          <th data-col="warehouse" class="px-2.5 py-2">WAREHOUSE NAME</th>
+          <th data-col="pile_number" class="text-center px-2 py-2">PILE <br> NUMBER</th>
+          <th data-col="variety" class="px-2.5 py-2">VARIETY</th>
+          <th data-col="purity" class="text-end px-2.5 py-2">PURITY</th>
+          <th data-col="mc" class="text-end px-2.5 py-2">MC</th>
+          <th data-col="quality" class="text-center px-2.5 py-2">QUALITY <br> (CONDITION)</th>
+          <th data-col="aged_months" class="text-center px-2.5 py-2">AGED <br>( in months)</th>
+          <th data-col="volume_bags" class="text-center px-2.5 py-2">VOLUME <br> (bags)</th>
+          <th data-col="trial" class="text-center px-2.5 py-2">NO. OF <br> TRIAL</th>
+          <th data-col="recovery_rate" class="text-center px-2.0 py-2">RECOVERY<br> RATE (%)</th>
+          <th data-col="mean" class="text-center px-2.5 py-2">MEAN (%)</th>
+          <th data-col="pmr_rate" class="text-center px-2.5 py-2">PMR <br> (%)</th>
+          <th data-col="status" class="text-center px-2.5 py-2">STATUS</th>
+          <th data-col="actions" class="text-center w-24 px-2 py-2">ACTIONS</th>
         </tr>
       </thead>
       <tbody>
@@ -115,54 +148,54 @@
           @php $record = $trialRecords->get($trial); @endphp
           <tr class="{{ $trial === $maxTrials ? 'border-b-2 border-base-content/20' : 'border-b border-base-content/10' }} hover:bg-base-200/30">
             @if ($trial === 1)
-              <td rowspan="{{ $maxTrials }}" class="text-center font-medium align-middle border-e border-base-content/10 px-2 py-1">
+              <td data-col="no" rowspan="{{ $maxTrials }}" class="text-center font-medium align-middle border-e border-base-content/10 px-2 py-1">
                 {{ $groupIndex }}
               </td>
-              <td rowspan="{{ $maxTrials }}" class="align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td data-col="branch" rowspan="{{ $maxTrials }}" class="align-middle border-e border-base-content/10 px-2.5 py-1">
                 {{ $branchName }}
               </td>
-              <td rowspan="{{ $maxTrials }}" class="align-middle font-medium border-e border-base-content/10 px-2.5 py-1">
+              <td data-col="warehouse" rowspan="{{ $maxTrials }}" class="align-middle font-medium border-e border-base-content/10 px-2.5 py-1">
                 {{ $warehouseName }}
               </td>
-              <td rowspan="{{ $maxTrials }}" class="text-center align-middle border-e border-base-content/10 px-2 py-1">
+              <td data-col="pile_number" rowspan="{{ $maxTrials }}" class="text-center align-middle border-e border-base-content/10 px-2 py-1">
                 <span class="font-semibold text-base-content">{{ $pileNumber }}</span>
               </td>
-              <td rowspan="{{ $maxTrials }}" class="align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td data-col="variety" rowspan="{{ $maxTrials }}" class="align-middle border-e border-base-content/10 px-2.5 py-1">
                 {{ $variety }}
               </td>
-              <td rowspan="{{ $maxTrials }}" class="text-end font-mono align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td data-col="purity" rowspan="{{ $maxTrials }}" class="text-end font-mono align-middle border-e border-base-content/10 px-2.5 py-1">
                 {{ number_format((float) $purity, 2) }}
               </td>
-              <td rowspan="{{ $maxTrials }}" class="text-end font-mono align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td data-col="mc" rowspan="{{ $maxTrials }}" class="text-end font-mono align-middle border-e border-base-content/10 px-2.5 py-1">
                 {{ number_format((float) $mc, 1) }}
               </td>
-              <td rowspan="{{ $maxTrials }}" class="text-center align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td data-col="quality" rowspan="{{ $maxTrials }}" class="text-center align-middle border-e border-base-content/10 px-2.5 py-1">
                 <span class="badge badge-soft badge-primary text-xs uppercase">{{ strtoupper(str_replace('_', ' ', $quality ?? '')) }}</span>
               </td>
-              <td rowspan="{{ $maxTrials }}" class="text-center align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td data-col="aged_months" rowspan="{{ $maxTrials }}" class="text-center align-middle border-e border-base-content/10 px-2.5 py-1">
                 {{ $agedMonths }}
               </td>
-              <td rowspan="{{ $maxTrials }}" class="text-end font-mono align-middle border-e border-base-content/20 px-2.5 py-1">
+              <td data-col="volume_bags" rowspan="{{ $maxTrials }}" class="text-end font-mono align-middle border-e border-base-content/20 px-2.5 py-1">
                 {{ number_format((float) $volumeKg / 50, 3) }}
               </td>
             @endif
 
-            <td class="text-center align-middle px-2 py-1 border-e border-base-content/10">
+            <td data-col="trial" class="text-center align-middle px-2 py-1 border-e border-base-content/10">
               <span class="font-semibold text-base-content">{{ $trial }}</span>
             </td>
-            <td class="text-end font-mono align-middle border-e border-base-content/20 px-2.5 py-1 {{ $record ? 'text-primary font-medium' : '' }}">
+            <td data-col="recovery_rate" class="text-end font-mono align-middle border-e border-base-content/20 px-2.5 py-1 {{ $record ? 'text-primary font-medium' : '' }}">
               <span class="sr-only">Trial {{ $trial }} Recovery Rate (%)</span>
               {{ $record ? number_format($record->recovery_rate_percentage, 2) : '—' }}
             </td>
 
             @if ($trial === 1)
-              <td rowspan="{{ $maxTrials }}" class="text-end font-mono align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td data-col="mean" rowspan="{{ $maxTrials }}" class="text-end font-mono align-middle border-e border-base-content/10 px-2.5 py-1">
                 <div class="flex flex-col items-end">
                   <span class="font-medium text-base-content">{{ $mean !== null ? number_format($mean, 2) : '—' }}</span>
                   <span class="text-xs text-base-content/60">{{ $stdDev !== null ? 's = '.number_format($stdDev, 2) : '—' }}</span>
                 </div>
               </td>
-              <td rowspan="{{ $maxTrials }}" class="text-end font-mono align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td data-col="pmr_rate" rowspan="{{ $maxTrials }}" class="text-end font-mono align-middle border-e border-base-content/10 px-2.5 py-1">
                 <div class="flex flex-col items-end gap-0.5">
                   @if (! $hasPmrTrials)
                     <span class="font-medium text-base-content/50" title="No PMR trials recorded yet">—</span>
@@ -199,7 +232,7 @@
                   </a>
                 </div>
               </td>
-              <td rowspan="{{ $maxTrials }}" class="text-center align-middle border-e border-base-content/10 px-2 py-1">
+              <td data-col="status" rowspan="{{ $maxTrials }}" class="text-center align-middle border-e border-base-content/10 px-2 py-1">
                 <div class="flex flex-col items-center gap-1">
                   @if (! $hasPmrTrials)
                     <span class="badge badge-soft badge-neutral text-xs font-medium px-2 py-0.5 whitespace-nowrap"
@@ -269,7 +302,7 @@
                   @endif
                 </div>
               </td>
-              <td rowspan="{{ $maxTrials }}" class="align-middle text-center px-2 py-1">
+              <td data-col="actions" rowspan="{{ $maxTrials }}" class="align-middle text-center px-2 py-1">
                 <div class="flex items-center justify-center gap-1">
                   @if ($pile && strtolower((string)$pile->pmr_status) === 'retest')
                     @if (auth()->user()?->hasRole('STAFF', 'RMEC', 'ADMINISTRATOR'))
@@ -779,6 +812,97 @@
             openModals.forEach((modal) => closeModal(modal));
         }
     });
+})();
+
+// PMR Column Visibility Manager
+(function () {
+    const STORAGE_KEY = 'nfa_pmr_visible_columns';
+    const serverDefaults = @json($visibleColumns ?? \App\Models\ReportColumnSetting::forReport('pmr'));
+    const emptyCell = document.querySelector('tbody tr td[colspan]');
+
+    function getVisibleColumns() {
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    return parsed;
+                }
+            }
+        } catch (e) {
+            console.error('Failed to read localStorage column settings', e);
+        }
+        return serverDefaults;
+    }
+
+    function setVisibleColumns(cols) {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(cols));
+        } catch (e) {
+            console.error('Failed to save column settings to localStorage', e);
+        }
+    }
+
+    function applyVisibility(visibleCols) {
+        const allColKeys = Array.from(document.querySelectorAll('.col-toggle-cb')).map(cb => cb.dataset.targetCol);
+        
+        allColKeys.forEach(colKey => {
+            const isVisible = visibleCols.includes(colKey);
+            const cells = document.querySelectorAll(`[data-col="${colKey}"]`);
+            cells.forEach(el => {
+                if (isVisible) {
+                    el.classList.remove('hidden');
+                } else {
+                    el.classList.add('hidden');
+                }
+            });
+
+            // Update checkbox state
+            const cb = document.querySelector(`.col-toggle-cb[data-target-col="${colKey}"]`);
+            if (cb) {
+                cb.checked = isVisible;
+            }
+        });
+
+        if (emptyCell) {
+            emptyCell.setAttribute('colspan', visibleCols.length.toString());
+        }
+    }
+
+    // Initialize visibility on page load
+    const currentVisible = getVisibleColumns();
+    applyVisibility(currentVisible);
+
+    // Event listener for checkbox changes
+    document.addEventListener('change', function (e) {
+        if (e.target && e.target.classList.contains('col-toggle-cb')) {
+            const checkboxes = document.querySelectorAll('.col-toggle-cb');
+            const activeCols = [];
+            checkboxes.forEach(cb => {
+                if (cb.checked) {
+                    activeCols.push(cb.dataset.targetCol);
+                }
+            });
+
+            // Prevent hiding all columns
+            if (activeCols.length === 0) {
+                e.target.checked = true;
+                return;
+            }
+
+            setVisibleColumns(activeCols);
+            applyVisibility(activeCols);
+        }
+    });
+
+    // Reset button
+    const resetBtn = document.getElementById('pmr-reset-columns-btn');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function () {
+            localStorage.removeItem(STORAGE_KEY);
+            applyVisibility(serverDefaults);
+        });
+    }
 })();
 </script>
 @endsection

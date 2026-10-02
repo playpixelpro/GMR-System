@@ -94,7 +94,7 @@ class User extends Authenticatable
 
     public function canEditRecord(Model $record): bool
     {
-        if ($record->getAttribute('is_locked')) {
+        if ($record->getAttribute('is_locked') || in_array(strtoupper((string) $record->getAttribute('status')), ['RECOMMENDED', 'RETEST'], true)) {
             return false;
         }
 

@@ -23,6 +23,7 @@ class Pile extends Model
         'mc',
         'quality',
         'volume_kg',
+        'test_milling_volume_kg',
         'amr_status',
         'pmr_status',
         'gmr_status',
@@ -37,6 +38,7 @@ class Pile extends Model
             'mc' => 'decimal:2',
             'aged_months' => 'float',
             'volume_kg' => 'decimal:3',
+            'test_milling_volume_kg' => 'decimal:3',
             'gmr_locked_at' => 'datetime',
         ];
     }

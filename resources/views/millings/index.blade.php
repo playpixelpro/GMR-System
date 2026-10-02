@@ -6,7 +6,6 @@
 <div class="mb-5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
     <div>
         <h1 class="text-2xl font-bold leading-tight text-black sm:text-3xl">Rice Milling Progress</h1>
-        <p class="mt-2 text-sm leading-6 text-black">Milling assignments for piles with an approved GMR, with per-pile accomplishment tracking.</p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
         @can('manage-millings')
@@ -99,7 +98,7 @@
 @else
     <section class="card border border-base-content/10 bg-base-100 p-4 text-black shadow-sm">
         <div class="overflow-x-auto">
-            <table class="table table-sm min-w-[64rem] text-sm">
+            <table class="table table-sm min-w-[80rem] text-sm">
                 <thead>
                     <tr class="border-b border-base-content/15 text-sm font-semibold text-black">
                         <th>Project / Memo Ref.</th>
@@ -107,9 +106,12 @@
                         <th>Pile</th>
                         <th>Warehouse</th>
                         <th>Miller</th>
-                        <th class="text-end">Target (kg)</th>
+                        <th class="text-end">Target - Palay (kg)</th>
+                        <th class="text-end">Issued Palay (kg)</th>
+                        <th class="text-end">Rice Recovery (kg)</th>
+                        <th class="text-end">Balance Palay (kg)</th>
+                        <th class="text-end">Recovery Rate (%)</th>
                         <th>Status</th>
-                        <th>Assigned</th>
                         <th class="text-end">Actions</th>
                     </tr>
                 </thead>
@@ -122,6 +124,10 @@
                             <td class="text-sm">{{ $milling->pile?->warehouse?->name ?? '—' }}</td>
                             <td>{{ $milling->miller ?? '—' }}</td>
                             <td class="text-end font-mono">{{ $milling->target_volume_kg !== null ? number_format((float) $milling->target_volume_kg, 3) : 'N/A' }}</td>
+                            <td class="text-end font-mono">{{ number_format($milling->cumulativePalayKg(), 3) }}</td>
+                            <td class="text-end font-mono">{{ number_format($milling->cumulativeMilledKg(), 3) }}</td>
+                            <td class="text-end font-mono">{{ $milling->target_volume_kg !== null ? number_format((float) $milling->balancePalayKg(), 3) : 'N/A' }}</td>
+                            <td class="text-end font-mono">{{ $milling->actualRecoveryRate() !== null ? number_format((float) $milling->actualRecoveryRate(), 2).'%' : '—' }}</td>
                             <td>
                                 @if ($milling->status === 'assigned')
                                     <span class="badge badge-soft badge-neutral text-xs">Assigned</span>
@@ -133,7 +139,6 @@
                                     <span class="badge badge-soft badge-error text-xs">Cancelled</span>
                                 @endif
                             </td>
-                            <td class="text-sm">{{ $milling->assigned_at?->format('M d, Y') ?? '—' }}</td>
                             <td class="text-end">
                                 <a href="{{ route('millings.show', $milling) }}" class="btn btn-ghost btn-xs">View</a>
                             </td>
@@ -153,8 +158,7 @@
         <div class="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-xl bg-base-100 p-5 text-black shadow-2xl">
             <div class="flex items-start justify-between gap-4 border-b border-base-content/10 pb-3">
                 <div>
-                    <h3 id="assign-milling-modal-title" class="text-lg font-bold">Assign Rice Milling</h3>
-                    <p class="mt-1 text-sm">Select the branch and warehouse, then an approved-GMR pile, the miller, and the project/memo reference. The pile's volume is frozen as the milling target.</p>
+                    <h3 id="assign-milling-modal-title" class="text-lg font-bold">Assign Rice Mill</h3>
                 </div>
                 <button type="button" class="btn btn-circle btn-text btn-sm" data-milling-modal-close="assign-milling-modal" aria-label="Close">&times;</button>
             </div>
@@ -202,14 +206,21 @@
                     </label>
 
                     <label class="form-control">
-                        <span class="label-text mb-2 text-sm font-semibold text-black">Miller / Rice Mill</span>
-                        <x-miller-combobox name="miller" class="input input-bordered min-h-11 w-full text-black" placeholder="e.g. North Cotabato Rice Mill" />
+                        <span class="label-text mb-2 text-sm font-semibold text-black">Rice Mill *</span>
+                        <x-miller-combobox name="miller" class="input input-bordered min-h-11 w-full text-black" placeholder="e.g. North Cotabato Rice Mill" required />
+                        @error('miller') <span class="text-xs text-error">{{ $message }}</span> @enderror
                     </label>
 
-                    <label class="form-control md:col-span-2">
+                    <label class="form-control">
+                        <span class="label-text mb-2 text-sm font-semibold text-black">Lot No. *</span>
+                        <input type="text" name="lot_number" value="{{ old('lot_number') }}" class="input input-bordered min-h-11 w-full text-black" placeholder="e.g. Lot 1" required />
+                        @error('lot_number') <span class="text-xs text-error">{{ $message }}</span> @enderror
+                    </label>
+
+                    <label class="form-control">
                         <span class="label-text mb-2 text-sm font-semibold text-black">Project / Memo Reference No. *</span>
-                        <input type="text" name="reference_number" class="input input-bordered min-h-11 w-full text-black" placeholder="Bidding project ref. no. or NFA memo no." required />
-                        <span class="mt-1 text-xs text-base-content/60">For contracted millers: the bidding project reference. For NFA-owned rice mills: the memorandum no.</span>
+                        <input type="text" name="reference_number" value="{{ old('reference_number') }}" class="input input-bordered min-h-11 w-full text-black" placeholder="Bidding project ref. no. or NFA memo no." required />
+                        @error('reference_number') <span class="text-xs text-error">{{ $message }}</span> @enderror
                     </label>
                 </div>
 

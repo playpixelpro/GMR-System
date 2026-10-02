@@ -9,6 +9,39 @@
         <p class="text-xs text-base-content/60">Actual Milling Recovery (AMR) — Commercial milling results and statistical analysis</p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
+        <div class="dropdown relative inline-flex [--placement:bottom-end]">
+            <button id="amr-columns-dropdown-btn" type="button" class="dropdown-toggle btn btn-outline btn-neutral btn-sm" aria-haspopup="menu" aria-expanded="false" title="Show or hide table columns">
+                <span class="icon-[tabler--columns] size-4"></span>
+                Columns
+                <span class="icon-[tabler--chevron-down] size-3.5 ms-1"></span>
+            </button>
+            <div class="dropdown-menu dropdown-open:opacity-100 hidden min-w-64 max-h-96 overflow-y-auto p-3 shadow-xl bg-base-100 border border-base-content/15 rounded-box z-50" role="menu" aria-labelledby="amr-columns-dropdown-btn">
+                <div class="flex items-center justify-between pb-2 mb-2 border-b border-base-content/10">
+                    <span class="text-xs font-bold uppercase tracking-wider text-base-content/70">Toggle Columns</span>
+                    <button type="button" id="amr-reset-columns-btn" class="text-xs text-primary hover:underline font-semibold">Reset to Default</button>
+                </div>
+                <div class="space-y-1.5" id="amr-column-checkboxes">
+                    @foreach (\App\Models\ReportColumnSetting::availableColumns('amr') as $colKey => $colMeta)
+                        <label class="flex items-center gap-2.5 px-1 py-1 rounded hover:bg-base-200/50 cursor-pointer text-xs">
+                            <input type="checkbox"
+                                   class="checkbox checkbox-primary checkbox-xs col-toggle-cb"
+                                   data-target-col="{{ $colKey }}"
+                                   {{ in_array($colKey, $visibleColumns ?? []) ? 'checked' : '' }}>
+                            <span class="text-base-content font-medium">{{ $colMeta['label'] }}</span>
+                        </label>
+                    @endforeach
+                </div>
+                <div class="pt-2 mt-2 border-t border-base-content/10 flex justify-between items-center text-[11px] text-base-content/60">
+                    <span>Saved in browser</span>
+                    @if (auth()->user()?->hasRole('ADMINISTRATOR', 'RMEC'))
+                        <a href="{{ route('settings.reports.columns') }}" class="text-primary hover:underline font-medium inline-flex items-center gap-0.5">
+                            <span class="icon-[tabler--settings] size-3"></span>
+                            Defaults
+                        </a>
+                    @endif
+                </div>
+            </div>
+        </div>
         <a href="{{ route('amr.export.excel', request()->query()) }}" class="btn btn-outline btn-success btn-sm" title="Export AMR report to Excel (.xlsx)">
             <span class="icon-[tabler--file-spreadsheet] size-4"></span>
             Excel Export
@@ -64,25 +97,25 @@
     <table class="table table-sm w-full text-sm">
       <thead>
         <tr class="bg-base-200/60 text-base-content border-b border-base-content/15 text-xs font-semibold uppercase tracking-wider">
-          <th class="w-8 text-center px-2 py-2">No.</th>
-          <th class="px-2.5 py-2">Branch</th>
-          <th class="px-2.5 py-2">Warehouse</th>
-          <th class="text-center px-2 py-2">Pile <br>No.</th>
-          <th class="px-2.5 py-2">Variety</th>
-          <th class="text-center px-2.5 py-2">Purity<br> (%)</th>
-          <th class="text-end px-2.5 py-2">MC (%)</th>
-          <th class="text-center px-2.5 py-2">Quality</th>
-          <th class="text-center px-2.5 py-2">Aged <br> (mos)</th>
-          <th class="text-center px-2.5 py-2">Volume <br>(bags)</th>
-          <th class="px-2.5 py-2">Rice Miller</th>
-          <th class="text-center px-2.5 py-2">Trial</th>
-          <th class="text-center px-2.5 py-2">Palay <br> In (kg)</th>
-          <th class="text-center px-2.5 py-2">Rice <br>Recovery (kg)</th>
-          <th class="text-center px-2.5 py-2">Recovery <br>(%)</th>
-          <th class="text-center px-2.5 py-2">Mean (%)</th>
-          <th class="text-center px-2.5 py-2">AMR (%)</th>
-          <th class="text-center px-2.5 py-2">Status</th>
-          <th class="text-center w-16 px-2 py-2">Actions</th>
+          <th data-col="no" class="w-8 text-center px-2 py-2">No.</th>
+          <th data-col="branch" class="px-2.5 py-2">Branch</th>
+          <th data-col="warehouse" class="px-2.5 py-2">Warehouse</th>
+          <th data-col="pile_number" class="text-center px-2 py-2">Pile <br>No.</th>
+          <th data-col="variety" class="px-2.5 py-2">Variety</th>
+          <th data-col="purity" class="text-center px-2.5 py-2">Purity<br> (%)</th>
+          <th data-col="mc" class="text-end px-2.5 py-2">MC (%)</th>
+          <th data-col="quality" class="text-center px-2.5 py-2">Quality</th>
+          <th data-col="aged_months" class="text-center px-2.5 py-2">Aged <br> (mos)</th>
+          <th data-col="volume_bags" class="text-center px-2.5 py-2">Volume <br>(bags)</th>
+          <th data-col="rice_miller" class="px-2.5 py-2">Rice Miller</th>
+          <th data-col="trial" class="text-center px-2.5 py-2">Trial</th>
+          <th data-col="palay_input" class="text-center px-2.5 py-2">Palay <br> In (kg)</th>
+          <th data-col="rice_recovery" class="text-center px-2.5 py-2">Rice <br>Recovery (kg)</th>
+          <th data-col="recovery_rate" class="text-center px-2.5 py-2">Recovery <br>(%)</th>
+          <th data-col="mean" class="text-center px-2.5 py-2">Mean (%)</th>
+          <th data-col="amr_rate" class="text-center px-2.5 py-2">AMR (%)</th>
+          <th data-col="status" class="text-center px-2.5 py-2">Status</th>
+          <th data-col="actions" class="text-center w-16 px-2 py-2">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -122,86 +155,86 @@
           @php $record = $isMri ? $records->first() : $trialRecords->get($trial); @endphp
           <tr class="{{ $trial === $totalRows ? 'border-b-2 border-base-content/20' : 'border-b border-base-content/10' }} hover:bg-base-200/30">
             @if ($trial === 1)
-              <td rowspan="{{ $totalRows }}" class="text-center font-medium align-middle border-e border-base-content/10 px-2 py-1">
+              <td data-col="no" rowspan="{{ $totalRows }}" class="text-center font-medium align-middle border-e border-base-content/10 px-2 py-1">
                 {{ $groupIndex }}
               </td>
-              <td rowspan="{{ $totalRows }}" class="align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td data-col="branch" rowspan="{{ $totalRows }}" class="align-middle border-e border-base-content/10 px-2.5 py-1">
                 {{ $branchName }}
               </td>
-              <td rowspan="{{ $totalRows }}" class="align-middle font-medium border-e border-base-content/10 px-2.5 py-1">
+              <td data-col="warehouse" rowspan="{{ $totalRows }}" class="align-middle font-medium border-e border-base-content/10 px-2.5 py-1">
                 {{ $warehouseName }}
               </td>
-              <td rowspan="{{ $totalRows }}" class="text-center align-middle border-e border-base-content/10 px-2 py-1">
+              <td data-col="pile_number" rowspan="{{ $totalRows }}" class="text-center align-middle border-e border-base-content/10 px-2 py-1">
                 <span class="font-semibold text-base-content">{{ $pileNumber }}</span>
               </td>
-              <td rowspan="{{ $totalRows }}" class="align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td data-col="variety" rowspan="{{ $totalRows }}" class="align-middle border-e border-base-content/10 px-2.5 py-1">
                 {{ $variety }}
               </td>
-              <td rowspan="{{ $totalRows }}" class="text-end font-mono align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td data-col="purity" rowspan="{{ $totalRows }}" class="text-end font-mono align-middle border-e border-base-content/10 px-2.5 py-1">
                 {{ $purity !== null ? number_format((float) $purity, 2) : '—' }}
               </td>
-              <td rowspan="{{ $totalRows }}" class="text-end font-mono align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td data-col="mc" rowspan="{{ $totalRows }}" class="text-end font-mono align-middle border-e border-base-content/10 px-2.5 py-1">
                 {{ $mc !== null ? number_format((float) $mc, 1) : '—' }}
               </td>
-              <td rowspan="{{ $totalRows }}" class="text-center align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td data-col="quality" rowspan="{{ $totalRows }}" class="text-center align-middle border-e border-base-content/10 px-2.5 py-1">
                 @if ($quality)
                   <span class="badge badge-soft badge-primary text-xs uppercase">{{ strtoupper(str_replace('_', ' ', $quality)) }}</span>
                 @else
                   —
                 @endif
               </td>
-              <td rowspan="{{ $totalRows }}" class="text-center align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td data-col="aged_months" rowspan="{{ $totalRows }}" class="text-center align-middle border-e border-base-content/10 px-2.5 py-1">
                 {{ $agedMonths }}
               </td>
-              <td rowspan="{{ $totalRows }}" class="text-end font-mono align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td data-col="volume_bags" rowspan="{{ $totalRows }}" class="text-end font-mono align-middle border-e border-base-content/10 px-2.5 py-1">
                 {{ number_format((float) $volumeKg / 50, 3) }}
               </td>
-              <td rowspan="{{ $totalRows }}" class="align-middle border-e border-base-content/20 font-medium px-2.5 py-1">
+              <td data-col="rice_miller" rowspan="{{ $totalRows }}" class="align-middle border-e border-base-content/20 font-medium px-2.5 py-1">
                 {{ $riceMillers }}
               </td>
             @endif
 
             @if ($isMri)
-              <td class="text-center align-middle px-2 py-1">
+              <td data-col="trial" class="text-center align-middle px-2 py-1">
                 <span class="badge badge-soft badge-info text-xs font-semibold px-1.5 py-0.5" title="Milling Recovery Index deduction per NFA Guideline C.3.10">C.3.10 (MRI)</span>
               </td>
-              <td class="text-center font-mono text-base-content/40 align-middle px-2.5 py-1">
+              <td data-col="palay_input" class="text-center font-mono text-base-content/40 align-middle px-2.5 py-1">
                 <span class="text-xs italic" title="Commercial test milling exempt for &le; 50,000 kg">Exempt</span>
               </td>
-              <td class="text-center font-mono text-base-content/40 align-middle px-2.5 py-1">
+              <td data-col="rice_recovery" class="text-center font-mono text-base-content/40 align-middle px-2.5 py-1">
                 <span class="text-xs italic" title="Commercial test milling exempt for &le; 50,000 kg">Exempt</span>
               </td>
-              <td class="text-end font-mono font-medium align-middle border-e border-base-content/20 px-2.5 py-1 text-primary">
+              <td data-col="recovery_rate" class="text-end font-mono font-medium align-middle border-e border-base-content/20 px-2.5 py-1 text-primary">
                 <div>{{ number_format((float) $record->milling_recovery, 2) }}%</div>
                 <div class="text-[10px] text-base-content/60 font-normal">PMR {{ number_format((float) $record->pmr_rate, 2) }}% &minus; {{ number_format((float) $record->mri_rate, 2) }}%</div>
               </td>
             @elseif ($isSingleRow && ! $hasAmrTrials)
-              <td class="text-center align-middle px-2 py-1">
+              <td data-col="trial" class="text-center align-middle px-2 py-1">
                 <span class="badge badge-soft badge-neutral text-xs">Exempt / MRI</span>
               </td>
-              <td class="text-center font-mono text-base-content/40 align-middle px-2.5 py-1">—</td>
-              <td class="text-center font-mono text-base-content/40 align-middle px-2.5 py-1">—</td>
-              <td class="text-center font-mono text-base-content/40 align-middle border-e border-base-content/20 px-2.5 py-1">—</td>
+              <td data-col="palay_input" class="text-center font-mono text-base-content/40 align-middle px-2.5 py-1">—</td>
+              <td data-col="rice_recovery" class="text-center font-mono text-base-content/40 align-middle px-2.5 py-1">—</td>
+              <td data-col="recovery_rate" class="text-center font-mono text-base-content/40 align-middle border-e border-base-content/20 px-2.5 py-1">—</td>
             @else
-              <td class="text-center align-middle px-2 py-1">
+              <td data-col="trial" class="text-center align-middle px-2 py-1">
                 <span class="badge badge-soft badge-neutral text-xs font-semibold px-1.5 py-0.5">Trial {{ $trial }}</span>
               </td>
-              <td class="text-end font-mono align-middle px-2.5 py-1">
+              <td data-col="palay_input" class="text-end font-mono align-middle px-2.5 py-1">
                 {{ $record && $record->palay_input_kg !== null ? number_format((float) $record->palay_input_kg, 2) : '—' }}
               </td>
-              <td class="text-end font-mono align-middle px-2.5 py-1">
+              <td data-col="rice_recovery" class="text-end font-mono align-middle px-2.5 py-1">
                 {{ $record && $record->rice_recovery_kg !== null ? number_format((float) $record->rice_recovery_kg, 2) : '—' }}
               </td>
-              <td class="text-end font-mono font-medium align-middle border-e border-base-content/20 px-2.5 py-1 {{ $record ? 'text-primary' : '' }}">
+              <td data-col="recovery_rate" class="text-end font-mono font-medium align-middle border-e border-base-content/20 px-2.5 py-1 {{ $record ? 'text-primary' : '' }}">
                 {{ $record && $record->milling_recovery_percentage > 0 ? number_format($record->milling_recovery_percentage, 2) . '%' : '—' }}
               </td>
             @endif
 
             @if ($trial === 1)
-              <td rowspan="{{ $totalRows }}" class="text-end font-mono font-semibold text-primary align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td data-col="mean" rowspan="{{ $totalRows }}" class="text-end font-mono font-semibold text-primary align-middle border-e border-base-content/10 px-2.5 py-1">
                 {{ $isMri ? number_format((float) $amrRateValue, 2) . '%' : ($mean !== null ? number_format($mean, 2) . '%' : '—') }}
               </td>
-              <td rowspan="{{ $totalRows }}" class="text-end font-mono font-semibold align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td data-col="amr_rate" rowspan="{{ $totalRows }}" class="text-end font-mono font-semibold align-middle border-e border-base-content/10 px-2.5 py-1">
                 @if (! $hasAmrTrials)
                   <span class="text-base-content/50">—</span>
                 @elseif ($calculation->isValid)
@@ -233,7 +266,7 @@
                   </a>
                 @endif
               </td>
-              <td rowspan="{{ $totalRows }}" class="text-center align-middle border-e border-base-content/10 px-2.5 py-1">
+              <td data-col="status" rowspan="{{ $totalRows }}" class="text-center align-middle border-e border-base-content/10 px-2.5 py-1">
                 @php
                   $reestablishment = app(\App\Services\PmrCalculationService::class)->evaluateReestablishment($pmrRateValue, $amrRateValue);
                   $isAmrLowerThan60 = $amrRateValue !== null && $amrRateValue <= 60.0;
@@ -295,7 +328,7 @@
                   @endif
                 </div>
               </td>
-              <td rowspan="{{ $totalRows }}" class="align-middle text-center px-2 py-1">
+              <td data-col="actions" rowspan="{{ $totalRows }}" class="align-middle text-center px-2 py-1">
                 <div class="flex items-center justify-center gap-1">
                   @if ($pile && strtolower((string)$pile->amr_status) === 'retest')
                     @if (auth()->user()?->hasRole('STAFF', 'RMEC', 'ADMINISTRATOR'))
@@ -792,6 +825,97 @@
             openModals.forEach((modal) => closeModal(modal));
         }
     });
+})();
+
+// AMR Column Visibility Manager
+(function () {
+    const STORAGE_KEY = 'nfa_amr_visible_columns';
+    const serverDefaults = @json($visibleColumns ?? \App\Models\ReportColumnSetting::forReport('amr'));
+    const emptyCell = document.querySelector('tbody tr td[colspan]');
+
+    function getVisibleColumns() {
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    return parsed;
+                }
+            }
+        } catch (e) {
+            console.error('Failed to read localStorage column settings', e);
+        }
+        return serverDefaults;
+    }
+
+    function setVisibleColumns(cols) {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(cols));
+        } catch (e) {
+            console.error('Failed to save column settings to localStorage', e);
+        }
+    }
+
+    function applyVisibility(visibleCols) {
+        const allColKeys = Array.from(document.querySelectorAll('.col-toggle-cb')).map(cb => cb.dataset.targetCol);
+        
+        allColKeys.forEach(colKey => {
+            const isVisible = visibleCols.includes(colKey);
+            const cells = document.querySelectorAll(`[data-col="${colKey}"]`);
+            cells.forEach(el => {
+                if (isVisible) {
+                    el.classList.remove('hidden');
+                } else {
+                    el.classList.add('hidden');
+                }
+            });
+
+            // Update checkbox state
+            const cb = document.querySelector(`.col-toggle-cb[data-target-col="${colKey}"]`);
+            if (cb) {
+                cb.checked = isVisible;
+            }
+        });
+
+        if (emptyCell) {
+            emptyCell.setAttribute('colspan', visibleCols.length.toString());
+        }
+    }
+
+    // Initialize visibility on page load
+    const currentVisible = getVisibleColumns();
+    applyVisibility(currentVisible);
+
+    // Event listener for checkbox changes
+    document.addEventListener('change', function (e) {
+        if (e.target && e.target.classList.contains('col-toggle-cb')) {
+            const checkboxes = document.querySelectorAll('.col-toggle-cb');
+            const activeCols = [];
+            checkboxes.forEach(cb => {
+                if (cb.checked) {
+                    activeCols.push(cb.dataset.targetCol);
+                }
+            });
+
+            // Prevent hiding all columns
+            if (activeCols.length === 0) {
+                e.target.checked = true;
+                return;
+            }
+
+            setVisibleColumns(activeCols);
+            applyVisibility(activeCols);
+        }
+    });
+
+    // Reset button
+    const resetBtn = document.getElementById('amr-reset-columns-btn');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function () {
+            localStorage.removeItem(STORAGE_KEY);
+            applyVisibility(serverDefaults);
+        });
+    }
 })();
 </script>
 @endsection

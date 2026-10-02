@@ -8,6 +8,7 @@ use App\Models\AuditLog;
 use App\Models\Branch;
 use App\Models\Pile;
 use App\Models\PmrRecord;
+use App\Models\ReportColumnSetting;
 use App\Models\Warehouse;
 use App\Services\PmrCalculationService;
 use App\Services\PmrExportService;
@@ -51,6 +52,7 @@ class PmrRecordController extends Controller
                 ->get(['id', 'branch_id', 'name']),
             'filters' => $filters,
             'recordGroups' => $groups,
+            'visibleColumns' => ReportColumnSetting::forReport('pmr'),
         ]);
     }
 

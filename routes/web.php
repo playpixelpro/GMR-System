@@ -12,6 +12,7 @@ use App\Http\Controllers\GmrSummaryController;
 use App\Http\Controllers\MillerController;
 use App\Http\Controllers\MillingController;
 use App\Http\Controllers\PmrRecordController;
+use App\Http\Controllers\ReportColumnSettingController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TestWorkflowController;
 use App\Http\Controllers\UserController;
@@ -290,6 +291,10 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
     Route::get('/gmr/summary', [GmrSummaryController::class, 'index'])->name(
         'gmr.summary',
     );
+    Route::get('/gmr/summary/export/excel', [
+        GmrSummaryController::class,
+        'exportExcel',
+    ])->name('gmr.summary.export.excel');
     Route::get('/emr/dashboard/export', [
         EmrDashboardController::class,
         'export',
@@ -312,6 +317,11 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
     Route::put('/gmr/config/signatories/{signatory}', [GmrReportConfigController::class, 'updateSignatory'])->name('gmr.config.signatories.update');
     Route::delete('/gmr/config/signatories/{signatory}', [GmrReportConfigController::class, 'destroySignatory'])->name('gmr.config.signatories.destroy');
     Route::patch('/gmr/config/signatories/{signatory}/toggle', [GmrReportConfigController::class, 'toggleSignatory'])->name('gmr.config.signatories.toggle');
+
+    // Report Column Visibility Settings (RMEC / Administrator)
+    Route::get('/settings/reports/columns', [ReportColumnSettingController::class, 'edit'])->name('settings.reports.columns');
+    Route::put('/settings/reports/columns', [ReportColumnSettingController::class, 'update'])->name('settings.reports.columns.update');
+    Route::post('/settings/reports/columns/reset', [ReportColumnSettingController::class, 'reset'])->name('settings.reports.columns.reset');
 
     // GMR Report Print & Selection (restricted — Staff cannot print the GMR report)
     Route::match(['get', 'post'], '/gmr/report/print', [GmrReportPrintController::class, 'print'])->name('gmr.report.print')->middleware('can:print-gmr-report');

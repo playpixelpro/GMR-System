@@ -42,6 +42,7 @@ class MillingTest extends TestCase
             'pile_id' => $unapprovedPile->id,
             'miller' => 'Acme Mill',
             'reference_number' => 'PR-2026-001',
+            'lot_number' => 'Lot 1',
         ])
             ->assertSessionHasErrors(['pile_id']);
 
@@ -53,11 +54,13 @@ class MillingTest extends TestCase
             'pile_id' => $approvedPile->id,
             'miller' => 'Acme Mill',
             'reference_number' => 'PR-2026-001',
+            'lot_number' => 'Lot 1',
         ])->assertRedirect(route('millings.show', Milling::first()));
 
         $milling = Milling::first();
         $this->assertSame($approvedPile->id, $milling->pile_id);
         $this->assertSame('assigned', $milling->status);
+        $this->assertSame('Lot 1', $milling->lot_number);
         $this->assertEquals(5000, (float) $milling->target_volume_kg);
         $this->assertEquals(100.0, (float) $milling->target_volume_bags);
     }
@@ -71,6 +74,7 @@ class MillingTest extends TestCase
             'pile_id' => $pile->id,
             'miller' => 'First Mill',
             'reference_number' => 'PR-2026-001',
+            'lot_number' => 'Lot 1',
         ])->assertRedirect();
 
         $this->post(route('millings.store'), [
@@ -78,7 +82,24 @@ class MillingTest extends TestCase
             'pile_id' => $pile->id,
             'miller' => 'Second Mill',
             'reference_number' => 'PR-2026-002',
+            'lot_number' => 'Lot 2',
         ])->assertSessionHasErrors(['pile_id']);
+    }
+
+    public function test_assigning_milling_requires_miller(): void
+    {
+        [$branch, $pile] = $this->createApprovedPile('1', 5000);
+
+        $this->post(route('millings.store'), [
+            'branch_id' => $branch->id,
+            'pile_id' => $pile->id,
+            'miller' => '',
+            'reference_number' => 'PR-2026-001',
+            'lot_number' => 'Lot 1',
+        ])
+            ->assertSessionHasErrors(['miller']);
+
+        $this->assertDatabaseMissing('millings', ['pile_id' => $pile->id]);
     }
 
     public function test_staff_can_log_progress_and_completion_auto_flips_status(): void
@@ -90,6 +111,7 @@ class MillingTest extends TestCase
             'pile_id' => $pile->id,
             'miller' => 'Acme Mill',
             'reference_number' => 'PR-2026-001',
+            'lot_number' => 'Lot 1',
         ]);
 
         $milling = Milling::first();
@@ -106,6 +128,7 @@ class MillingTest extends TestCase
         // First progress entry auto-starts the milling.
         $this->post(route('millings.progress.store', $milling), [
             'progress_date' => now()->format('Y-m-d'),
+            'batch_number' => 'Batch 1',
             'palay_input_kg' => 3000,
             'milled_rice_kg' => 2000,
         ])->assertRedirect(route('millings.show', $milling));
@@ -118,6 +141,7 @@ class MillingTest extends TestCase
         // Final entry reaches the 5000 kg target -> auto-completes.
         $this->post(route('millings.progress.store', $milling), [
             'progress_date' => now()->format('Y-m-d'),
+            'batch_number' => 'Batch 2',
             'palay_input_kg' => 3000,
             'milled_rice_kg' => 3000,
         ]);
@@ -126,6 +150,54 @@ class MillingTest extends TestCase
         $this->assertSame('completed', $milling->status);
         $this->assertNotNull($milling->completed_at);
         $this->assertEquals(5000, $milling->cumulativeMilledKg());
+    }
+
+    public function test_recording_progress_requires_batch_no_palay_input_and_milled_rice(): void
+    {
+        [$branch, $pile] = $this->createApprovedPile('1', 5000);
+
+        $milling = Milling::create([
+            'branch_id' => $branch->id,
+            'pile_id' => $pile->id,
+            'miller' => 'Acme Mill',
+            'reference_number' => 'PR-2026-001',
+            'status' => 'assigned',
+            'target_volume_kg' => 5000,
+            'assigned_at' => now(),
+        ]);
+
+        $staff = User::factory()->create([
+            'role' => 'staff',
+            'branch_id' => $branch->id,
+            'must_change_password' => false,
+            'is_active' => true,
+        ]);
+        $this->actingAs($staff);
+
+        // Omitting required fields
+        $this->post(route('millings.progress.store', $milling), [
+            'progress_date' => now()->format('Y-m-d'),
+        ])->assertSessionHasErrors(['batch_number', 'palay_input_kg', 'milled_rice_kg']);
+
+        // Submitting with required fields succeeds
+        $this->post(route('millings.progress.store', $milling), [
+            'progress_date' => now()->format('Y-m-d'),
+            'batch_number' => 'Batch 001',
+            'palay_input_kg' => 2500,
+            'milled_rice_kg' => 1625,
+        ])->assertRedirect(route('millings.show', $milling));
+
+        $this->assertDatabaseHas('milling_progress', [
+            'milling_id' => $milling->id,
+            'batch_number' => 'Batch 001',
+            'palay_input_kg' => 2500,
+            'milled_rice_kg' => 1625,
+        ]);
+
+        $this->get(route('millings.show', $milling))
+            ->assertOk()
+            ->assertSee('Batch No.')
+            ->assertSee('Batch 001');
     }
 
     public function test_staff_cannot_assign_millings(): void
@@ -175,6 +247,7 @@ class MillingTest extends TestCase
             'pile_id' => $pile->id,
             'miller' => 'Acme Mill',
             'reference_number' => 'PR-2026-001',
+            'lot_number' => 'Lot 1',
         ])->assertRedirect(route('millings.show', Milling::first()));
 
         $milling = Milling::first();
@@ -212,6 +285,7 @@ class MillingTest extends TestCase
             'pile_id' => $pile->id,
             'miller' => 'Acme Mill',
             'reference_number' => 'PR-2026-001',
+            'lot_number' => 'Lot 1',
         ])->assertRedirect(route('millings.show', Milling::first()));
 
         $milling = Milling::first();
@@ -227,7 +301,23 @@ class MillingTest extends TestCase
             'branch_id' => $branch->id,
             'pile_id' => $pile->id,
             'miller' => 'Acme Mill',
+            'lot_number' => 'Lot 1',
         ])->assertSessionHasErrors(['reference_number']);
+
+        $this->assertDatabaseMissing('millings', ['pile_id' => $pile->id]);
+    }
+
+    public function test_assign_requires_lot_number(): void
+    {
+        [$branch, $pile] = $this->createApprovedPile('1', 5000);
+
+        $this->post(route('millings.store'), [
+            'branch_id' => $branch->id,
+            'pile_id' => $pile->id,
+            'miller' => 'Acme Mill',
+            'reference_number' => 'PR-2026-001',
+            'lot_number' => '',
+        ])->assertSessionHasErrors(['lot_number']);
 
         $this->assertDatabaseMissing('millings', ['pile_id' => $pile->id]);
     }
@@ -266,6 +356,8 @@ class MillingTest extends TestCase
             ->assertSee('assign-milling-modal')
             ->assertSee('assign-warehouse-select')
             ->assertSee('Project / Memo Reference No.')
+            ->assertSee('Lot No. *')
+            ->assertSee('Rice Mill *')
             ->assertSee('Warehouse')
             ->assertSee($pile->warehouse->name)
             ->assertSee('info-approved-gmr')
@@ -356,6 +448,42 @@ class MillingTest extends TestCase
             ->assertOk()
             ->assertSee('REF-NEW-DATE')
             ->assertDontSee('REF-OLD-DATE');
+    }
+
+    public function test_index_displays_target_accomplishment_and_balance_columns(): void
+    {
+        [$branch, $pile] = $this->createApprovedPile('1', 5000);
+
+        $milling = Milling::create([
+            'branch_id' => $branch->id,
+            'pile_id' => $pile->id,
+            'miller' => 'Test Miller',
+            'reference_number' => 'REF-PROGRESS-COL',
+            'status' => 'ongoing',
+            'target_volume_kg' => 5000,
+            'assigned_at' => now(),
+        ]);
+
+        $milling->progress()->create([
+            'pile_id' => $pile->id,
+            'progress_date' => now()->format('Y-m-d'),
+            'palay_input_kg' => 3000,
+            'milled_rice_kg' => 2000,
+            'recovery_percentage' => 66.67,
+        ]);
+
+        $this->get(route('millings.index'))
+            ->assertOk()
+            ->assertSee('Target - Palay (kg)')
+            ->assertSee('Issued Palay (kg)')
+            ->assertSee('Rice Recovery (kg)')
+            ->assertSee('Balance Palay (kg)')
+            ->assertSee('Recovery Rate (%)')
+            ->assertDontSee('<th>Assigned</th>', false)
+            ->assertSee('5,000.000')
+            ->assertSee('3,000.000')
+            ->assertSee('2,000.000')
+            ->assertSee('66.67%');
     }
 
     /**

@@ -128,6 +128,11 @@
                     <input type="text" name="volume" id="volume" value="{{ old('volume') }}" inputmode="decimal" autocomplete="off" required data-pile-detail-field data-number-format
                            class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
                 </div>
+                <div>
+                    <label for="test_milling_volume" class="block text-sm font-medium text-gray-700">Test Milling Volume in kg</label>
+                    <input type="text" name="test_milling_volume" id="test_milling_volume" value="{{ old('test_milling_volume') }}" inputmode="decimal" autocomplete="off" data-pile-detail-field data-number-format placeholder="Optional"
+                           class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
+                </div>
             </div>
             <div class="mt-4 flex justify-end">
                 <button type="button" data-edit-pile-details disabled class="min-w-48 rounded-md border border-blue-300 bg-white px-8 py-4 text-lg font-semibold text-blue-700 shadow-sm enabled:hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50">
@@ -148,6 +153,18 @@
                         <p class="mt-1 text-xs text-teal-800">
                             Piles with &lt; 50,000 kg (less than 1,000 bags) are exempt from commercial test milling. AMR is established by deducting the MRI (up to 3.00%) from PMR.
                         </p>
+                    </div>
+                </div>
+
+                <div data-amr-mri-locked-notice class="mb-4 hidden rounded-md border border-amber-300 bg-amber-50 p-4 text-amber-900 shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <span class="icon-[tabler--lock] h-6 w-6 text-amber-600 flex-shrink-0" aria-hidden="true"></span>
+                        <div>
+                            <h3 class="text-sm font-bold text-amber-900">AMR Establishment Locked</h3>
+                            <p class="text-xs text-amber-800 mt-0.5">
+                                This low-volume AMR establishment record is locked and finalized (Status: <strong data-mri-lock-status>RECOMMENDED</strong>). Staff cannot edit locked test milling data.
+                            </p>
+                        </div>
                     </div>
                 </div>
 
@@ -438,34 +455,34 @@
                 // Show Section A (MRI establishment), hide Section B (standard trials)
                 if (mriSection) {
                     mriSection.classList.remove('hidden');
-                    mriSection.querySelectorAll('input, select, textarea').forEach((field) => {
-                        field.disabled = false;
-                        if (field.tagName === 'TEXTAREA') {
-                            field.required = true;
-                        }
-                        if (field._flatpickr?.altInput) {
-                            field._flatpickr.altInput.disabled = false;
-                        }
-                    });
+
                     const pmrField = document.querySelector('#mri_pmr_rate');
                     const mriField = document.querySelector('#mri_rate');
                     const dateField = document.querySelector('#mri_test_milling_date');
+                    const remarksField = document.querySelector('#mri_remarks');
                     const badge = document.querySelector('#mri_pmr_badge');
-
-                    if (pmrField) pmrField.required = true;
-                    if (mriField) mriField.required = true;
-                    if (dateField) {
-                        if (dateField._flatpickr?.altInput) {
-                            dateField._flatpickr.altInput.required = true;
-                        } else {
-                            dateField.required = true;
-                        }
-                    }
+                    const lockedNotice = mriSection.querySelector('[data-amr-mri-locked-notice]');
+                    const lockStatusText = mriSection.querySelector('[data-mri-lock-status]');
+                    const submitButton = document.querySelector('[data-entry-form] button[type="submit"]');
 
                     // Check for existing MRI record or prefill from PMR
                     const existingMriRecord = selectedPile?.amr?.records?.find(
                         (r) => r.establishment_type === 'mri' || (r.pmr_rate !== null && r.pmr_rate !== undefined)
                     );
+
+                    const isRecordLocked = Boolean(
+                        existingMriRecord && (
+                            existingMriRecord.is_locked ||
+                            existingMriRecord.can_edit === false ||
+                            existingMriRecord.status === 'RECOMMENDED' ||
+                            existingMriRecord.status === 'RETEST'
+                        )
+                    );
+                    const isPileAmrLocked = Boolean(
+                        (selectedPile?.is_amr_locked && !selectedPile?.is_amr_retest) ||
+                        (selectedPile?.amr_status && ['recommended'].includes(selectedPile.amr_status.toLowerCase()))
+                    );
+                    const isLocked = isRecordLocked || isPileAmrLocked;
 
                     if (existingMriRecord) {
                         if (pmrField && existingMriRecord.pmr_rate !== null) {
@@ -481,7 +498,6 @@
                                 dateField.value = existingMriRecord.test_milling_date;
                             }
                         }
-                        const remarksField = document.querySelector('#mri_remarks');
                         if (remarksField && existingMriRecord.mri_remarks) {
                             remarksField.value = existingMriRecord.mri_remarks;
                         }
@@ -498,6 +514,65 @@
                     } else {
                         if (badge) {
                             badge.textContent = '';
+                        }
+                    }
+
+                    if (isLocked) {
+                        mriSection.querySelectorAll('input, select, textarea').forEach((field) => {
+                            field.disabled = true;
+                            field.classList.add('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
+                            if (field._flatpickr?.altInput) {
+                                field._flatpickr.altInput.disabled = true;
+                                field._flatpickr.altInput.classList.add('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
+                            }
+                        });
+                        if (lockedNotice) {
+                            const statusName = existingMriRecord?.status || selectedPile?.amr_status?.toUpperCase() || 'LOCKED';
+                            if (lockStatusText) lockStatusText.textContent = statusName;
+                            lockedNotice.classList.remove('hidden');
+                        }
+                        if (submitButton) {
+                            submitButton.disabled = true;
+                            submitButton.classList.add('opacity-50', 'cursor-not-allowed');
+                            submitButton.title = 'Test milling is locked and cannot be edited';
+                        }
+                        if (editPileDetailsButton) {
+                            editPileDetailsButton.disabled = true;
+                            editPileDetailsButton.title = 'Pile details cannot be edited while test milling is locked';
+                        }
+                    } else {
+                        mriSection.querySelectorAll('input, select, textarea').forEach((field) => {
+                            field.disabled = false;
+                            field.classList.remove('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
+                            if (field.tagName === 'TEXTAREA') {
+                                field.required = true;
+                            }
+                            if (field._flatpickr?.altInput) {
+                                field._flatpickr.altInput.disabled = false;
+                                field._flatpickr.altInput.classList.remove('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
+                            }
+                        });
+                        if (lockedNotice) {
+                            lockedNotice.classList.add('hidden');
+                        }
+                        if (submitButton) {
+                            submitButton.disabled = false;
+                            submitButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                            submitButton.removeAttribute('title');
+                        }
+                        if (editPileDetailsButton && pileHasSavedDetails) {
+                            editPileDetailsButton.disabled = false;
+                            editPileDetailsButton.removeAttribute('title');
+                        }
+
+                        if (pmrField) pmrField.required = true;
+                        if (mriField) mriField.required = true;
+                        if (dateField) {
+                            if (dateField._flatpickr?.altInput) {
+                                dateField._flatpickr.altInput.required = true;
+                            } else {
+                                dateField.required = true;
+                            }
                         }
                     }
 
@@ -519,6 +594,8 @@
                 // High volume or not AMR: hide Section A, show Section B
                 if (mriSection) {
                     mriSection.classList.add('hidden');
+                    const lockedNotice = mriSection.querySelector('[data-amr-mri-locked-notice]');
+                    if (lockedNotice) lockedNotice.classList.add('hidden');
                     mriSection.querySelectorAll('input, select, textarea').forEach((field) => {
                         field.disabled = true;
                         field.required = false;
@@ -938,7 +1015,20 @@
                 field.classList.toggle('text-gray-500', locked);
                 field.classList.toggle('cursor-not-allowed', locked);
             });
-            editPileDetailsButton.disabled = !pileHasSavedDetails;
+            const selectedPile = pileData.find((pile) => String(pile.id) === pileSelect.value);
+            const isTestLocked = Boolean(
+                selectedPile && formType.value && selectedPile[formType.value]?.records?.length > 0 &&
+                selectedPile[formType.value].records.every((r) => r.is_locked) &&
+                !selectedPile[`is_${formType.value}_retest`]
+            ) || Boolean(selectedPile && selectedPile[`is_${formType?.value}_locked`] && !selectedPile[`is_${formType?.value}_retest`]);
+
+            if (isTestLocked) {
+                editPileDetailsButton.disabled = true;
+                editPileDetailsButton.title = 'Pile details cannot be edited while test milling is locked';
+            } else {
+                editPileDetailsButton.disabled = !pileHasSavedDetails;
+                editPileDetailsButton.removeAttribute('title');
+            }
             editPileDetailsButton.textContent = pileHasSavedDetails && !locked ? 'Save' : 'Edit';
         }
 
@@ -974,6 +1064,10 @@
             }
             document.querySelector('#quality').value = normalizedQuality;
             document.querySelector('#volume').value = details.volume ? formatVolume(String(details.volume)) : '';
+            const testMillingVolInput = document.querySelector('#test_milling_volume');
+            if (testMillingVolInput) {
+                testMillingVolInput.value = details.test_milling_volume ? formatVolume(String(details.test_milling_volume)) : '';
+            }
             updateTrialOptions();
             updateAmrVolumeLayout();
         }
@@ -1385,6 +1479,18 @@
         }
 
         editPileDetailsButton.addEventListener('click', async () => {
+            const selectedPile = pileData.find((pile) => String(pile.id) === pileSelect.value);
+            const isTestLocked = Boolean(
+                selectedPile && formType.value && selectedPile[formType.value]?.records?.length > 0 &&
+                selectedPile[formType.value].records.every((r) => r.is_locked) &&
+                !selectedPile[`is_${formType.value}_retest`]
+            ) || Boolean(selectedPile && selectedPile[`is_${formType?.value}_locked`] && !selectedPile[`is_${formType?.value}_retest`]);
+
+            if (isTestLocked) {
+                window.showAlert('Pile details cannot be modified because the test milling is locked by RMEC or Administrator.', 'error');
+                return;
+            }
+
             if (pileDetailsLocked) {
                 setPileDetailsLocked(false);
                 return;
@@ -1400,6 +1506,7 @@
                 mc: document.querySelector('#mc').value,
                 quality: document.querySelector('#quality').value,
                 volume: document.querySelector('#volume').value.replace(/,/g, ''),
+                test_milling_volume: document.querySelector('#test_milling_volume')?.value.replace(/,/g, '') || '',
             });
 
             try {
@@ -1423,8 +1530,18 @@
                         details.mc = payload.get('mc');
                         details.quality = payload.get('quality');
                         details.volume = payload.get('volume').replaceAll(',', '');
+                        details.test_milling_volume = payload.get('test_milling_volume').replaceAll(',', '');
                     }
                 });
+                if (selectedPile?.shared) {
+                    selectedPile.shared.variety = payload.get('variety');
+                    selectedPile.shared.purity = payload.get('purity');
+                    selectedPile.shared.aged = payload.get('aged');
+                    selectedPile.shared.mc = payload.get('mc');
+                    selectedPile.shared.quality = payload.get('quality');
+                    selectedPile.shared.volume = payload.get('volume').replaceAll(',', '');
+                    selectedPile.shared.test_milling_volume = payload.get('test_milling_volume').replaceAll(',', '');
+                }
                 setPileDetailsLocked(true, true);
                 updateAmrVolumeLayout();
                 updateTrialOptions();

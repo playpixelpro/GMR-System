@@ -10,10 +10,13 @@
 
 <div class="mb-5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
     <div>
-        <h1 class="text-2xl font-bold leading-tight text-black sm:text-3xl">GMR Summary Dashboard</h1>
-        <p class="mt-2 text-sm leading-6 text-black">Final validated AMR and PMR summarized by branch, warehouse, and pile.</p>
+        <h1 class="text-2xl font-bold leading-tight text-black sm:text-3xl">GMR Dashboard</h1>
     </div>
     <div class="flex flex-wrap items-center gap-2">
+        <a href="{{ route('gmr.summary.export.excel', request()->query()) }}" class="btn btn-outline btn-success btn-sm sm:btn-md gap-2" title="Export GMR summary to Excel (.xlsx)">
+            <span class="icon-[tabler--file-spreadsheet] size-5"></span>
+            Excel Export
+        </a>
         @if (auth()->user()?->hasRole('RMEC', 'ADMINISTRATOR'))
             <a href="{{ route('gmr.config.edit') }}" class="btn btn-outline btn-sm sm:btn-md gap-2">
                 <span class="icon-[tabler--adjustments] size-5"></span>
@@ -128,7 +131,6 @@
             <div class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between border-b border-base-content/10">
                 <div>
                     <h2 class="text-lg font-semibold text-black">Detailed GMR Results</h2>
-                    <p class="mt-1 text-sm text-black">GMR is the midpoint of the final AMR and PMR values. Select a branch first, then check records to include in the printable report.</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-3">
                     <div class="flex items-center gap-2">
