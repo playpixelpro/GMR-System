@@ -159,10 +159,10 @@
                 <th style="width: 8%;">Pile No.</th>
                 <th style="width: 14%;">Volume in Bags</th>
                 <th style="width: 9%;">Quality</th>
-                <th style="width: 11%;">AMR</th>
-                <th style="width: 11%;">PMR</th>
-                <th style="width: 14%;">EMR</th>
-                <th style="width: 8%;">GMR</th>
+                <th style="width: 11%;">PMR(%)</th>
+                <th style="width: 11%;">AMR(%)</th>
+                <th style="width: 14%;">EMR(%)</th>
+                <th style="width: 8%;">GMR(%)</th>
             </tr>
         </thead>
         <tbody>
@@ -175,10 +175,10 @@
                     </td>
                     <td class="text-center font-bold">{{ $row['quality'] ?? 'GQA' }}</td>
                     <td class="text-center">
-                        {{ $row['amr'] !== null ? number_format((float) $row['amr'], 2) : '—' }}
+                        {{ $row['pmr'] !== null ? number_format((float) $row['pmr'], 2) : '—' }}
                     </td>
                     <td class="text-center">
-                        {{ $row['pmr'] !== null ? number_format((float) $row['pmr'], 2) : '—' }}
+                        {{ $row['amr'] !== null ? number_format((float) $row['amr'], 2) : '—' }}
                     </td>
                     <td class="text-center font-bold">
                         {{ str_replace('%', '', (string) ($row['emr'] ?? '—')) }}
@@ -258,18 +258,28 @@
 
     <script type="text/php">
         if (isset($pdf)) {
-            $font = $fontMetrics->get_font("helvetica", "normal");
-            $generatedDate = date("M d, Y");
-            $pageWidth = $pdf->get_width();
-            $pageHeight = $pdf->get_height();
+            $pdf->page_script(function ($pageNumber, $pageCount, $canvas, $fontMetrics) {
+                $font = $fontMetrics->get_font("helvetica", "normal");
+                $pageWidth = $canvas->get_width();
+                $pageHeight = $canvas->get_height();
 
-            // Lower-right: page number "Page X of Y".
-            $pageNumberText = "Page {PAGE_NUM} of {PAGE_COUNT}";
-            $pdf->page_text($pageWidth - 52, $pageHeight - 16, $pageNumberText, $font, 7, array(0, 0, 0));
+                $marginRight = {{ $config->getMarginRightPt() }};
+                $marginLeft = {{ $config->getMarginLeftPt() }};
+                $marginBottom = {{ $config->getMarginBottomPt() }};
 
-            // Lower-left: small watermark with developer credit and generation date.
-            $watermark = "GMR System - Developed by Dindo O. Quitor | " . $generatedDate;
-            $pdf->page_text(18, $pageHeight - 16, $watermark, $font, 6, array(0, 0, 0));
+                $y = $pageHeight - max(16, $marginBottom * 0.55);
+
+                // Lower-right: page number "Page X of Y" aligned with the right content margin.
+                $pageText = "Page " . $pageNumber . " of " . $pageCount;
+                $pageFontSize = 7;
+                $pageTextWidth = $fontMetrics->get_text_width($pageText, $font, $pageFontSize);
+                $canvas->text($pageWidth - $marginRight - $pageTextWidth, $y, $pageText, $font, $pageFontSize, array(0, 0, 0));
+
+                // Lower-left: small watermark with developer credit and generation date aligned with the left content margin.
+                $generatedDate = date("M d, Y");
+                $watermark = "GMR System - Developed by Dindo O. Quitor | " . $generatedDate;
+                $canvas->text($marginLeft, $y, $watermark, $font, 6, array(0, 0, 0));
+            });
         }
     </script>
 </body>

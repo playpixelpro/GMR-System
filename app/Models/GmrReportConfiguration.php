@@ -61,10 +61,10 @@ class GmrReportConfiguration extends Model
             'custom_height' => null,
             'custom_unit' => 'in',
             'orientation' => 'portrait',
-            'margin_top' => 0.50,
-            'margin_right' => 0.50,
-            'margin_bottom' => 0.50,
-            'margin_left' => 0.50,
+            'margin_top' => 0.5,
+            'margin_right' => 0.5,
+            'margin_bottom' => 0.5,
+            'margin_left' => 0.5,
             'margin_unit' => 'in',
         ]);
     }
@@ -76,7 +76,11 @@ class GmrReportConfiguration extends Model
     {
         $orientation = strtolower($this->orientation ?? 'portrait');
 
-        if ($this->paper_size === 'Custom' && $this->custom_width && $this->custom_height) {
+        if (
+            $this->paper_size === 'Custom' &&
+            $this->custom_width &&
+            $this->custom_height
+        ) {
             $unit = $this->custom_unit ?: 'in';
 
             return "{$this->custom_width}{$unit} {$this->custom_height}{$unit} {$orientation}";
@@ -106,6 +110,50 @@ class GmrReportConfiguration extends Model
     }
 
     /**
+     * Scale factor from margin_unit to points (pt).
+     */
+    public function getMarginScale(): float
+    {
+        return match ($this->margin_unit) {
+            'mm' => 72 / 25.4,
+            'cm' => 72 / 2.54,
+            default => 72.0,
+        };
+    }
+
+    /**
+     * Returns the top margin in points (pt).
+     */
+    public function getMarginTopPt(): float
+    {
+        return (float) ($this->margin_top ?? 0.5) * $this->getMarginScale();
+    }
+
+    /**
+     * Returns the right margin in points (pt).
+     */
+    public function getMarginRightPt(): float
+    {
+        return (float) ($this->margin_right ?? 0.5) * $this->getMarginScale();
+    }
+
+    /**
+     * Returns the bottom margin in points (pt).
+     */
+    public function getMarginBottomPt(): float
+    {
+        return (float) ($this->margin_bottom ?? 0.5) * $this->getMarginScale();
+    }
+
+    /**
+     * Returns the left margin in points (pt).
+     */
+    public function getMarginLeftPt(): float
+    {
+        return (float) ($this->margin_left ?? 0.5) * $this->getMarginScale();
+    }
+
+    /**
      * Returns paper dimensions in points (pt) for DomPDF or pixel calculations.
      * 1 in = 72 pt, 1 mm = 2.83465 pt, 1 cm = 28.3465 pt
      *
@@ -116,7 +164,11 @@ class GmrReportConfiguration extends Model
         $widthPt = 8.5 * 72; // default 612 pt
         $heightPt = 13.0 * 72; // default 936 pt for long bond
 
-        if ($this->paper_size === 'Custom' && $this->custom_width && $this->custom_height) {
+        if (
+            $this->paper_size === 'Custom' &&
+            $this->custom_width &&
+            $this->custom_height
+        ) {
             $scale = match ($this->custom_unit) {
                 'mm' => 72 / 25.4,
                 'cm' => 72 / 2.54,
@@ -135,7 +187,12 @@ class GmrReportConfiguration extends Model
         }
 
         if (strtolower($this->orientation) === 'landscape') {
-            return [0.0, 0.0, max($widthPt, $heightPt), min($widthPt, $heightPt)];
+            return [
+                0.0,
+                0.0,
+                max($widthPt, $heightPt),
+                min($widthPt, $heightPt),
+            ];
         }
 
         return [0.0, 0.0, min($widthPt, $heightPt), max($widthPt, $heightPt)];
