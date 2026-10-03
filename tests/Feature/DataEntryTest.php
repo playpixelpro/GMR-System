@@ -354,6 +354,102 @@ class DataEntryTest extends TestCase
         $this->assertDatabaseCount('amr_records', 1);
     }
 
+    public function test_entry_form_displays_test_milling_volume_field(): void
+    {
+        $response = $this->get(route('records.create'));
+
+        $response->assertOk();
+        $response->assertSee('Test Milling Volume in kg');
+        $response->assertSee('test_milling_volume');
+        $response->assertSee('Volume of Pile (kg) - Net of test Milling');
+    }
+
+    public function test_test_milling_volume_is_optional_and_persisted(): void
+    {
+        $payloadWithVolume = [
+            'form_type' => 'amr',
+            'new_branch_name' => 'TM Branch',
+            'new_warehouse_name' => 'Warehouse TM',
+            'test_milling_date' => '2026-09-24',
+            'pile_number' => 'TM-1',
+            'variety' => 'PD',
+            'purity' => 90,
+            'mc' => 12,
+            'quality' => 'good',
+            'aged' => 3,
+            'volume' => 30000,
+            'test_milling_volume' => '1,500.500',
+            'rice_millers' => 'Miller TM',
+            'no_of_trial' => 1,
+            'palay_input' => 100,
+            'rice_recovery' => 65,
+        ];
+
+        $this->post(route('records.store'), $payloadWithVolume)->assertRedirect();
+
+        $pile = Pile::where('number', 'TM-1')->firstOrFail();
+        $this->assertEquals(1500.500, (float) $pile->test_milling_volume_kg);
+        $record = AmrRecord::where('pile_id', $pile->id)->firstOrFail();
+        $this->assertEquals(1500.500, (float) $record->test_milling_volume_kg);
+
+        // Optional: without test_milling_volume
+        $payloadWithoutVolume = [
+            'form_type' => 'amr',
+            'new_branch_name' => 'TM Branch 2',
+            'new_warehouse_name' => 'Warehouse TM 2',
+            'test_milling_date' => '2026-09-24',
+            'pile_number' => 'TM-2',
+            'variety' => 'PD',
+            'purity' => 90,
+            'mc' => 12,
+            'quality' => 'good',
+            'aged' => 3,
+            'volume' => 30000,
+            'rice_millers' => 'Miller TM 2',
+            'no_of_trial' => 1,
+            'palay_input' => 100,
+            'rice_recovery' => 65,
+        ];
+
+        $this->post(route('records.store'), $payloadWithoutVolume)->assertRedirect();
+
+        $pile2 = Pile::where('number', 'TM-2')->firstOrFail();
+        $this->assertNull($pile2->test_milling_volume_kg);
+    }
+
+    public function test_update_pile_details_updates_test_milling_volume(): void
+    {
+        $branch = Branch::create(['name' => 'Update Test Branch']);
+        $warehouse = Warehouse::create(['branch_id' => $branch->id, 'name' => 'Update Test Warehouse']);
+        $pile = Pile::create([
+            'branch_id' => $branch->id,
+            'warehouse_id' => $warehouse->id,
+            'pile_number' => 'UP-1',
+            'number' => 'UP-1',
+            'variety' => 'PD',
+            'purity' => 90,
+            'aged_months' => 2,
+            'mc' => 12,
+            'quality' => 'good',
+            'volume_kg' => 20000,
+            'test_milling_volume_kg' => null,
+        ]);
+
+        $response = $this->patchJson(route('piles.details.update', $pile), [
+            'variety' => 'PD-NEW',
+            'purity' => 92,
+            'aged' => 3,
+            'mc' => 13,
+            'quality' => 'fair',
+            'volume' => 19500,
+            'test_milling_volume' => '500.250',
+        ]);
+
+        $response->assertOk();
+        $pile->refresh();
+        $this->assertEquals(500.250, (float) $pile->test_milling_volume_kg);
+    }
+
     /**
      * @return array<string, mixed>
      */

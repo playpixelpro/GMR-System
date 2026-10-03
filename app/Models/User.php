@@ -75,6 +75,11 @@ class User extends Authenticatable
         return in_array(strtoupper((string) $this->role), $roles, true);
     }
 
+    public function isBranchRestricted(): bool
+    {
+        return (bool) ($this->branch_id && $this->hasRole('STAFF', 'VIEWER'));
+    }
+
     public function isEditLocked(): bool
     {
         return (bool) $this->is_edit_locked;
@@ -89,7 +94,7 @@ class User extends Authenticatable
 
     public function canEditRecord(Model $record): bool
     {
-        if ($record->getAttribute('is_locked')) {
+        if ($record->getAttribute('is_locked') || in_array(strtoupper((string) $record->getAttribute('status')), ['RECOMMENDED', 'RETEST'], true)) {
             return false;
         }
 

@@ -10,10 +10,13 @@
 
 <div class="mb-5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
     <div>
-        <h1 class="text-2xl font-bold leading-tight text-black sm:text-3xl">GMR Summary Dashboard</h1>
-        <p class="mt-2 text-sm leading-6 text-black">Final validated AMR and PMR summarized by branch, warehouse, and pile.</p>
+        <h1 class="text-2xl font-bold leading-tight text-black sm:text-3xl">GMR Dashboard</h1>
     </div>
     <div class="flex flex-wrap items-center gap-2">
+        <a href="{{ route('gmr.summary.export.excel', request()->query()) }}" class="btn btn-outline btn-success btn-sm sm:btn-md gap-2" title="Export GMR summary to Excel (.xlsx)">
+            <span class="icon-[tabler--file-spreadsheet] size-5"></span>
+            Excel Export
+        </a>
         @if (auth()->user()?->hasRole('RMEC', 'ADMINISTRATOR'))
             <a href="{{ route('gmr.config.edit') }}" class="btn btn-outline btn-sm sm:btn-md gap-2">
                 <span class="icon-[tabler--adjustments] size-5"></span>
@@ -28,7 +31,7 @@
         <label class="form-control">
             <span class="label-text mb-2 text-sm font-semibold text-black">Branch</span>
             @php
-                $isStaffUser = auth()->user()?->hasRole('STAFF') && auth()->user()?->branch_id;
+                $isStaffUser = (bool) auth()->user()?->isBranchRestricted();
             @endphp
             <select name="branch_id" class="select select-bordered min-h-11 w-full text-base text-black @if($isStaffUser) bg-gray-100 text-gray-500 cursor-not-allowed @endif" onchange="this.form.submit()" @disabled($isStaffUser)>
                 @unless($isStaffUser)
@@ -128,7 +131,6 @@
             <div class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between border-b border-base-content/10">
                 <div>
                     <h2 class="text-lg font-semibold text-black">Detailed GMR Results</h2>
-                    <p class="mt-1 text-sm text-black">GMR is the midpoint of the final AMR and PMR values. Select a branch first, then check records to include in the printable report.</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-3">
                     <div class="flex items-center gap-2">
@@ -258,9 +260,9 @@
                     <button type="button" class="btn btn-circle btn-text btn-sm" data-submit-close="gmr-submit-modal" aria-label="Close">&times;</button>
                 </div>
                 <div class="mt-4 space-y-3 text-sm">
-                    <div class="alert alert-soft alert-info">
+                    <x-alert-box type="info" size="sm">
                         Enter the <strong>Recommendation Memo No.</strong> of the GMR report memo submitted to the Central Office. This becomes the reference recorded for this submission.
-                    </div>
+                    </x-alert-box>
                     <label class="form-control">
                         <span class="label-text mb-2 text-sm font-semibold text-black">Recommendation Memo No. *</span>
                         <input type="text" id="submit-memo-input" class="input input-bordered min-h-11 text-black" placeholder="e.g. RM-2026-01-001" required />
@@ -307,13 +309,13 @@
                         <span class="font-mono">{{ $formatRange($row['amr'], $row['pmr']) }}</span>
                     </div>
                     @if ($row['status'] === 'Re-establish')
-                        <div class="alert alert-soft alert-secondary text-sm"><strong>Re-establish required:</strong> {{ implode('; ', $row['review_reasons']) }}.</div>
+                        <x-alert-box type="error" size="sm"><strong>Re-establish required:</strong> {{ implode('; ', $row['review_reasons']) }}.</x-alert-box>
                     @elseif ($row['status'] === 'Review')
-                        <div class="alert alert-soft alert-warning text-sm"><strong>Review required:</strong> {{ implode('; ', $row['review_reasons']) }}.</div>
+                        <x-alert-box type="warning" size="sm"><strong>Review required:</strong> {{ implode('; ', $row['review_reasons']) }}.</x-alert-box>
                     @elseif ($row['status'] === 'Incomplete')
-                        <div class="alert alert-soft alert-neutral text-sm"><strong>Incomplete:</strong> AMR and PMR are both required to compute GMR.</div>
+                        <x-alert-box type="neutral" size="sm"><strong>Incomplete:</strong> AMR and PMR are both required to compute GMR.</x-alert-box>
                     @else
-                        <div class="alert alert-soft alert-primary text-sm">AMR and PMR meet the current GMR validation rules.</div>
+                        <x-alert-box type="success" size="sm">AMR and PMR meet the current GMR validation rules.</x-alert-box>
                     @endif
                 </div>
             </div>
@@ -437,13 +439,13 @@
                 const selectedBranch = getSelectedBranch();
                 if (!selectedBranch) {
                     e.preventDefault();
-                    alert('Please select a branch before printing the report.');
+                    window.showAlert('Please select a branch before printing the report.', 'warning');
                     return;
                 }
                 const checkedCount = document.querySelectorAll('.pile-checkbox:checked').length;
                 if (checkedCount === 0) {
                     e.preventDefault();
-                    alert('Please select at least one record to include in the printable GMR report.');
+                    window.showAlert('Please select at least one record to include in the printable GMR report.', 'warning');
                 }
             });
         }
@@ -479,13 +481,13 @@
             submitButton.addEventListener('click', function () {
                 const selectedBranch = getSelectedBranch();
                 if (!selectedBranch) {
-                    alert('Please select a branch before submitting the GMR report to the Central Office.');
+                    window.showAlert('Please select a branch before submitting the GMR report to the Central Office.', 'warning');
                     return;
                 }
                 const checkedPiles = Array.from(document.querySelectorAll('.pile-checkbox:checked'))
                     .map(cb => cb.value);
                 if (checkedPiles.length === 0) {
-                    alert('Please select at least one record to submit to the Central Office.');
+                    window.showAlert('Please select at least one record to submit to the Central Office.', 'warning');
                     return;
                 }
                 pendingPiles = checkedPiles;

@@ -13,6 +13,7 @@
         <h1 class="text-2xl font-bold leading-tight text-black sm:text-3xl">Milling Detail</h1>
         <p class="mt-2 text-sm leading-6 text-black">
             {{ $milling->branch?->name ?? '—' }} · Pile {{ $milling->pile?->pile_number ?? ($milling->pile?->number ?? '—') }}
+            @if ($milling->lot_number) · Lot: {{ $milling->lot_number }} @endif
             @if ($milling->reference_number) · Project/Memo Ref: {{ $milling->reference_number }} @endif
         </p>
     </div>
@@ -42,7 +43,9 @@
     <div class="card border border-base-content/10 bg-base-100 p-4 text-black shadow-sm">
         <p class="text-xs font-semibold uppercase text-black">Project / Memo Ref.</p>
         <p class="mt-2 text-sm font-mono font-medium">{{ $milling->reference_number ?? '—' }}</p>
-        <p class="text-xs text-base-content/60">{{ $milling->miller ?? '—' }}</p>
+        <p class="text-xs text-base-content/60">
+            @if ($milling->lot_number)<span class="font-semibold text-black">Lot {{ $milling->lot_number }}</span> · @endif{{ $milling->miller ?? '—' }}
+        </p>
     </div>
     <div class="card border border-base-content/10 bg-base-100 p-4 text-black shadow-sm">
         <p class="text-xs font-semibold uppercase text-black">Final GMR (Milling Basis)</p>
@@ -120,25 +123,34 @@
     @if (in_array($milling->status, ['assigned', 'ongoing'], true))
         <div class="mb-5 card border border-base-content/10 bg-base-100 p-4 text-black shadow-sm">
             <h2 class="mb-3 text-sm font-semibold uppercase text-black">Log Accomplishment</h2>
-            <form method="POST" action="{{ route('millings.progress.store', $milling) }}" class="grid grid-cols-1 gap-3 md:grid-cols-4">
+            <form method="POST" action="{{ route('millings.progress.store', $milling) }}" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
                 @csrf
                 <label class="form-control">
                     <span class="label-text mb-2 text-xs font-semibold text-black">Date *</span>
                     <input type="date" name="progress_date" value="{{ old('progress_date', now()->format('Y-m-d')) }}" max="{{ now()->format('Y-m-d') }}" class="input input-bordered min-h-11 text-black" required />
+                    @error('progress_date') <span class="text-xs text-error">{{ $message }}</span> @enderror
                 </label>
                 <label class="form-control">
-                    <span class="label-text mb-2 text-xs font-semibold text-black">Palay Input (kg)</span>
-                    <input type="number" step="0.001" min="0" name="palay_input_kg" class="input input-bordered min-h-11 text-black" value="{{ old('palay_input_kg') }}" />
+                    <span class="label-text mb-2 text-xs font-semibold text-black">Batch No. *</span>
+                    <input type="text" name="batch_number" value="{{ old('batch_number') }}" placeholder="e.g. Batch 1" class="input input-bordered min-h-11 text-black" required />
+                    @error('batch_number') <span class="text-xs text-error">{{ $message }}</span> @enderror
                 </label>
                 <label class="form-control">
-                    <span class="label-text mb-2 text-xs font-semibold text-black">Milled Rice (kg)</span>
-                    <input type="number" step="0.001" min="0" name="milled_rice_kg" class="input input-bordered min-h-11 text-black" value="{{ old('milled_rice_kg') }}" />
+                    <span class="label-text mb-2 text-xs font-semibold text-black">Palay Input (kg) *</span>
+                    <input type="number" step="0.001" min="0" name="palay_input_kg" class="input input-bordered min-h-11 text-black" value="{{ old('palay_input_kg') }}" placeholder="0.000" required />
+                    @error('palay_input_kg') <span class="text-xs text-error">{{ $message }}</span> @enderror
                 </label>
-                <label class="form-control md:col-span-1">
+                <label class="form-control">
+                    <span class="label-text mb-2 text-xs font-semibold text-black">Milled Rice (kg) *</span>
+                    <input type="number" step="0.001" min="0" name="milled_rice_kg" class="input input-bordered min-h-11 text-black" value="{{ old('milled_rice_kg') }}" placeholder="0.000" required />
+                    @error('milled_rice_kg') <span class="text-xs text-error">{{ $message }}</span> @enderror
+                </label>
+                <label class="form-control">
                     <span class="label-text mb-2 text-xs font-semibold text-black">Remarks</span>
-                    <input type="text" name="remarks" class="input input-bordered min-h-11 text-black" value="{{ old('remarks') }}" />
+                    <input type="text" name="remarks" class="input input-bordered min-h-11 text-black" value="{{ old('remarks') }}" placeholder="Optional notes" />
+                    @error('remarks') <span class="text-xs text-error">{{ $message }}</span> @enderror
                 </label>
-                <div class="md:col-span-4">
+                <div class="col-span-full">
                     <button type="submit" class="btn btn-primary btn-sm gap-2">
                         <span class="icon-[tabler--plus] size-4"></span>
                         Record Progress
@@ -155,10 +167,11 @@
         <p class="text-sm text-base-content/60">No progress entries have been recorded yet.</p>
     @else
         <div class="overflow-x-auto">
-            <table class="table table-sm min-w-[48rem] text-sm">
+            <table class="table table-sm min-w-[54rem] text-sm">
                 <thead>
                     <tr class="border-b border-base-content/15 text-sm font-semibold text-black">
                         <th>Date</th>
+                        <th>Batch No.</th>
                         <th class="text-end">Palay Input (kg)</th>
                         <th class="text-end">Milled Rice (kg)</th>
                         <th class="text-end">Recovery</th>
@@ -171,6 +184,7 @@
                     @foreach ($milling->progress as $entry)
                         <tr class="border-b border-base-content/10">
                             <td class="font-medium">{{ $entry->progress_date?->format('M d, Y') }}</td>
+                            <td class="font-mono text-sm font-semibold">{{ $entry->batch_number ?? '—' }}</td>
                             <td class="text-end font-mono">{{ $entry->palay_input_kg !== null ? number_format((float) $entry->palay_input_kg, 3) : '—' }}</td>
                             <td class="text-end font-mono">{{ $entry->milled_rice_kg !== null ? number_format((float) $entry->milled_rice_kg, 3) : '—' }}</td>
                             <td class="text-end font-mono">{{ $entry->recovery_percentage !== null ? $fmtPct((float) $entry->recovery_percentage) : '—' }}</td>

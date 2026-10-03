@@ -10,13 +10,10 @@
     </div>
 
     @if (session('status'))
-        <div class="alert alert-success flex items-start gap-2">
-            <span class="icon-[tabler--circle-check] size-5 shrink-0 mt-0.5" aria-hidden="true"></span>
-            <div>{{ session('status') }}</div>
-        </div>
+        <x-alert-box type="success" :message="session('status')" dismissible class="mb-4" />
     @endif
     @if (isset($errors) && $errors->any())
-        <div class="alert alert-error">
+        <x-alert-box type="error" dismissible class="mb-4">
             @if ($errors->count() === 1)
                 {{ $errors->first() }}
             @else
@@ -26,7 +23,7 @@
                     @endforeach
                 </ul>
             @endif
-        </div>
+        </x-alert-box>
     @endif
 
     <form method="POST" action="{{ route('users.store') }}" class="grid gap-3 rounded-lg border border-base-content/10 bg-base-100 p-4 md:grid-cols-6 items-end">
@@ -45,6 +42,7 @@
                 <option value="STAFF" {{ old('role', 'STAFF') === 'STAFF' ? 'selected' : '' }}>Staff</option>
                 <option value="RMEC" {{ old('role') === 'RMEC' ? 'selected' : '' }}>RMEC</option>
                 <option value="ADMINISTRATOR" {{ old('role') === 'ADMINISTRATOR' ? 'selected' : '' }}>Administrator</option>
+                <option value="VIEWER" {{ old('role') === 'VIEWER' ? 'selected' : '' }}>Viewer</option>
             </select>
         </div>
         <div class="space-y-1" id="user-branch-wrapper">
@@ -101,7 +99,7 @@
                         </td>
                         <td>
                             @if ($user->id === auth()->id())
-                                <span class="badge badge-soft {{ $user->role === 'ADMINISTRATOR' ? 'badge-primary' : ($user->role === 'RMEC' ? 'badge-secondary' : 'badge-neutral') }} text-xs inline-flex items-center gap-1" title="Current user (cannot change own role)">
+                                <span class="badge badge-soft {{ $user->role === 'ADMINISTRATOR' ? 'badge-primary' : ($user->role === 'RMEC' ? 'badge-secondary' : ($user->role === 'VIEWER' ? 'badge-info' : 'badge-neutral')) }} text-xs inline-flex items-center gap-1" title="Current user (cannot change own role)">
                                     <span class="icon-[tabler--lock] size-3"></span>
                                     <span>{{ $user->role }} (You)</span>
                                 </span>
@@ -110,12 +108,13 @@
                                     @csrf
                                     @method('PATCH')
                                     <select name="role" data-current-role="{{ $user->role }}"
-                                            class="select select-xs select-bordered font-medium w-36 {{ $user->role === 'ADMINISTRATOR' ? 'text-primary font-semibold' : ($user->role === 'RMEC' ? 'text-secondary font-semibold' : 'text-base-content') }}"
+                                            class="select select-xs select-bordered font-medium w-36 {{ $user->role === 'ADMINISTRATOR' ? 'text-primary font-semibold' : ($user->role === 'RMEC' ? 'text-secondary font-semibold' : ($user->role === 'VIEWER' ? 'text-info font-semibold' : 'text-base-content')) }}"
                                             onchange="if (confirm('Are you sure you want to change the role of \x27{{ addslashes($user->name) }}\x27 from {{ $user->role }} to ' + this.value + '?')) { this.form.submit(); } else { this.value = this.dataset.currentRole; }"
                                             title="Promote or reassign user role">
                                         <option value="STAFF" @selected($user->role === 'STAFF')>Staff</option>
                                         <option value="RMEC" @selected($user->role === 'RMEC')>RMEC</option>
                                         <option value="ADMINISTRATOR" @selected($user->role === 'ADMINISTRATOR')>Administrator</option>
+                                        <option value="VIEWER" @selected($user->role === 'VIEWER')>Viewer</option>
                                     </select>
                                 </form>
                             @endif
@@ -127,6 +126,17 @@
                                     @method('PATCH')
                                     <select name="branch_id" class="select select-xs select-bordered w-36" onchange="this.form.submit()" title="Change staff branch">
                                         <option value="">Unassigned</option>
+                                        @foreach ($branches as $branch)
+                                            <option value="{{ $branch->id }}" @selected($user->branch_id === $branch->id)>{{ $branch->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </form>
+                            @elseif ($user->role === 'VIEWER')
+                                <form method="POST" action="{{ route('users.branch', $user) }}" class="flex items-center gap-1">
+                                    @csrf
+                                    @method('PATCH')
+                                    <select name="branch_id" class="select select-xs select-bordered w-36" onchange="this.form.submit()" title="Change viewer branch">
+                                        <option value="">All Branches</option>
                                         @foreach ($branches as $branch)
                                             <option value="{{ $branch->id }}" @selected($user->branch_id === $branch->id)>{{ $branch->name }}</option>
                                         @endforeach
@@ -362,15 +372,13 @@
                 </div>
 
                 @if (! $modalCreds['email_sent'])
-                    <div class="alert alert-warning text-xs flex items-center gap-2 py-2">
-                        <span class="icon-[tabler--alert-triangle] size-4 shrink-0"></span>
+                    <x-alert-box type="warning" size="sm">
                         <span>Email delivery is unavailable. Please copy or send these credentials to the user directly.</span>
-                    </div>
+                    </x-alert-box>
                 @else
-                    <div class="alert alert-info text-xs flex items-center gap-2 py-2">
-                        <span class="icon-[tabler--info-circle] size-4 shrink-0"></span>
+                    <x-alert-box type="info" size="sm">
                         <span>These credentials have also been emailed to the user.</span>
-                    </div>
+                    </x-alert-box>
                 @endif
 
                 <!-- Details card -->
@@ -554,6 +562,9 @@
                     branchSelect.required = isStaff;
                     if (branchStar) {
                         branchStar.style.display = isStaff ? 'inline' : 'none';
+                    }
+                    if (roleSelect.value === 'RMEC' || roleSelect.value === 'ADMINISTRATOR') {
+                        branchSelect.value = '';
                     }
                 };
                 roleSelect.addEventListener('change', updateBranchRequirement);

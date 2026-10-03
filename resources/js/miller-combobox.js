@@ -194,7 +194,11 @@ function activeOption(combo) {
 function showDialogError(message) {
     const errorBox = getDialog()?.querySelector('[data-miller-dialog-error]');
     if (!errorBox) {
-        window.alert(message);
+        if (typeof window.showAlert === 'function') {
+            window.showAlert(message, 'error');
+        } else {
+            console.error(message);
+        }
         return;
     }
 
@@ -205,7 +209,12 @@ function showDialogError(message) {
 function openDialog(combo, query) {
     const dialog = getDialog();
     if (!dialog) {
-        window.alert('The miller profile form is unavailable on this page.');
+        const msg = 'The miller profile form is unavailable on this page.';
+        if (typeof window.showAlert === 'function') {
+            window.showAlert(msg, 'warning');
+        } else {
+            console.warn(msg);
+        }
         return;
     }
 

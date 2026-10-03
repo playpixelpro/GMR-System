@@ -50,13 +50,20 @@
         </label>
 
         <label class="form-control">
-            <span class="label-text mb-2 text-sm font-semibold text-black">Miller / Rice Mill</span>
-            <x-miller-combobox name="miller" class="input input-bordered min-h-11 w-full text-black" placeholder="e.g. North Cotabato Rice Mill" />
+            <span class="label-text mb-2 text-sm font-semibold text-black">Miller / Rice Mill *</span>
+            <x-miller-combobox name="miller" class="input input-bordered min-h-11 w-full text-black" placeholder="e.g. North Cotabato Rice Mill" required />
+            @error('miller') <span class="text-xs text-error">{{ $message }}</span> @enderror
+        </label>
+
+        <label class="form-control">
+            <span class="label-text mb-2 text-sm font-semibold text-black">Lot No. *</span>
+            <input type="text" name="lot_number" value="{{ old('lot_number') }}" class="input input-bordered min-h-11 w-full text-black" placeholder="e.g. Lot 1" required />
+            @error('lot_number') <span class="text-xs text-error">{{ $message }}</span> @enderror
         </label>
 
         <label class="form-control">
             <span class="label-text mb-2 text-sm font-semibold text-black">Project / Memo Reference No. *</span>
-            <input type="text" name="reference_number" class="input input-bordered min-h-11 w-full text-black" placeholder="Bidding project ref. no. or NFA memo no." required />
+            <input type="text" name="reference_number" value="{{ old('reference_number') }}" class="input input-bordered min-h-11 w-full text-black" placeholder="Bidding project ref. no. or NFA memo no." required />
             <span class="mt-1 text-xs text-base-content/60">For contracted millers: the bidding project reference. For NFA-owned rice mills: the memorandum no.</span>
             @error('reference_number') <span class="text-xs text-error">{{ $message }}</span> @enderror
         </label>
@@ -77,7 +84,7 @@
     </label>
 
     @if ($piles->isEmpty())
-        <div class="alert alert-soft alert-warning mt-4 text-sm">No piles with an approved GMR are currently available for milling in the selected branch.</div>
+        <x-alert-box type="warning" message="No piles with an approved GMR are currently available for milling in the selected branch." class="mt-4" />
     @endif
 
     <div class="mt-5">

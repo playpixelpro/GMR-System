@@ -44,6 +44,8 @@ class MillingController extends Controller
 
         $millings = Milling::query()
             ->with(['branch:id,name', 'pile:id,pile_number,number,branch_id,warehouse_id,variety,quality,volume_kg', 'pile.warehouse:id,branch_id,name', 'assignedBy:id,name'])
+            ->withSum('progress', 'palay_input_kg')
+            ->withSum('progress', 'milled_rice_kg')
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->when($warehouseId, fn ($q) => $q->whereHas('pile', fn ($pq) => $pq->where('warehouse_id', $warehouseId)))
             ->when($status, fn ($q) => $q->where('status', $status))
@@ -160,14 +162,21 @@ class MillingController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        if (! $request->has('lot_number') && $request->has('lot_no')) {
+            $request->merge(['lot_number' => $request->input('lot_no')]);
+        }
+
         $validated = $request->validate([
             'branch_id' => ['required', 'integer', 'exists:branches,id'],
             'pile_id' => ['required', 'integer', 'exists:piles,id'],
-            'miller' => ['nullable', 'string', 'max:191'],
+            'miller' => ['required', 'string', 'max:191'],
             'reference_number' => ['required', 'string', 'max:255'],
+            'lot_number' => ['required', 'string', 'max:100'],
             'remarks' => ['nullable', 'string', 'max:2000'],
         ], [
+            'miller.required' => 'The Miller / Rice Mill field is required.',
             'reference_number.required' => 'The Project / Memo Reference No. is required (bidding project ref. for contracted millers, or memo no. for NFA-owned rice mills).',
+            'lot_number.required' => 'The Lot No. field is required.',
         ]);
 
         $pile = Pile::with([
@@ -220,6 +229,7 @@ class MillingController extends Controller
                 'miller' => $validated['miller'] ?? null,
                 'miller_id' => $millerId,
                 'reference_number' => $validated['reference_number'] ?? null,
+                'lot_number' => $validated['lot_number'] ?? null,
                 'status' => 'assigned',
                 'target_volume_kg' => $targetVolumeKg > 0 ? $targetVolumeKg : null,
                 'target_volume_bags' => $targetVolumeBags,
@@ -246,6 +256,8 @@ class MillingController extends Controller
                     'milling_id' => $milling->id,
                     'pile_id' => $pile->id,
                     'miller' => $validated['miller'] ?? null,
+                    'reference_number' => $validated['reference_number'] ?? null,
+                    'lot_number' => $validated['lot_number'] ?? null,
                     'target_volume_kg' => $targetVolumeKg > 0 ? $targetVolumeKg : null,
                     'final_gmr' => $finalGmr,
                     'final_gmr_source' => $finalGmr !== null ? $finalGmrSource : null,
@@ -345,11 +357,20 @@ class MillingController extends Controller
      */
     public function storeProgress(Request $request, Milling $milling): RedirectResponse
     {
+        if (! $request->has('batch_number') && $request->has('batch_no')) {
+            $request->merge(['batch_number' => $request->input('batch_no')]);
+        }
+
         $validated = $request->validate([
             'progress_date' => ['required', 'date', 'before_or_equal:today'],
-            'palay_input_kg' => ['nullable', 'numeric', 'min:0'],
-            'milled_rice_kg' => ['nullable', 'numeric', 'min:0'],
+            'batch_number' => ['required', 'string', 'max:100'],
+            'palay_input_kg' => ['required', 'numeric', 'min:0'],
+            'milled_rice_kg' => ['required', 'numeric', 'min:0'],
             'remarks' => ['nullable', 'string', 'max:2000'],
+        ], [
+            'batch_number.required' => 'The Batch No. is required.',
+            'palay_input_kg.required' => 'The Palay Input (kg) is required.',
+            'milled_rice_kg.required' => 'The Milled Rice (kg) is required.',
         ]);
 
         $palay = isset($validated['palay_input_kg']) ? (float) $validated['palay_input_kg'] : null;
@@ -364,6 +385,7 @@ class MillingController extends Controller
                 'milling_id' => $milling->id,
                 'pile_id' => $milling->pile_id,
                 'progress_date' => $validated['progress_date'],
+                'batch_number' => $validated['batch_number'],
                 'palay_input_kg' => $palay,
                 'milled_rice_kg' => $milled,
                 'recovery_percentage' => $recovery,
@@ -404,6 +426,7 @@ class MillingController extends Controller
                     'milling_id' => $milling->id,
                     'progress_id' => $progress->id,
                     'progress_date' => $validated['progress_date'],
+                    'batch_number' => $validated['batch_number'],
                     'palay_input_kg' => $palay,
                     'milled_rice_kg' => $milled,
                     'recovery_percentage' => $recovery,

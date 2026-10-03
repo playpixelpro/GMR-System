@@ -51,6 +51,14 @@ class StoreDataEntryRequest extends FormRequest
             ]);
         }
 
+        if ($this->has('test_milling_volume')) {
+            $this->merge([
+                'test_milling_volume' => $this->filled('test_milling_volume')
+                    ? str_replace(',', '', (string) $this->input('test_milling_volume'))
+                    : null,
+            ]);
+        }
+
         $formType = $this->input('form_type', 'amr');
         $recordModel =
             $formType === 'amr' ? AmrRecord::class : PmrRecord::class;
@@ -356,6 +364,7 @@ class StoreDataEntryRequest extends FormRequest
             ],
             'aged' => ['required', 'numeric', 'min:0'],
             'volume' => ['required', 'numeric', 'min:0'],
+            'test_milling_volume' => ['nullable', 'numeric', 'min:0'],
             'trials' => ['required', 'array', 'min:1', 'max:'.$maximumTrial],
             'trials.*.trial_number' => [
                 'required',

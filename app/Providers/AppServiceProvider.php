@@ -43,5 +43,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Logging milling accomplishment/progress per pile.
         Gate::define('record-milling-progress', fn (User $user) => $user->hasRole('STAFF', 'RMEC', 'ADMINISTRATOR'));
+
+        // General access to Data Entry and Rice Milling modules (all non-viewer users).
+        Gate::define('access-data-entry', fn (User $user) => ! $user->hasRole('VIEWER'));
+        Gate::define('access-milling', fn (User $user) => ! $user->hasRole('VIEWER'));
     }
 }

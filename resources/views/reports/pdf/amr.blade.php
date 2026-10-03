@@ -221,7 +221,7 @@
                             <td class="text-center font-bold text-primary">C.3.10 (MRI)</td>
                             <td class="text-center" style="color: #6b7280; font-style: italic;">Exempt</td>
                             <td class="text-center" style="color: #6b7280; font-style: italic;">Exempt</td>
-                            <td class="text-right font-bold text-primary">{{ $record && $record->milling_recovery !== null ? number_format((float) $record->milling_recovery, 2) . '%' : '—' }}</td>
+                            <td class="text-right font-bold text-primary">{{ $record && $record->milling_recovery !== null ? number_format((float) $record->milling_recovery, 2) : '—' }}</td>
                         @elseif ($isSingleRow && $records->isEmpty())
                             <td class="text-center">Exempt / MRI</td>
                             <td class="text-center">—</td>
@@ -231,12 +231,12 @@
                             <td class="text-center">Trial {{ $trial }}</td>
                             <td class="text-right">{{ $record && $record->palay_input_kg !== null ? number_format((float) $record->palay_input_kg, 2) : '—' }}</td>
                             <td class="text-right">{{ $record && $record->rice_recovery_kg !== null ? number_format((float) $record->rice_recovery_kg, 2) : '—' }}</td>
-                            <td class="text-right font-bold text-primary">{{ $record && $record->milling_recovery_percentage > 0 ? number_format($record->milling_recovery_percentage, 2) . '%' : '—' }}</td>
+                            <td class="text-right font-bold text-primary">{{ $record && $record->milling_recovery_percentage > 0 ? number_format($record->milling_recovery_percentage, 2) : '—' }}</td>
                         @endif
 
                         @if ($trial === 1)
-                            <td rowspan="{{ $totalRows }}" class="text-right font-bold">{{ $isMri && $amrRateValue !== null ? number_format((float) $amrRateValue, 2) . '%' : ($mean !== null ? number_format($mean, 2) . '%' : '—') }}</td>
-                            <td rowspan="{{ $totalRows }}" class="text-right font-bold text-primary">{{ $amrRateValue !== null ? number_format((float) $amrRateValue, 2) . '%' : '—' }}</td>
+                            <td rowspan="{{ $totalRows }}" class="text-right font-bold">{{ $isMri && $amrRateValue !== null ? number_format((float) $amrRateValue, 2) : ($mean !== null ? number_format($mean, 2) : '—') }}</td>
+                            <td rowspan="{{ $totalRows }}" class="text-right font-bold text-primary">{{ $amrRateValue !== null ? number_format((float) $amrRateValue, 2) : '—' }}</td>
                             <td rowspan="{{ $totalRows }}" class="text-center">
                                 <span class="badge {{ $statusBadge }}">{{ $statusText }}</span>
                             </td>

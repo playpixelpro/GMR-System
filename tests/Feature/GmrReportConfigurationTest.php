@@ -77,6 +77,29 @@ class GmrReportConfigurationTest extends TestCase
             ->assertSee('GMR Report Configuration');
     }
 
+    public function test_gmr_report_configuration_is_in_settings_reports_submenu_and_not_in_reports_menu(): void
+    {
+        $response = $this->actingAs($this->adminUser)->get(route('gmr.config.edit'));
+
+        $response->assertOk();
+
+        $content = $response->getContent();
+
+        // Ensure Reports dropdown does not contain GMR Report Configuration
+        $reportsDropdownHtml = str($content)->between('id="reports-dropdown"', 'id="settings-dropdown"')->toString();
+        $this->assertStringNotContainsString('GMR Report Configuration', $reportsDropdownHtml);
+
+        // Ensure Settings dropdown contains Reports submenu and GMR Report Configuration link
+        $settingsDropdownHtml = str($content)->after('id="settings-dropdown"')->before('</aside>')->toString();
+        $this->assertStringContainsString('Reports', $settingsDropdownHtml);
+        $this->assertStringContainsString('GMR Report', $settingsDropdownHtml);
+        $this->assertStringContainsString(route('gmr.config.edit'), $settingsDropdownHtml);
+
+        // Ensure nested reports dropdown is open when active on gmr.config.edit
+        $this->assertStringContainsString('id="settings-reports-dropdown"', $settingsDropdownHtml);
+        $this->assertStringContainsString('dropdown relative open', $settingsDropdownHtml);
+    }
+
     public function test_signatory_modals_render_as_native_dialogs(): void
     {
         $response = $this->actingAs($this->rmecUser)->get(route('gmr.config.edit'));

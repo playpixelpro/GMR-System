@@ -3,18 +3,22 @@
 namespace App\Http\Controllers;
 
 use App\Models\AmrRecord;
+use App\Models\AuditLog;
 use App\Models\Branch;
 use App\Models\Pile;
 use App\Models\Warehouse;
 use App\Services\EmrGmrGateService;
+use App\Services\GmrSummaryExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class GmrSummaryController extends Controller
 {
     public function __construct(
         protected EmrGmrGateService $gateService,
+        protected GmrSummaryExportService $exportService,
     ) {}
 
     /**
@@ -23,10 +27,10 @@ class GmrSummaryController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
-        $isStaff = $user && $user->hasRole('STAFF') && $user->branch_id;
+        $isBranchRestricted = (bool) $user?->isBranchRestricted();
 
         $filters = [
-            'branch_id' => $isStaff ? (int) $user->branch_id : ($request->integer('branch_id') ?: null),
+            'branch_id' => $isBranchRestricted ? (int) $user->branch_id : ($request->integer('branch_id') ?: null),
             'warehouse_id' => $request->integer('warehouse_id') ?: null,
         ];
         $rows = $this->rows($filters);
@@ -43,7 +47,7 @@ class GmrSummaryController extends Controller
 
         return view('reports.gmr-summary', [
             'branches' => Branch::query()
-                ->when($isStaff, fn ($query) => $query->whereKey($user->branch_id))
+                ->when($isBranchRestricted, fn ($query) => $query->whereKey($user->branch_id))
                 ->orderBy('name')
                 ->get(['id', 'name']),
             'warehouses' => $warehouses,
@@ -52,6 +56,40 @@ class GmrSummaryController extends Controller
             'summary' => $this->summary($rows),
             'total_warehouses' => $warehouses->count(),
         ]);
+    }
+
+    /**
+     * Export the filtered GMR summary as Excel.
+     */
+    public function exportExcel(Request $request): StreamedResponse
+    {
+        $user = $request->user();
+        $isBranchRestricted = (bool) $user?->isBranchRestricted();
+
+        $filters = [
+            'branch_id' => $isBranchRestricted ? (int) $user->branch_id : ($request->integer('branch_id') ?: null),
+            'warehouse_id' => $request->integer('warehouse_id') ?: null,
+        ];
+        $rows = $this->rows($filters);
+
+        AuditLog::create([
+            'module' => 'gmr',
+            'action' => 'GMR_SUMMARY_EXPORTED',
+            'description' => 'GMR summary dashboard exported as excel',
+            'ip_address' => $request->ip(),
+            'metadata' => [
+                'format' => 'excel',
+                'branch_id' => $filters['branch_id'],
+                'warehouse_id' => $filters['warehouse_id'],
+            ],
+        ]);
+
+        $filterNames = [
+            'branch' => $filters['branch_id'] ? Branch::find($filters['branch_id'])?->name : 'All Branches',
+            'warehouse' => $filters['warehouse_id'] ? Warehouse::find($filters['warehouse_id'])?->name : 'All Warehouses',
+        ];
+
+        return $this->exportService->exportExcel($rows, $filterNames);
     }
 
     /**

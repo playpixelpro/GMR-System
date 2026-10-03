@@ -11,6 +11,7 @@ class MillingProgress extends Model
         'milling_id',
         'pile_id',
         'progress_date',
+        'batch_number',
         'palay_input_kg',
         'milled_rice_kg',
         'recovery_percentage',

@@ -20,13 +20,13 @@
         {{ $email }}
     </p>
 
-    <div class="mt-5 alert alert-info text-xs">
+    <x-alert-box type="info" size="sm" class="mt-5">
         <ul class="list-disc pl-4 space-y-1">
             <li>Use the temporary password from the email to sign in.</li>
             <li>You will be required to change it on your first login.</li>
             <li>An Administrator must confirm your account within <strong>8 hours</strong> or it will be disabled.</li>
         </ul>
-    </div>
+    </x-alert-box>
 
     <div class="mt-6 text-center">
         <a href="{{ route('login') }}" class="btn btn-primary w-full">Go to login</a>

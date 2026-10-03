@@ -146,6 +146,7 @@ class MillerTest extends TestCase
             'pile_id' => $pile->id,
             'miller' => 'Acme Rice Mill',
             'reference_number' => 'PR-2026-001',
+            'lot_number' => 'Lot 1',
         ])->assertRedirect();
 
         $milling = Milling::firstOrFail();
@@ -160,6 +161,7 @@ class MillerTest extends TestCase
             'pile_id' => $otherPile->id,
             'miller' => 'Not In Master List Mill',
             'reference_number' => 'PR-2026-002',
+            'lot_number' => 'Lot 2',
         ])->assertRedirect();
 
         $second = Milling::latest('id')->firstOrFail();
@@ -358,6 +360,7 @@ class MillerTest extends TestCase
             'pile_id' => $pile->id,
             'miller' => 'Doomed Mill',
             'reference_number' => 'PR-2026-001',
+            'lot_number' => 'Lot 1',
         ])->assertRedirect();
 
         $milling = Milling::firstOrFail();

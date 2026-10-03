@@ -384,4 +384,227 @@ class AmrMriEstablishmentTest extends TestCase
         $response->assertSee('Explanation of the MRI Used');
         $response->assertSee('Dindo O. Quitor - R12 RECO');
     }
+
+    public function test_staff_cannot_edit_low_volume_amr_record_locked_with_recommended(): void
+    {
+        $branch = Branch::create(['name' => 'Bataan Branch']);
+        $warehouse = Warehouse::create([
+            'branch_id' => $branch->id,
+            'name' => 'Balanga Warehouse',
+        ]);
+        $pile = Pile::create([
+            'warehouse_id' => $warehouse->id,
+            'branch_id' => $branch->id,
+            'number' => 'P-707',
+            'variety' => 'RC-160',
+            'volume_kg' => 38000,
+            'amr_status' => 'pending',
+        ]);
+
+        $staffUser = User::factory()->create([
+            'role' => 'staff',
+            'branch_id' => $branch->id,
+            'must_change_password' => false,
+            'is_active' => true,
+        ]);
+
+        $rmecUser = User::factory()->create([
+            'role' => 'rmec',
+            'must_change_password' => false,
+            'is_active' => true,
+        ]);
+
+        $record = AmrRecord::factory()->create([
+            'pile_id' => $pile->id,
+            'trial_number' => 1,
+            'conduct_number' => 1,
+            'establishment_type' => 'mri',
+            'pmr_rate' => 65.00,
+            'mri_rate' => 1.50,
+            'milling_recovery' => 63.50,
+            'status' => 'PENDING',
+            'is_locked' => false,
+            'created_by' => $staffUser->id,
+        ]);
+
+        // RMEC recommends the test milling
+        $this->actingAs($rmecUser)->post(route('piles.rmec-action', $pile), [
+            'form_type' => 'amr',
+            'action' => 'recommend',
+            'remarks' => 'Recommended by RMEC.',
+        ])->assertSessionHasNoErrors();
+
+        $record->refresh();
+        $pile->refresh();
+        $this->assertTrue($record->is_locked);
+        $this->assertSame('RECOMMENDED', $record->status);
+        $this->assertSame('recommended', $pile->amr_status);
+
+        // 1. Staff cannot edit the record via records.update
+        $this->actingAs($staffUser)->patchJson(
+            route('records.update', ['formType' => 'amr', 'record' => $record->id]),
+            [
+                'pmr_rate' => 64.00,
+                'mri_rate' => 2.00,
+            ],
+        )->assertForbidden();
+
+        // 2. Staff cannot delete the record via records.destroy
+        $this->actingAs($staffUser)->deleteJson(
+            route('records.destroy', ['formType' => 'amr', 'record' => $record->id]),
+        )->assertForbidden();
+
+        // 3. Staff cannot submit new data to override conduct 1 via records.store
+        $this->actingAs($staffUser)->post(route('records.store'), [
+            'form_type' => 'amr',
+            'branch_id' => $branch->id,
+            'warehouse_id' => $warehouse->id,
+            'pile_id' => $pile->id,
+            'variety' => 'RC-160',
+            'volume' => '38,000',
+            'purity' => 95.0,
+            'mc' => 13.5,
+            'aged' => 3,
+            'quality' => 'good',
+            'mri_test_milling_date' => '2026-09-30',
+            'pmr_rate' => 64.00,
+            'mri_rate' => 2.00,
+            'mri_remarks' => 'Attempted overwrite',
+        ])->assertSessionHasErrors(['pile']);
+
+        // 4. Staff cannot modify pile details when AMR is locked
+        $this->actingAs($staffUser)->patchJson(
+            route('piles.details.update', $pile),
+            [
+                'variety' => 'Modified Variety',
+                'purity' => 99.0,
+                'aged' => 5,
+                'mc' => 12.0,
+                'quality' => 'good',
+                'volume' => 39000,
+            ],
+        )->assertForbidden();
+
+        // Ensure record was not modified
+        $record->refresh();
+        $this->assertSame(63.50, (float) $record->milling_recovery);
+        $this->assertSame('RC-160', $record->variety);
+    }
+
+    public function test_staff_cannot_modify_old_conduct_data_when_low_volume_amr_is_actioned_with_retest(): void
+    {
+        $branch = Branch::create(['name' => 'Tarlac Branch']);
+        $warehouse = Warehouse::create([
+            'branch_id' => $branch->id,
+            'name' => 'Tarlac City Warehouse',
+        ]);
+        $pile = Pile::create([
+            'warehouse_id' => $warehouse->id,
+            'branch_id' => $branch->id,
+            'number' => 'P-808',
+            'variety' => 'RC-216',
+            'volume_kg' => 42000,
+            'amr_status' => 'pending',
+        ]);
+
+        $staffUser = User::factory()->create([
+            'role' => 'staff',
+            'branch_id' => $branch->id,
+            'must_change_password' => false,
+            'is_active' => true,
+        ]);
+
+        $rmecUser = User::factory()->create([
+            'role' => 'rmec',
+            'must_change_password' => false,
+            'is_active' => true,
+        ]);
+
+        $conduct1 = AmrRecord::factory()->create([
+            'pile_id' => $pile->id,
+            'trial_number' => 1,
+            'conduct_number' => 1,
+            'establishment_type' => 'mri',
+            'pmr_rate' => 64.00,
+            'mri_rate' => 3.00,
+            'milling_recovery' => 61.00,
+            'status' => 'PENDING',
+            'is_locked' => false,
+            'created_by' => $staffUser->id,
+        ]);
+
+        // RMEC actions RETEST
+        $this->actingAs($rmecUser)->post(route('piles.rmec-action', $pile), [
+            'form_type' => 'amr',
+            'action' => 'retest',
+            'remarks' => 'Retest required per RMEC.',
+        ])->assertSessionHasNoErrors();
+
+        $conduct1->refresh();
+        $pile->refresh();
+        $this->assertTrue($conduct1->is_locked);
+        $this->assertSame('RETEST', $conduct1->status);
+        $this->assertSame('retest', $pile->amr_status);
+
+        // 1. Staff cannot edit conduct 1 via records.update
+        $this->actingAs($staffUser)->patchJson(
+            route('records.update', ['formType' => 'amr', 'record' => $conduct1->id]),
+            [
+                'pmr_rate' => 65.00,
+                'mri_rate' => 2.00,
+            ],
+        )->assertForbidden();
+
+        // 2. Staff cannot delete conduct 1 via records.destroy
+        $this->actingAs($staffUser)->deleteJson(
+            route('records.destroy', ['formType' => 'amr', 'record' => $conduct1->id]),
+        )->assertForbidden();
+
+        // 3. Staff cannot modify pile details while locked
+        $this->actingAs($staffUser)->patchJson(
+            route('piles.details.update', $pile),
+            [
+                'variety' => 'Modified Variety',
+                'purity' => 99.0,
+                'aged' => 5,
+                'mc' => 12.0,
+                'quality' => 'good',
+                'volume' => 43000,
+            ],
+        )->assertForbidden();
+
+        // 4. Staff CAN create a new test conduct (Conduct 2) without modifying conduct 1
+        $this->actingAs($staffUser)->post(route('records.store'), [
+            'form_type' => 'amr',
+            'branch_id' => $branch->id,
+            'warehouse_id' => $warehouse->id,
+            'pile_id' => $pile->id,
+            'variety' => 'RC-216',
+            'volume' => '42,000',
+            'purity' => 95.0,
+            'mc' => 13.5,
+            'aged' => 4,
+            'quality' => 'good',
+            'mri_test_milling_date' => '2026-10-01',
+            'pmr_rate' => 66.00,
+            'mri_rate' => 1.50,
+            'mri_remarks' => 'Retest Conduct 2 MRI establishment',
+        ])->assertSessionHasNoErrors();
+
+        // Conduct 1 remains unchanged, RETEST, and locked
+        $conduct1->refresh();
+        $this->assertSame(1, $conduct1->conduct_number);
+        $this->assertSame('RETEST', $conduct1->status);
+        $this->assertTrue($conduct1->is_locked);
+        $this->assertSame(61.00, (float) $conduct1->milling_recovery);
+
+        // Conduct 2 exists with status PENDING and not locked
+        $this->assertDatabaseHas('amr_records', [
+            'pile_id' => $pile->id,
+            'conduct_number' => 2,
+            'status' => 'PENDING',
+            'is_locked' => 0,
+            'milling_recovery' => 64.50,
+        ]);
+    }
 }

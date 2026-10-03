@@ -8,7 +8,9 @@
         <img src="{{ asset('new-nfa-logo.webp') }}" alt="NFA logo" class="size-16 object-contain">
     </div>
     <h1 class="text-2xl font-semibold">Reset Password</h1>
-    @if ($errors->any()) <div class="mt-4 alert alert-error">{{ $errors->first() }}</div> @endif
+    @if ($errors->any())
+        <x-alert-box type="error" :message="$errors->first()" class="mt-4" dismissible />
+    @endif
     <form method="POST" action="{{ route('password.update') }}" class="mt-6 space-y-4">
         @csrf
         <input type="hidden" name="token" value="{{ $token }}">

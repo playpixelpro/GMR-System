@@ -162,10 +162,14 @@
             </div>
 
             @if ($approval->remarks)
-                <div class="alert alert-soft alert-info mt-3 text-sm"><strong>Remarks:</strong> {{ $approval->remarks }}</div>
+                <x-alert-box type="info" class="mt-3">
+                    <strong>Remarks:</strong> {{ $approval->remarks }}
+                </x-alert-box>
             @endif
             @if ($approval->rejection_reason)
-                <div class="alert alert-soft alert-error mt-3 text-sm"><strong>Rejection reason:</strong> {{ $approval->rejection_reason }}</div>
+                <x-alert-box type="error" class="mt-3">
+                    <strong>Rejection reason:</strong> {{ $approval->rejection_reason }}
+                </x-alert-box>
             @endif
 
             @if ($canApprove)

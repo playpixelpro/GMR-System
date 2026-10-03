@@ -45,7 +45,7 @@
             </button>
 
             <div>
-                <a href="{{ route('home') }}" class="text-sm font-semibold text-base-content hover:text-primary transition-colors block leading-tight">NFA GMR</a>
+                <a href="{{ auth()->user()?->hasRole('VIEWER') ? route('amr.index') : route('home') }}" class="text-sm font-semibold text-base-content hover:text-primary transition-colors block leading-tight">NFA GMR</a>
             </div>
         </div>
 
@@ -80,25 +80,27 @@
         <aside id="collapsible-mini-sidebar" class="overlay [--auto-close:sm] transition-all duration-300 overlay-minified:w-17 sm:shadow-none overlay-open:translate-x-0 drawer drawer-start hidden w-66 sm:fixed sm:top-16 sm:bottom-0 sm:start-0 sm:z-30 sm:flex sm:translate-x-0 border-e border-base-content/20 bg-base-100 overflow-y-auto" role="dialog" tabindex="-1">
             <div class="drawer-body px-2 py-4">
                 <ul class="menu p-0">
-                    <li>
-                        <a href="{{ route('home') }}" class="{{ request()->routeIs('home') ? 'menu-active' : '' }}" title="Home">
-                            <span class="icon-[tabler--home] size-5"></span>
-                            <span class="overlay-minified:hidden">Home</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('records.create') }}" class="{{ request()->routeIs('records.*') ? 'menu-active' : '' }}" title="Data Entry">
-                            <span class="icon-[tabler--edit] size-5"></span>
-                            <span class="overlay-minified:hidden">Data Entry</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('millings.index') }}" class="{{ request()->routeIs('millings.*') ? 'menu-active' : '' }}" title="Rice Milling">
-                            <span class="icon-[tabler--building-factory-2] size-5"></span>
-                            <span class="overlay-minified:hidden">Rice Milling</span>
-                        </a>
-                    </li>
-                    @php($isReportActive = request()->routeIs('amr.*', 'pmr.*', 'emr.*', 'gmr.*', 'gmr-approvals.*'))
+                    @unless (auth()->user()?->hasRole('VIEWER'))
+                        <li>
+                            <a href="{{ route('home') }}" class="{{ request()->routeIs('home') ? 'menu-active' : '' }}" title="Home">
+                                <span class="icon-[tabler--home] size-5"></span>
+                                <span class="overlay-minified:hidden">Home</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('records.create') }}" class="{{ request()->routeIs('records.*') ? 'menu-active' : '' }}" title="Data Entry">
+                                <span class="icon-[tabler--edit] size-5"></span>
+                                <span class="overlay-minified:hidden">Data Entry</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('millings.index') }}" class="{{ request()->routeIs('millings.*') ? 'menu-active' : '' }}" title="Rice Milling">
+                                <span class="icon-[tabler--building-factory-2] size-5"></span>
+                                <span class="overlay-minified:hidden">Rice Milling</span>
+                            </a>
+                        </li>
+                    @endunless
+                    @php($isReportActive = request()->routeIs('amr.*', 'pmr.*', 'emr.*', 'gmr.summary', 'gmr.report.*', 'gmr-approvals.*'))
                     <li class="dropdown relative {{ $isReportActive ? 'open' : '' }} [--adaptive:none] [--strategy:static]" data-flyout-title="Reports">
                         <button id="reports-dropdown" type="button" class="dropdown-toggle {{ $isReportActive ? 'menu-active' : '' }}" aria-haspopup="menu" aria-expanded="{{ $isReportActive ? 'true' : 'false' }}" aria-label="Reports" title="Reports">
                             <span class="icon-[tabler--report-analytics] size-5"></span>
@@ -111,12 +113,12 @@
                             <li><a href="{{ route('emr.index') }}" class="{{ request()->routeIs('emr.*') ? 'menu-active' : '' }}"><span class="icon-[tabler--chart-arrows] size-5"></span>Expected Milling Recovery</a></li>
                             <li><a href="{{ route('gmr.summary') }}" class="{{ request()->routeIs('gmr.summary') ? 'menu-active' : '' }}"><span class="icon-[tabler--chart-dots] size-5"></span>GMR Summary</a></li>
                             @if (auth()->user()?->hasRole('RMEC', 'ADMINISTRATOR'))
-                                <li><a href="{{ route('gmr.config.edit') }}" class="{{ request()->routeIs('gmr.config.*') ? 'menu-active' : '' }}"><span class="icon-[tabler--adjustments] size-5"></span>GMR Report Configuration</a></li>
                                 <li><a href="{{ route('gmr-approvals.index') }}" class="{{ request()->routeIs('gmr-approvals.*') ? 'menu-active' : '' }}"><span class="icon-[tabler--clipboard-check] size-5"></span>GMR Central Office Approvals</a></li>
                             @endif
                         </ul>
                     </li>
-                    @php($isSettingActive = request()->routeIs('profile.*', 'users.*', 'settings.*'))
+                    @php($isSettingActive = request()->routeIs('profile.*', 'users.*', 'settings.*', 'gmr.config.*'))
+                    @php($isSettingReportsActive = request()->routeIs('gmr.config.*', 'settings.reports.*'))
                     <li class="dropdown relative {{ $isSettingActive ? 'open' : '' }} [--adaptive:none] [--strategy:static]" data-flyout-title="Setting">
                         <button id="settings-dropdown" type="button" class="dropdown-toggle {{ $isSettingActive ? 'menu-active' : '' }}" aria-haspopup="menu" aria-expanded="{{ $isSettingActive ? 'true' : 'false' }}" aria-label="Setting" title="Setting">
                             <span class="icon-[tabler--settings] size-5"></span>
@@ -136,26 +138,49 @@
                                     </a>
                                 </li>
                             @endcan
-                            @if (auth()->user()?->hasRole('ADMINISTRATOR'))
-                                <li>
-                                    <a href="{{ route('users.index') }}" class="{{ request()->routeIs('users.*') ? 'menu-active' : '' }}">
-                                        <span class="icon-[tabler--users] size-5"></span>User management
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="{{ route('settings.blocked-ips') }}" class="{{ request()->routeIs('settings.blocked-ips') ? 'menu-active' : '' }}">
-                                        <span class="icon-[tabler--shield-lock] size-5"></span>Blocked IPs
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="{{ route('settings.activity-logs') }}" class="{{ request()->routeIs('settings.activity-logs*') ? 'menu-active' : '' }}">
-                                        <span class="icon-[tabler--list-details] size-5"></span>Activity Logs
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="{{ route('settings.data-cleanup') }}" class="{{ request()->routeIs('settings.data-cleanup*') ? 'menu-active' : '' }}">
-                                        <span class="icon-[tabler--database-cog] size-5"></span>Data Cleanup
-                                    </a>
+                            @if (auth()->user()?->hasRole('ADMINISTRATOR', 'RMEC'))
+                                @if (auth()->user()?->hasRole('ADMINISTRATOR'))
+                                    <li>
+                                        <a href="{{ route('users.index') }}" class="{{ request()->routeIs('users.*') ? 'menu-active' : '' }}">
+                                            <span class="icon-[tabler--users] size-5"></span>User management
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('settings.blocked-ips') }}" class="{{ request()->routeIs('settings.blocked-ips') ? 'menu-active' : '' }}">
+                                            <span class="icon-[tabler--shield-lock] size-5"></span>Blocked IPs
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('settings.activity-logs') }}" class="{{ request()->routeIs('settings.activity-logs*') ? 'menu-active' : '' }}">
+                                            <span class="icon-[tabler--list-details] size-5"></span>Activity Logs
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('settings.data-cleanup') }}" class="{{ request()->routeIs('settings.data-cleanup*') ? 'menu-active' : '' }}">
+                                            <span class="icon-[tabler--database-cog] size-5"></span>Data Cleanup
+                                        </a>
+                                    </li>
+                                @endif
+                                <li class="dropdown relative {{ $isSettingReportsActive ? 'open' : '' }} [--adaptive:none] [--strategy:static]">
+                                    <button id="settings-reports-dropdown" type="button" class="dropdown-toggle w-full {{ $isSettingReportsActive ? 'menu-active' : '' }}" aria-haspopup="menu" aria-expanded="{{ $isSettingReportsActive ? 'true' : 'false' }}" aria-label="Reports">
+                                        <span class="icon-[tabler--file-report] size-5"></span>
+                                        <span>Reports</span>
+                                        <span class="icon-[tabler--chevron-down] dropdown-open:rotate-180 size-4 ms-auto"></span>
+                                    </button>
+                                    <ul class="dropdown-menu mt-0 shadow-none dropdown-open:opacity-100 {{ $isSettingReportsActive ? 'block' : 'hidden' }} min-w-full space-y-1 pt-1" role="menu" aria-orientation="vertical" aria-labelledby="settings-reports-dropdown">
+                                        <li class="ps-4 ms-2 border-s border-base-content/15">
+                                            <a href="{{ route('gmr.config.edit') }}" class="{{ request()->routeIs('gmr.config.*') ? 'menu-active' : '' }}">
+                                                <span class="icon-[tabler--adjustments] size-5"></span>
+                                                <span>GMR Report</span>
+                                            </a>
+                                        </li>
+                                        <li class="ps-4 ms-2 border-s border-base-content/15">
+                                            <a href="{{ route('settings.reports.columns') }}" class="{{ request()->routeIs('settings.reports.columns*') ? 'menu-active' : '' }}">
+                                                <span class="icon-[tabler--columns] size-5"></span>
+                                                <span>Column Visibility</span>
+                                            </a>
+                                        </li>
+                                    </ul>
                                 </li>
                             @endif
                         </ul>
@@ -386,8 +411,24 @@
                     }, 50);
                 });
             });
+
+            document.addEventListener('click', function (e) {
+                const btn = e.target.closest('#settings-reports-dropdown');
+                if (!btn) return;
+                const parentDropdown = btn.closest('li.dropdown');
+                if (!parentDropdown) return;
+                const menu = parentDropdown.querySelector('.dropdown-menu');
+                if (!menu) return;
+                e.preventDefault();
+                e.stopPropagation();
+                const isOpen = parentDropdown.classList.toggle('open');
+                menu.classList.toggle('hidden', !isOpen);
+                menu.classList.toggle('block', isOpen);
+                btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            });
         });
     </script>
+    <x-alert-dialog />
     @stack('modals')
 </body>
 

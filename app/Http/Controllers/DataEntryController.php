@@ -65,6 +65,7 @@ class DataEntryController extends Controller
                     'mc' => $pile->mc,
                     'quality' => $pile->quality,
                     'volume' => $pile->volume_kg,
+                    'test_milling_volume' => $pile->test_milling_volume_kg,
                 ];
 
                 $amrRecords = $pile->amrRecords;
@@ -96,6 +97,12 @@ class DataEntryController extends Controller
                     'number' => $pile->pile_number ?? $pile->number,
                     'pile_number' => $pile->pile_number ?? $pile->number,
                     'is_gmr_locked' => $pile->isGmrLocked(),
+                    'amr_status' => $pile->amr_status,
+                    'pmr_status' => $pile->pmr_status,
+                    'is_amr_locked' => $amrRecordsForConduct->isNotEmpty() && $amrRecordsForConduct->every('is_locked'),
+                    'is_pmr_locked' => $pmrRecordsForConduct->isNotEmpty() && $pmrRecordsForConduct->every('is_locked'),
+                    'is_amr_retest' => $amrLatestIsRetest,
+                    'is_pmr_retest' => $pmrLatestIsRetest,
                     'shared' => $sharedData,
                     'pmr_rate' => $pilePmrRate,
                     'amr' => [
@@ -200,6 +207,16 @@ class DataEntryController extends Controller
             abort_unless($pileBranchId === $currentUser->branch_id, 403, 'You can only edit piles in your assigned branch.');
         }
 
+        $latestAmrRecords = AmrRecord::where('pile_id', $pile->id)
+            ->where('conduct_number', AmrRecord::where('pile_id', $pile->id)->max('conduct_number'))
+            ->get();
+        $isAmrLocked = $latestAmrRecords->isNotEmpty() && $latestAmrRecords->every('is_locked');
+        $isRmecActioned = in_array(strtolower((string) $pile->amr_status), ['recommended', 'retest'], true);
+
+        if ($currentUser?->hasRole('STAFF') && ($isAmrLocked || $isRmecActioned)) {
+            abort(403, 'Pile details cannot be modified because the AMR test milling is locked by RMEC or Administrator.');
+        }
+
         $validated = $request->validated();
 
         $updateData = [
@@ -209,6 +226,7 @@ class DataEntryController extends Controller
             'mc' => $validated['mc'],
             'quality' => $validated['quality'],
             'volume_kg' => $validated['volume'],
+            'test_milling_volume_kg' => $validated['test_milling_volume'] ?? null,
         ];
 
         DB::transaction(function () use ($pile, $updateData): void {
@@ -221,10 +239,11 @@ class DataEntryController extends Controller
                 'mc' => $updateData['mc'],
                 'quality' => $updateData['quality'],
                 'volume_kg' => $updateData['volume_kg'],
+                'test_milling_volume_kg' => $updateData['test_milling_volume_kg'],
             ];
 
-            $pile->amrRecords()->update($childUpdateData);
-            $pile->pmrRecords()->update($childUpdateData);
+            $pile->amrRecords()->where('is_locked', false)->update($childUpdateData);
+            $pile->pmrRecords()->where('is_locked', false)->update($childUpdateData);
         });
 
         AuditLog::record('DATA_EDITED', $pile, [
@@ -260,7 +279,7 @@ class DataEntryController extends Controller
             abort_unless($pileBranchId === $currentUser->branch_id, 403, 'You can only modify records in your assigned branch.');
         }
 
-        if ($trial->is_locked) {
+        if ($trial->is_locked || in_array(strtoupper((string) $trial->status), ['RECOMMENDED', 'RETEST'], true)) {
             abort(403, 'This test milling record is locked and cannot be edited.');
         }
 
@@ -410,7 +429,7 @@ class DataEntryController extends Controller
             abort_unless($pileBranchId === $currentUser->branch_id, 403, 'You can only delete records in your assigned branch.');
         }
 
-        if ($trial->is_locked) {
+        if ($trial->is_locked || in_array(strtoupper((string) $trial->status), ['RECOMMENDED', 'RETEST'], true)) {
             abort(403, 'This test milling record is locked and cannot be deleted.');
         }
 
@@ -534,6 +553,7 @@ class DataEntryController extends Controller
                         'quality' => $validated['quality'],
                         'aged_months' => $validated['aged'],
                         'volume_kg' => $validated['volume'],
+                        'test_milling_volume_kg' => $validated['test_milling_volume'] ?? null,
                     ],
                 );
             }
@@ -577,6 +597,7 @@ class DataEntryController extends Controller
                 'quality' => $validated['quality'],
                 'aged_months' => $validated['aged'],
                 'volume_kg' => $validated['volume'],
+                'test_milling_volume_kg' => $validated['test_milling_volume'] ?? null,
             ]);
 
             // Sync updated attributes across all existing trials for this pile
@@ -587,6 +608,7 @@ class DataEntryController extends Controller
                 'quality' => $validated['quality'],
                 'aged_months' => $validated['aged'],
                 'volume_kg' => $validated['volume'],
+                'test_milling_volume_kg' => $validated['test_milling_volume'] ?? null,
             ];
             AmrRecord::where('pile_id', $pile->id)->update($sharedAttributes);
             PmrRecord::where('pile_id', $pile->id)->update($sharedAttributes);
@@ -674,6 +696,7 @@ class DataEntryController extends Controller
                     'quality' => $validated['quality'],
                     'aged_months' => $validated['aged'],
                     'volume_kg' => $validated['volume'],
+                    'test_milling_volume_kg' => $validated['test_milling_volume'] ?? null,
                     'rice_millers' => $validated['form_type'] === 'amr'
                             ? $trial['rice_millers'] ?? null
                             : null,

@@ -37,7 +37,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:191'],
             'email' => ['required', 'email', 'max:191', 'unique:users,email'],
-            'role' => ['required', 'in:STAFF,RMEC,ADMINISTRATOR'],
+            'role' => ['required', 'in:STAFF,RMEC,ADMINISTRATOR,VIEWER'],
             'branch_id' => [
                 'nullable',
                 Rule::requiredIf(fn () => $request->input('role') === 'STAFF'),
@@ -54,7 +54,7 @@ class UserController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'role' => $validated['role'],
-            'branch_id' => $validated['role'] === 'STAFF' ? ($validated['branch_id'] ?? null) : null,
+            'branch_id' => in_array($validated['role'], ['STAFF', 'VIEWER'], true) ? ($validated['branch_id'] ?? null) : null,
             'password' => $temporaryPassword,
             'must_change_password' => true,
             'temporary_password_expires_at' => now()->addDays(7),
@@ -365,7 +365,7 @@ class UserController extends Controller
         }
 
         $validated = $request->validate([
-            'role' => ['required', 'in:STAFF,RMEC,ADMINISTRATOR'],
+            'role' => ['required', 'in:STAFF,RMEC,ADMINISTRATOR,VIEWER'],
         ]);
 
         $newRole = $validated['role'];
@@ -395,6 +395,7 @@ class UserController extends Controller
             $newRole === 'ADMINISTRATOR' => 'promoted to Administrator',
             $newRole === 'RMEC' && $oldRole === 'STAFF' => 'promoted to RMEC',
             $oldRole === 'ADMINISTRATOR' && $newRole === 'RMEC' => 'reassigned to RMEC',
+            $newRole === 'VIEWER' => 'reassigned as Viewer',
             default => 'reassigned to Staff',
         };
 

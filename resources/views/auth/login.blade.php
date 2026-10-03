@@ -13,7 +13,7 @@
     </div>
 
     @if ($errors->any())
-        <div class="mb-4 alert alert-error">{{ $errors->first() }}</div>
+        <x-alert-box type="error" :message="$errors->first()" class="mb-4" dismissible />
     @endif
 
     <form method="POST" action="{{ route('login.submit') }}" class="space-y-4">

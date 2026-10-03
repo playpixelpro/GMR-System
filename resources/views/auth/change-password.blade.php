@@ -9,7 +9,9 @@
     </div>
     <h1 class="text-2xl font-semibold">Change Password</h1>
     <p class="mt-2 text-sm">You must change your temporary password before continuing.</p>
-    @if ($errors->any()) <div class="mt-4 alert alert-error">{{ $errors->first() }}</div> @endif
+    @if ($errors->any())
+        <x-alert-box type="error" :message="$errors->first()" class="mt-4" dismissible />
+    @endif
     <form method="POST" action="{{ route('password.change.submit') }}" class="mt-6 space-y-4">
         @csrf
         <label class="block">
