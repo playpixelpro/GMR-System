@@ -20,14 +20,14 @@ npm install
 ### 2. Create the environment file
 
 ```bash
-cp ".env copy.example" .env
+cp .env.example .env
 php artisan key:generate
 ```
 
 On Windows PowerShell, use:
 
 ```powershell
-Copy-Item ".env copy.example" .env
+Copy-Item ".env.example" .env
 php artisan key:generate
 ```
 
@@ -83,6 +83,19 @@ GRAVATAR_ENABLED=false
 Avatar resolution follows this priority: **local uploaded avatar → Gravatar → default generated avatar**.
 
 ### 6. Run the database setup
+
+The initial administrator seeder requires explicit credentials. Set these
+values in `.env` before running the seed command. Choose a strong, unique
+temporary password with at least 16 characters; the administrator will be
+required to change it at first login.
+
+```env
+NFA_ADMIN_EMAIL=administrator@example.com
+NFA_ADMIN_PASSWORD=replace-with-a-unique-strong-temporary-password
+```
+
+If an administrator already exists, seeding can proceed without these values
+and will leave that administrator unchanged.
 
 ```bash
 php artisan migrate --seed --no-interaction

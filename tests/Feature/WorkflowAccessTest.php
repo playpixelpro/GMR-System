@@ -453,6 +453,7 @@ class WorkflowAccessTest extends TestCase
 
     public function test_administrator_can_specify_a_temporary_password_when_creating_user(): void
     {
+        Notification::fake();
         $admin = User::factory()->create([
             'role' => 'ADMINISTRATOR',
             'must_change_password' => false,
@@ -469,12 +470,16 @@ class WorkflowAccessTest extends TestCase
                 'password' => 'CustomTempPass123!',
             ])
             ->assertRedirect()
-            ->assertSessionHas('status')
+            ->assertSessionHas(
+                'status',
+                'User created successfully. The user must change their temporary password upon first login.',
+            )
             ->assertSessionHas('credentials_modal');
 
         // Accessing the users page shows the popup modal with details and copy/send actions
         $this->actingAs($admin)
             ->get(route('users.index'))
+            ->assertHeader('Cache-Control', 'max-age=0, no-store, private')
             ->assertSee('User Account Created')
             ->assertSee('CustomTempPass123!')
             ->assertSee('Copy all details')
@@ -528,6 +533,46 @@ class WorkflowAccessTest extends TestCase
         ])->assertRedirect(route('home'));
 
         $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_administrator_cannot_set_a_temporary_password_shorter_than_twelve_characters(): void
+    {
+        $administrator = User::factory()->create([
+            'role' => 'ADMINISTRATOR',
+            'must_change_password' => false,
+        ]);
+
+        $this->actingAs($administrator)
+            ->post(route('users.store'), [
+                'name' => 'Short Password Staff',
+                'email' => 'short.password@example.com',
+                'role' => 'RMEC',
+                'password' => 'ShortPass1',
+            ])
+            ->assertSessionHasErrors('password');
+
+        $this->assertDatabaseMissing('users', [
+            'email' => 'short.password@example.com',
+        ]);
+    }
+
+    public function test_administrator_cannot_reset_a_temporary_password_shorter_than_twelve_characters(): void
+    {
+        $administrator = User::factory()->create([
+            'role' => 'ADMINISTRATOR',
+            'must_change_password' => false,
+        ]);
+        $user = User::factory()->create([
+            'password' => Hash::make('PreviousTemporaryPassword123!'),
+        ]);
+
+        $this->actingAs($administrator)
+            ->post(route('users.reset-password', $user), [
+                'password' => 'ShortPass1',
+            ])
+            ->assertSessionHasErrors('password');
+
+        $this->assertTrue(Hash::check('PreviousTemporaryPassword123!', $user->fresh()->password));
     }
 
     public function test_home_dashboard_displays_all_cards_including_gmr_report(): void

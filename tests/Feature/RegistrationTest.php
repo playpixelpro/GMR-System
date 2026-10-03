@@ -80,6 +80,18 @@ class RegistrationTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'nobranch@example.com']);
     }
 
+    public function test_registration_is_rate_limited_per_ip(): void
+    {
+        foreach (range(1, 5) as $attempt) {
+            $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.25'])
+                ->post(route('register.store'), []);
+        }
+
+        $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.25'])
+            ->post(route('register.store'), [])
+            ->assertStatus(429);
+    }
+
     public function test_registered_user_can_log_in_with_temporary_password(): void
     {
         Notification::fake();
