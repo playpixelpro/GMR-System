@@ -37,6 +37,12 @@
             margin: 2px 0;
         }
 
+        .header-volume-note {
+            font-size: 8pt;
+            font-style: italic;
+            margin: 2px 0;
+        }
+
         .header-region {
             font-size: 9.5pt;
             font-weight: bold;
@@ -149,6 +155,7 @@
     <div class="header-section">
         <div class="header-title">{{ $config->title }}</div>
         <div class="header-subtitle">{{ $config->subtitle }}</div>
+        <div class="header-volume-note">Note: Volume before test milling is the pile's original volume; after-test volume is calculated by subtracting the test milling volume.</div>
         <div class="header-region">{{ $config->region_text }}</div>
         <div class="header-branch">{{ $branchName ?? ($config->branch_text ?: 'North Cotabato Branch') }}</div>
     </div>

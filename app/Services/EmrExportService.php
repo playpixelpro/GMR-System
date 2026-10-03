@@ -34,9 +34,9 @@ class EmrExportService
         $filterText = 'Branch: '.($filters['branch'] ?? 'All Branches').' | Warehouse: '.($filters['warehouse'] ?? 'All Warehouses').' | Generated on: '.now()->format('Y-m-d H:i:s');
         $sheet->setCellValue('A3', $filterText);
 
-        $sheet->mergeCells('A1:M1');
-        $sheet->mergeCells('A2:M2');
-        $sheet->mergeCells('A3:M3');
+        $sheet->mergeCells('A1:N1');
+        $sheet->mergeCells('A2:N2');
+        $sheet->mergeCells('A3:N3');
 
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14)->setColor(new Color('064E3B'));
         $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(11);
@@ -52,13 +52,14 @@ class EmrExportService
             'D' => 'Pile No.',
             'E' => 'Variety',
             'F' => 'Aged (mos)',
-            'G' => 'Volume (net kg)',
-            'H' => 'Volume (50kg bags)',
-            'I' => 'Purity (%)',
-            'J' => 'Quality',
-            'K' => 'AMR (%)',
-            'L' => 'PMR (%)',
-            'M' => 'EMR (%)',
+            'G' => 'Volume Before Test Milling (net kg)',
+            'H' => 'Volume Before Test Milling (50kg bags)',
+            'I' => 'Volume After Test Milling (50kg bags)',
+            'J' => 'Purity (%)',
+            'K' => 'Quality',
+            'L' => 'AMR (%)',
+            'M' => 'PMR (%)',
+            'N' => 'EMR (%)',
         ];
 
         foreach ($headers as $col => $header) {
@@ -88,7 +89,7 @@ class EmrExportService
             ],
         ];
 
-        $sheet->getStyle('A5:M5')->applyFromArray($headerStyle);
+        $sheet->getStyle('A5:N5')->applyFromArray($headerStyle);
         $sheet->getRowDimension(5)->setRowHeight(28);
 
         $row = 6;
@@ -102,27 +103,29 @@ class EmrExportService
             $sheet->setCellValue("F{$row}", $data['age'] ?? '—');
             $sheet->setCellValue("G{$row}", $data['volume'] ?? '—');
             $sheet->setCellValue("H{$row}", $data['volume_bags'] !== null ? round((float) $data['volume_bags'], 3) : '—');
-            $sheet->setCellValue("I{$row}", $data['purity'] !== null ? round((float) $data['purity'], 2) : '—');
-            $sheet->setCellValue("J{$row}", strtoupper(str_replace('_', ' ', $data['quality'] ?? '—')));
-            $sheet->setCellValue("K{$row}", $data['amr'] !== null ? round((float) $data['amr'], 2) : '—');
-            $sheet->setCellValue("L{$row}", $data['pmr'] !== null ? round((float) $data['pmr'], 2) : '—');
+            $sheet->setCellValue("I{$row}", $data['volume_after_test_milling_bags'] !== null ? round((float) $data['volume_after_test_milling_bags'], 3) : '—');
+            $sheet->setCellValue("J{$row}", $data['purity'] !== null ? round((float) $data['purity'], 2) : '—');
+            $sheet->setCellValue("K{$row}", strtoupper(str_replace('_', ' ', $data['quality'] ?? '—')));
+            $sheet->setCellValue("L{$row}", $data['amr'] !== null ? round((float) $data['amr'], 2) : '—');
+            $sheet->setCellValue("M{$row}", $data['pmr'] !== null ? round((float) $data['pmr'], 2) : '—');
             $emrClean = isset($data['emr_display']) ? str_replace('%', '', (string) $data['emr_display']) : '—';
-            $sheet->setCellValue("M{$row}", $emrClean);
+            $sheet->setCellValue("N{$row}", $emrClean);
 
-            $sheet->getStyle("A{$row}:M{$row}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('D1D5DB');
+            $sheet->getStyle("A{$row}:N{$row}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('D1D5DB');
             $sheet->getStyle("A{$row}:A{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle("F{$row}:I{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-            $sheet->getStyle("K{$row}:L{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-            $sheet->getStyle("M{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("F{$row}:J{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            $sheet->getStyle("L{$row}:M{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            $sheet->getStyle("N{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-            $sheet->getStyle("I{$row}")->getNumberFormat()->setFormatCode('0.00');
-            $sheet->getStyle("K{$row}:L{$row}")->getNumberFormat()->setFormatCode('0.00');
+            $sheet->getStyle("J{$row}")->getNumberFormat()->setFormatCode('0.00');
+            $sheet->getStyle("H{$row}:I{$row}")->getNumberFormat()->setFormatCode('#,##0.000');
+            $sheet->getStyle("L{$row}:M{$row}")->getNumberFormat()->setFormatCode('0.00');
 
             $row++;
         }
 
         // Auto-fit column widths
-        foreach (range('A', 'M') as $columnID) {
+        foreach (range('A', 'N') as $columnID) {
             $sheet->getColumnDimension($columnID)->setAutoSize(true);
         }
 

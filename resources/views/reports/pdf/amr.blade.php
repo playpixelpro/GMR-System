@@ -103,6 +103,7 @@
     <div class="header">
         <h1>National Food Authority</h1>
         <h2>Actual Milling Recovery (AMR) Report</h2>
+        <p style="font-size: 7px; margin: 0 0 3px;">Note: Volume values shown are before test milling.</p>
         <div class="meta">
             Branch: <strong>{{ $filterBranch ?? 'All Branches' }}</strong> &nbsp;|&nbsp;
             Warehouse: <strong>{{ $filterWarehouse ?? 'All Warehouses' }}</strong> &nbsp;|&nbsp;
@@ -122,7 +123,7 @@
                 <th style="width: 32px;">MC (%)</th>
                 <th style="width: 45px;">Quality</th>
                 <th style="width: 30px;">Aged (mos)</th>
-                <th style="width: 45px;">Volume (bags)</th>
+                <th style="width: 45px;">Volume Before Test Milling (bags)</th>
                 <th style="width: 60px;">Rice Miller</th>
                 <th style="width: 32px;">Trial</th>
                 <th style="width: 45px;">Palay In (kg)</th>

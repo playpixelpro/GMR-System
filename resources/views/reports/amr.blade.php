@@ -7,6 +7,7 @@
     <div>
         <h1 class="text-xl font-semibold text-base-content">AMR Report</h1>
         <p class="text-xs text-base-content/60">Actual Milling Recovery (AMR) — Commercial milling results and statistical analysis</p>
+        <p class="mt-1 text-xs font-medium text-base-content/70">Note: Volume values shown are before test milling.</p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
         <div class="dropdown relative inline-flex [--placement:bottom-end]">
@@ -106,7 +107,7 @@
           <th data-col="mc" class="text-end px-2.5 py-2">MC (%)</th>
           <th data-col="quality" class="text-center px-2.5 py-2">Quality</th>
           <th data-col="aged_months" class="text-center px-2.5 py-2">Aged <br> (mos)</th>
-          <th data-col="volume_bags" class="text-center px-2.5 py-2">Volume <br>(bags)</th>
+          <th data-col="volume_bags" class="text-center px-2.5 py-2">Volume Before Test Milling <br>(bags)</th>
           <th data-col="rice_miller" class="px-2.5 py-2">Rice Miller</th>
           <th data-col="trial" class="text-center px-2.5 py-2">Trial</th>
           <th data-col="palay_input" class="text-center px-2.5 py-2">Palay <br> In (kg)</th>

@@ -7,6 +7,7 @@
     <div>
         <h1 class="text-xl font-semibold text-base-content">PMR Report</h1>
         <p class="text-xs text-base-content/60">Potential Milling Recovery (PMR) — 3 laboratory test milling trials under NFA recovery standards</p>
+        <p class="mt-1 text-xs font-medium text-base-content/70">Note: Volume values shown are before test milling.</p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
         <div class="dropdown relative inline-flex [--placement:bottom-end]">
@@ -106,7 +107,7 @@
           <th data-col="mc" class="text-end px-2.5 py-2">MC</th>
           <th data-col="quality" class="text-center px-2.5 py-2">QUALITY <br> (CONDITION)</th>
           <th data-col="aged_months" class="text-center px-2.5 py-2">AGED <br>( in months)</th>
-          <th data-col="volume_bags" class="text-center px-2.5 py-2">VOLUME <br> (bags)</th>
+          <th data-col="volume_bags" class="text-center px-2.5 py-2">VOLUME BEFORE TEST MILLING <br> (bags)</th>
           <th data-col="trial" class="text-center px-2.5 py-2">NO. OF <br> TRIAL</th>
           <th data-col="recovery_rate" class="text-center px-2.0 py-2">RECOVERY<br> RATE (%)</th>
           <th data-col="mean" class="text-center px-2.5 py-2">MEAN (%)</th>

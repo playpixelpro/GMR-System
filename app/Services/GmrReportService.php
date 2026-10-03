@@ -119,9 +119,10 @@ class GmrReportService
             'volume_before_test_milling_bags' => $pile->volume_kg !== null
                     ? round((float) $pile->volume_kg / 50, 3)
                     : null,
-            'volume_after_test_milling_bags' => $pile->test_milling_volume_kg !== null
-                    ? round((float) $pile->test_milling_volume_kg / 50, 3)
-                    : null,
+            'volume_after_test_milling_bags' => Pile::calculateVolumeAfterTestMillingBags(
+                $pile->volume_kg,
+                $pile->test_milling_volume_kg,
+            ),
             'quality' => ! empty($pile->quality)
                 ? strtoupper($pile->quality)
                 : 'GQA',

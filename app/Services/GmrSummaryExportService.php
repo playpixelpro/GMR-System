@@ -32,9 +32,9 @@ class GmrSummaryExportService
         $filterText = 'Branch: '.($filters['branch'] ?? 'All Branches').' | Warehouse: '.($filters['warehouse'] ?? 'All Warehouses').' | Generated on: '.now()->format('Y-m-d H:i:s');
         $sheet->setCellValue('A3', $filterText);
 
-        $sheet->mergeCells('A1:K1');
-        $sheet->mergeCells('A2:K2');
-        $sheet->mergeCells('A3:K3');
+        $sheet->mergeCells('A1:L1');
+        $sheet->mergeCells('A2:L2');
+        $sheet->mergeCells('A3:L3');
 
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14)->setColor(new Color('064E3B'));
         $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(11);
@@ -47,13 +47,14 @@ class GmrSummaryExportService
             'B' => 'Branch',
             'C' => 'Warehouse',
             'D' => 'Pile No.',
-            'E' => 'Volume (bags)',
-            'F' => 'PMR (%)',
-            'G' => 'AMR (%)',
-            'H' => 'EMR Range (%)',
-            'I' => 'GMR (%)',
-            'J' => 'Status',
-            'K' => 'Approved GMR (%)',
+            'E' => 'Volume Before Test Milling (50kg bags)',
+            'F' => 'Volume After Test Milling (50kg bags)',
+            'G' => 'PMR (%)',
+            'H' => 'AMR (%)',
+            'I' => 'EMR Range (%)',
+            'J' => 'GMR (%)',
+            'K' => 'Status',
+            'L' => 'Approved GMR (%)',
         ];
 
         foreach ($headers as $col => $label) {
@@ -84,7 +85,7 @@ class GmrSummaryExportService
             ],
         ];
 
-        $sheet->getStyle('A5:K5')->applyFromArray($headerStyle);
+        $sheet->getStyle('A5:L5')->applyFromArray($headerStyle);
         $sheet->getRowDimension(5)->setRowHeight(28);
 
         // Data rows starting at row 6
@@ -97,14 +98,15 @@ class GmrSummaryExportService
             $sheet->setCellValue("C{$row}", $item['warehouse'] ?? '—');
             $sheet->setCellValue("D{$row}", $item['pile'] ?? '—');
 
-            // Volume (bags)
+            // Pile volume before and after test milling
             $sheet->setCellValue("E{$row}", $item['volume_bags'] !== null ? round((float) $item['volume_bags'], 3) : 'N/A');
+            $sheet->setCellValue("F{$row}", $item['volume_after_test_milling_bags'] !== null ? round((float) $item['volume_after_test_milling_bags'], 3) : 'N/A');
 
             // PMR
-            $sheet->setCellValue("F{$row}", $item['pmr'] !== null ? round((float) $item['pmr'], 2) : 'N/A');
+            $sheet->setCellValue("G{$row}", $item['pmr'] !== null ? round((float) $item['pmr'], 2) : 'N/A');
 
             // AMR
-            $sheet->setCellValue("G{$row}", $item['amr'] !== null ? round((float) $item['amr'], 2) : 'N/A');
+            $sheet->setCellValue("H{$row}", $item['amr'] !== null ? round((float) $item['amr'], 2) : 'N/A');
 
             // EMR Range (numbers without % symbol, e.g. 61.50 – 65.20)
             $emrDisplay = 'N/A';
@@ -113,48 +115,48 @@ class GmrSummaryExportService
             } elseif (! empty($item['emr']) && $item['emr'] !== 'N/A') {
                 $emrDisplay = str_replace('%', '', (string) $item['emr']);
             }
-            $sheet->setCellValue("H{$row}", $emrDisplay);
+            $sheet->setCellValue("I{$row}", $emrDisplay);
 
             // GMR
-            $sheet->setCellValue("I{$row}", $item['gmr'] !== null ? round((float) $item['gmr'], 2) : 'N/A');
+            $sheet->setCellValue("J{$row}", $item['gmr'] !== null ? round((float) $item['gmr'], 2) : 'N/A');
 
             // Status
-            $sheet->setCellValue("J{$row}", $item['status'] ?? '—');
+            $sheet->setCellValue("K{$row}", $item['status'] ?? '—');
 
             // Approved GMR
             $approvedGmr = $item['approved_gmr'] ?? null;
             if (($item['gmr_status'] ?? null) === 'approved' && $approvedGmr !== null) {
-                $sheet->setCellValue("K{$row}", round((float) $approvedGmr, 2));
+                $sheet->setCellValue("L{$row}", round((float) $approvedGmr, 2));
             } elseif (($item['gmr_status'] ?? null) === 'submitted') {
-                $sheet->setCellValue("K{$row}", 'Submitted');
+                $sheet->setCellValue("L{$row}", 'Submitted');
             } else {
-                $sheet->setCellValue("K{$row}", '—');
+                $sheet->setCellValue("L{$row}", '—');
             }
 
             // Cell alignments and styles
             $sheet->getStyle("A{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $sheet->getStyle("B{$row}:C{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
             $sheet->getStyle("D{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle("E{$row}:G{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-            $sheet->getStyle("H{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle("I{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-            $sheet->getStyle("J{$row}:K{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("E{$row}:H{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            $sheet->getStyle("I{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("J{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            $sheet->getStyle("K{$row}:L{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
             // Number formats (0.00) for numeric columns
-            $sheet->getStyle("E{$row}")->getNumberFormat()->setFormatCode('#,##0.000');
-            $sheet->getStyle("F{$row}:G{$row}")->getNumberFormat()->setFormatCode('0.00');
-            $sheet->getStyle("I{$row}")->getNumberFormat()->setFormatCode('0.00');
+            $sheet->getStyle("E{$row}:F{$row}")->getNumberFormat()->setFormatCode('#,##0.000');
+            $sheet->getStyle("G{$row}:H{$row}")->getNumberFormat()->setFormatCode('0.00');
+            $sheet->getStyle("J{$row}")->getNumberFormat()->setFormatCode('0.00');
             if (($item['gmr_status'] ?? null) === 'approved' && $approvedGmr !== null) {
-                $sheet->getStyle("K{$row}")->getNumberFormat()->setFormatCode('0.00');
+                $sheet->getStyle("L{$row}")->getNumberFormat()->setFormatCode('0.00');
             }
 
             // Highlight GMR
             if ($item['gmr'] !== null) {
-                $sheet->getStyle("I{$row}")->getFont()->setBold(true)->setColor(new Color('064E3B'));
+                $sheet->getStyle("J{$row}")->getFont()->setBold(true)->setColor(new Color('064E3B'));
             }
 
             // Border for data row
-            $sheet->getStyle("A{$row}:K{$row}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('E5E7EB');
+            $sheet->getStyle("A{$row}:L{$row}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('E5E7EB');
 
             $row++;
             $itemNumber++;
@@ -163,11 +165,11 @@ class GmrSummaryExportService
         // Bottom border for the table
         $lastRow = $row - 1;
         if ($lastRow >= 6) {
-            $sheet->getStyle("A{$lastRow}:K{$lastRow}")->getBorders()->getBottom()->setBorderStyle(Border::BORDER_MEDIUM)->getColor()->setRGB('064E3B');
+            $sheet->getStyle("A{$lastRow}:L{$lastRow}")->getBorders()->getBottom()->setBorderStyle(Border::BORDER_MEDIUM)->getColor()->setRGB('064E3B');
         }
 
         // Auto-fit column widths
-        foreach (range('A', 'K') as $columnID) {
+        foreach (range('A', 'L') as $columnID) {
             $sheet->getColumnDimension($columnID)->setAutoSize(true);
         }
 

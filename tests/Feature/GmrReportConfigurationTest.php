@@ -463,10 +463,11 @@ class GmrReportConfigurationTest extends TestCase
                 'selected_piles' => [$pile->id],
             ])
             ->assertOk()
+            ->assertSee('Volume before test milling is the pile’s original volume')
             ->assertSee('Volume in Bags Before Test Milling')
             ->assertSee('Volume in Bags After Test Milling')
             ->assertSee('11,522')
-            ->assertSee('10,000')
+            ->assertSee('1,522')
             ->assertDontSee('Warehouse')
             ->assertDontSee('GMR(%)');
     }
@@ -559,7 +560,7 @@ class GmrReportConfigurationTest extends TestCase
         $this->assertSame('GID#2, MLANG BS', $sheet->getCell('A7')->getValue());
         $this->assertSame('1', (string) $sheet->getCell('B7')->getValue());
         $this->assertEquals(11522, $sheet->getCell('C7')->getValue());
-        $this->assertEquals(10000, $sheet->getCell('D7')->getValue());
+        $this->assertEquals(1522, $sheet->getCell('D7')->getValue());
         $this->assertEquals(62.22, $sheet->getCell('F7')->getValue());
         $this->assertEquals(61.53, $sheet->getCell('G7')->getValue());
         $this->assertEquals(61.88, $sheet->getCell('I7')->getValue());
@@ -620,7 +621,7 @@ class GmrReportConfigurationTest extends TestCase
             'Volume in Bags After Test Milling',
             $sheet->getCell('B6')->getValue(),
         );
-        $this->assertSame(10000.0, $sheet->getCell('B7')->getValue());
+        $this->assertSame(1522.0, $sheet->getCell('B7')->getValue());
         $this->assertSame('B', $sheet->getHighestColumn());
 
         unlink($tempFile);
