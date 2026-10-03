@@ -367,6 +367,7 @@ class RmecActionAndGateTest extends TestCase
                 'quality' => 'premium',
                 'aged' => 6,
                 'volume' => 50000,
+                'test_milling_volume' => 48000,
                 'trials' => [
                     ['trial_number' => 1, 'test_milling_date' => '2026-09-28', 'palay_input' => 100, 'rice_recovery' => 65],
                     ['trial_number' => 2, 'test_milling_date' => '2026-09-28', 'palay_input' => 100, 'rice_recovery' => 65],

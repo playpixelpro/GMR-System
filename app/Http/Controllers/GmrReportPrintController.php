@@ -139,7 +139,9 @@ class GmrReportPrintController extends Controller
         $signatories = $this->reportService->getActiveSignatories();
 
         // Use branch name from the selected branch
-        $branchName = $config->branch_text ?: $branch->name;
+        $branchName = $this->reportService->formatBranchName(
+            $config->branch_text ?: $branch->name,
+        );
 
         if ($request->boolean('pdf')) {
             return $this->reportService->generatePdf(
@@ -176,6 +178,7 @@ class GmrReportPrintController extends Controller
             'config' => $config,
             'signatories' => $signatories,
             'branchName' => $branchName,
+            'visibleColumns' => $config->getVisibleReportColumns(),
             'printUrlWithPdf' => $printUrlWithPdf,
             'printUrlWithExcel' => $printUrlWithExcel,
             'selectedPileIds' => $allowedPileIds,

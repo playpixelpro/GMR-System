@@ -12,6 +12,8 @@ class Pile extends Model
 {
     use HasFactory;
 
+    public const TEST_MILLING_REQUIRED_VOLUME_KG = 50000;
+
     protected $fillable = [
         'branch_id',
         'warehouse_id',

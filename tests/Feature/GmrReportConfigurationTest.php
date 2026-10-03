@@ -69,6 +69,9 @@ class GmrReportConfigurationTest extends TestCase
             ->get(route('gmr.config.edit'))
             ->assertOk()
             ->assertSee('GMR Report Configuration')
+            ->assertSee('Report Table Columns')
+            ->assertSee('Volume in Bags Before Test Milling')
+            ->assertSee('Volume in Bags After Test Milling')
             ->assertSee('Paper Size')
             ->assertSee('Signatories Management');
 
@@ -181,6 +184,10 @@ class GmrReportConfigurationTest extends TestCase
                 'margin_bottom' => 0.75,
                 'margin_left' => 0.75,
                 'margin_unit' => 'in',
+                'visible_columns' => [
+                    'volume_before_test_milling',
+                    'volume_after_test_milling',
+                ],
             ],
         );
 
@@ -195,6 +202,41 @@ class GmrReportConfigurationTest extends TestCase
         $this->assertEquals('A4', $config->paper_size);
         $this->assertEquals('landscape', $config->orientation);
         $this->assertEquals(0.75, $config->margin_top);
+        $this->assertSame(
+            ['volume_before_test_milling', 'volume_after_test_milling'],
+            $config->getVisibleReportColumns(),
+        );
+    }
+
+    public function test_rmec_cannot_save_unrecognized_gmr_report_columns(): void
+    {
+        $config = GmrReportConfiguration::current();
+        $requestData = $config->only([
+            'title',
+            'subtitle',
+            'region_text',
+            'branch_text',
+            'paper_size',
+            'custom_width',
+            'custom_height',
+            'custom_unit',
+            'orientation',
+            'margin_top',
+            'margin_right',
+            'margin_bottom',
+            'margin_left',
+            'margin_unit',
+        ]);
+        $requestData['visible_columns'] = ['unknown_column'];
+
+        $this->actingAs($this->rmecUser)
+            ->put(route('gmr.config.update'), $requestData)
+            ->assertSessionHasErrors('visible_columns.0');
+
+        $this->assertSame(
+            array_keys(GmrReportConfiguration::availableReportColumns()),
+            $config->fresh()->getVisibleReportColumns(),
+        );
     }
 
     public function test_rmec_can_save_custom_paper_dimensions(): void
@@ -214,6 +256,9 @@ class GmrReportConfigurationTest extends TestCase
             'margin_bottom' => 0.5,
             'margin_left' => 0.5,
             'margin_unit' => 'in',
+            'visible_columns' => array_keys(
+                GmrReportConfiguration::availableReportColumns(),
+            ),
         ]);
 
         $config = GmrReportConfiguration::current();
@@ -372,6 +417,60 @@ class GmrReportConfigurationTest extends TestCase
         ]);
     }
 
+    public function test_print_report_appends_branch_suffix_to_configured_branch_name(): void
+    {
+        [, $warehouse] = $this->createHierarchy();
+        $pile = $this->createPileWithRates(
+            $warehouse,
+            '1',
+            11522 * 50,
+            61.53,
+            62.22,
+        );
+        $config = GmrReportConfiguration::current();
+        $config->update(['branch_text' => 'North Cotabato']);
+
+        $this->actingAs($this->rmecUser)
+            ->post(route('gmr.report.print'), [
+                'selected_piles' => [$pile->id],
+            ])
+            ->assertOk()
+            ->assertSee('North Cotabato Branch')
+            ->assertDontSee('North Cotabato Branch Branch');
+    }
+
+    public function test_print_report_displays_both_test_milling_volumes_and_only_visible_columns(): void
+    {
+        [, $warehouse] = $this->createHierarchy();
+        $pile = $this->createPileWithRates(
+            $warehouse,
+            '1',
+            11522 * 50,
+            61.53,
+            62.22,
+        );
+        $pile->update(['test_milling_volume_kg' => 10000 * 50]);
+
+        GmrReportConfiguration::current()->update([
+            'visible_columns' => [
+                'volume_before_test_milling',
+                'volume_after_test_milling',
+            ],
+        ]);
+
+        $this->actingAs($this->rmecUser)
+            ->post(route('gmr.report.print'), [
+                'selected_piles' => [$pile->id],
+            ])
+            ->assertOk()
+            ->assertSee('Volume in Bags Before Test Milling')
+            ->assertSee('Volume in Bags After Test Milling')
+            ->assertSee('11,522')
+            ->assertSee('10,000')
+            ->assertDontSee('Warehouse')
+            ->assertDontSee('GMR(%)');
+    }
+
     public function test_print_with_excel_parameter_downloads_xlsx_file(): void
     {
         [$branch, $warehouse] = $this->createHierarchy();
@@ -421,10 +520,12 @@ class GmrReportConfigurationTest extends TestCase
             61.53,
             62.22,
         );
+        $pile1->update(['test_milling_volume_kg' => 10000 * 50]);
 
         $service = app(GmrReportService::class);
         $rows = $service->getRowsForPiles([$pile1->id]);
         $config = $service->getConfiguration();
+        $config->branch_text = 'North Cotabato';
         $signatories = $service->getActiveSignatories();
 
         $response = $service->exportExcel(
@@ -447,21 +548,21 @@ class GmrReportConfigurationTest extends TestCase
             'REPORT ON PRE-MILLING ACTIVITY',
             $sheet->getCell('A1')->getValue(),
         );
+        $this->assertSame('North Cotabato Branch', $sheet->getCell('A4')->getValue());
         $this->assertSame('Warehouse', $sheet->getCell('A6')->getValue());
-        $this->assertSame('PMR(%)', $sheet->getCell('E6')->getValue());
-        $this->assertSame('AMR(%)', $sheet->getCell('F6')->getValue());
-        $this->assertSame('EMR(%)', $sheet->getCell('G6')->getValue());
-        $this->assertSame('GMR(%)', $sheet->getCell('H6')->getValue());
+        $this->assertSame('Volume in Bags Before Test Milling', $sheet->getCell('C6')->getValue());
+        $this->assertSame('Volume in Bags After Test Milling', $sheet->getCell('D6')->getValue());
+        $this->assertSame('PMR(%)', $sheet->getCell('F6')->getValue());
+        $this->assertSame('AMR(%)', $sheet->getCell('G6')->getValue());
+        $this->assertSame('EMR(%)', $sheet->getCell('H6')->getValue());
+        $this->assertSame('GMR(%)', $sheet->getCell('I6')->getValue());
         $this->assertSame('GID#2, MLANG BS', $sheet->getCell('A7')->getValue());
         $this->assertSame('1', (string) $sheet->getCell('B7')->getValue());
         $this->assertEquals(11522, $sheet->getCell('C7')->getValue());
-        $this->assertEquals(62.22, $sheet->getCell('E7')->getValue());
-        $this->assertEquals(61.53, $sheet->getCell('F7')->getValue());
-        $this->assertEquals(61.88, $sheet->getCell('H7')->getValue());
-        $this->assertStringNotContainsString(
-            '%',
-            (string) $sheet->getCell('E7')->getValue(),
-        );
+        $this->assertEquals(10000, $sheet->getCell('D7')->getValue());
+        $this->assertEquals(62.22, $sheet->getCell('F7')->getValue());
+        $this->assertEquals(61.53, $sheet->getCell('G7')->getValue());
+        $this->assertEquals(61.88, $sheet->getCell('I7')->getValue());
         $this->assertStringNotContainsString(
             '%',
             (string) $sheet->getCell('F7')->getValue(),
@@ -474,6 +575,54 @@ class GmrReportConfigurationTest extends TestCase
             '%',
             (string) $sheet->getCell('H7')->getValue(),
         );
+        $this->assertStringNotContainsString(
+            '%',
+            (string) $sheet->getCell('I7')->getValue(),
+        );
+        unlink($tempFile);
+    }
+
+    public function test_gmr_report_excel_export_includes_only_configured_columns(): void
+    {
+        [, $warehouse] = $this->createHierarchy();
+        $pile = $this->createPileWithRates(
+            $warehouse,
+            '1',
+            11522 * 50,
+            61.53,
+            62.22,
+        );
+        $pile->update(['test_milling_volume_kg' => 10000 * 50]);
+
+        $service = app(GmrReportService::class);
+        $config = $service->getConfiguration();
+        $config->visible_columns = [
+            'warehouse',
+            'volume_after_test_milling',
+        ];
+        $response = $service->exportExcel(
+            $service->getRowsForPiles([$pile->id]),
+            $config,
+            $service->getActiveSignatories(),
+        );
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'gmr_hidden_columns_');
+        ob_start();
+        $response->sendContent();
+        $content = ob_get_clean();
+        file_put_contents($tempFile, $content);
+
+        $spreadsheet = IOFactory::load($tempFile);
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $this->assertSame('Warehouse', $sheet->getCell('A6')->getValue());
+        $this->assertSame(
+            'Volume in Bags After Test Milling',
+            $sheet->getCell('B6')->getValue(),
+        );
+        $this->assertSame(10000.0, $sheet->getCell('B7')->getValue());
+        $this->assertSame('B', $sheet->getHighestColumn());
+
         unlink($tempFile);
     }
 
