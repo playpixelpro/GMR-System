@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" data-theme="light" class="light" style="color-scheme: light;">
 <head>
     <meta charset="UTF-8">
@@ -254,7 +254,22 @@
     <div class="footer">
         <div class="footer-left">NFA GMR System &bull; Confidential</div>
         <div class="footer-center">Actual Milling Recovery (AMR) Report</div>
-        <div class="footer-right">Page <script type="text/php">echo $pdf->get_page_number();</script> of <script type="text/php">echo $pdf->get_page_count();</script></div>
+        <div class="footer-right"></div>
     </div>
+
+    <script type="text/php">
+        if (isset($pdf)) {
+            $pdf->page_script(function ($pageNumber, $pageCount, $canvas, $fontMetrics) {
+                $font = $fontMetrics->get_font('helvetica', 'normal');
+                $size = 7.5;
+                $text = "Page " . $pageNumber . " of " . $pageCount;
+                $textWidth = $fontMetrics->get_text_width($text, $font, $size);
+                $rightMargin = 8 * (72 / 25.4);
+                $x = $canvas->get_width() - $rightMargin - $textWidth;
+                $y = $canvas->get_height() - 38.3;
+                $canvas->text($x, $y, $text, $font, $size, [0.42, 0.45, 0.50]);
+            });
+        }
+    </script>
 </body>
 </html>

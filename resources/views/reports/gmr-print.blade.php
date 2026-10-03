@@ -96,6 +96,14 @@
             background-color: #334155;
         }
 
+        .btn-success {
+            background-color: #059669;
+            color: #fff;
+        }
+        .btn-success:hover {
+            background-color: #047857;
+        }
+
         .btn-outline {
             background-color: transparent;
             border-color: #94a3b8;
@@ -326,6 +334,18 @@
                 Download PDF
             </a>
             @endif
+            @if (isset($printUrlWithExcel))
+            <a href="{{ $printUrlWithExcel }}" class="btn btn-success">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="8" y1="13" x2="16" y2="13"></line>
+                    <line x1="8" y1="17" x2="16" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                Export Excel
+            </a>
+            @endif
             @if (isset($isPreview) && $isPreview)
             <a href="{{ route('gmr.config.edit') }}" class="btn btn-outline">
                 Back to Configuration
@@ -357,10 +377,10 @@
                         <th style="width: 8%;">Pile No.</th>
                         <th style="width: 14%;">Volume in Bags</th>
                         <th style="width: 9%;">Quality</th>
-                        <th style="width: 11%;">AMR</th>
-                        <th style="width: 11%;">PMR</th>
-                        <th style="width: 14%;">EMR</th>
-                        <th style="width: 8%;">GMR</th>
+                        <th style="width: 11%;">PMR(%)</th>
+                        <th style="width: 11%;">AMR(%)</th>
+                        <th style="width: 14%;">EMR(%)</th>
+                        <th style="width: 8%;">GMR(%)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -381,10 +401,10 @@
                             </td>
                             <td class="text-center font-bold">{{ $row['quality'] ?? 'GQA' }}</td>
                             <td class="text-center">
-                                {{ $row['amr'] !== null ? number_format((float) $row['amr'], 2) : '—' }}
+                                {{ $row['pmr'] !== null ? number_format((float) $row['pmr'], 2) : '—' }}
                             </td>
                             <td class="text-center">
-                                {{ $row['pmr'] !== null ? number_format((float) $row['pmr'], 2) : '—' }}
+                                {{ $row['amr'] !== null ? number_format((float) $row['amr'], 2) : '—' }}
                             </td>
                             <td class="text-center font-bold">
                                 {{ str_replace('%', '', (string) ($row['emr'] ?? '—')) }}
