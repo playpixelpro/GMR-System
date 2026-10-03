@@ -46,6 +46,7 @@ class GmrReportConfigController extends Controller
             'config' => $config,
             'signatories' => $signatories,
             'reportColumns' => GmrReportConfiguration::availableReportColumns(),
+            'columnLabels' => $config->getReportColumnLabels(),
         ]);
     }
 
@@ -59,6 +60,19 @@ class GmrReportConfigController extends Controller
         $availableColumns = array_keys(
             GmrReportConfiguration::availableReportColumns(),
         );
+        $columnLabelRules = [
+            'column_labels' => [
+                'required',
+                'array:'.implode(',', $availableColumns),
+            ],
+        ];
+        foreach ($availableColumns as $columnKey) {
+            $columnLabelRules["column_labels.{$columnKey}"] = [
+                'required',
+                'string',
+                'max:100',
+            ];
+        }
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -82,6 +96,7 @@ class GmrReportConfigController extends Controller
                 'distinct',
                 Rule::in($availableColumns),
             ],
+            ...$columnLabelRules,
         ]);
 
         $config = $this->reportService->getConfiguration();
@@ -206,6 +221,7 @@ class GmrReportConfigController extends Controller
                 $config->branch_text ?: 'North Cotabato',
             ),
             'visibleColumns' => $config->getVisibleReportColumns(),
+            'columnLabels' => $config->getReportColumnLabels(),
             'isPreview' => true,
         ]);
     }

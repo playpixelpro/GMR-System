@@ -69,7 +69,7 @@
         ],
         [
             ['label' => 'Total Piles', 'value' => number_format($summary['piles']), 'accent' => 'primary', 'size' => 'text-lg xl:text-xl'],
-            ['label' => 'Volume Before Test Milling (bags)', 'value' => number_format($summary['volume_bags'], 3), 'accent' => 'secondary', 'size' => 'text-base xl:text-lg'],
+            ['label' => 'Volume (bags)', 'value' => number_format($summary['volume_bags'], 3), 'accent' => 'secondary', 'size' => 'text-base xl:text-lg'],
             ['label' => 'Average Purity', 'value' => $formatPercentage($summary['purity']), 'accent' => 'accent', 'size' => 'text-lg xl:text-xl'],
             ['label' => 'Average AMR', 'value' => $formatPercentage($summary['amr']), 'accent' => 'primary', 'size' => 'text-lg xl:text-xl'],
             ['label' => 'Average PMR', 'value' => $formatPercentage($summary['pmr']), 'accent' => 'secondary', 'size' => 'text-lg xl:text-xl'],
@@ -95,7 +95,7 @@
         <h2 class="mb-4 text-lg font-semibold text-black">EMR Summary by Warehouse</h2>
         <div class="overflow-x-auto">
             <table class="table table-sm min-w-208 text-sm">
-                <thead><tr class="border-b border-base-content/15 text-sm font-semibold text-black"><th>Warehouse</th><th class="text-end">Piles</th><th class="text-end">Volume Before Test Milling (bags)</th><th class="text-end">Avg Purity</th><th class="text-end">Avg AMR</th><th class="text-end">Avg PMR</th><th class="text-end">EMR</th></tr></thead>
+                <thead><tr class="border-b border-base-content/15 text-sm font-semibold text-black"><th>Warehouse</th><th class="text-end">Piles</th><th class="text-end">Volume (bags)</th><th class="text-end">Avg Purity</th><th class="text-end">Avg AMR</th><th class="text-end">Avg PMR</th><th class="text-end">EMR</th></tr></thead>
                 <tbody>
                     @foreach ($allRows->groupBy('warehouse') as $warehouseName => $warehouseRows)
                         @php $complete = $warehouseRows->filter(fn (array $row): bool => $row['amr'] !== null && $row['pmr'] !== null); @endphp
@@ -113,7 +113,7 @@
         </div>
         <div class="overflow-x-auto">
             <table class="table table-sm min-w-328 text-sm">
-                <thead><tr class="border-y border-base-content/15 bg-base-200/60 text-sm font-semibold text-black"><th class="text-center">No.</th><th>Branch</th><th>Warehouse</th><th>Pile</th><th>Variety</th><th class="text-center">Age</th><th class="text-center">Volume Before Test Milling <br>(bags)</th><th class="text-center">Purity</th><th class="text-center">Quality</th><th class="text-center">AMR</th><th class="text-center">PMR</th><th class="text-center">EMR</th><th>Status</th></tr></thead>
+                <thead><tr class="border-y border-base-content/15 bg-base-200/60 text-sm font-semibold text-black"><th class="text-center">No.</th><th>Branch</th><th>Warehouse</th><th>Pile</th><th>Variety</th><th class="text-center">Age</th><th class="text-center">Volume <br>(bags)</th><th class="text-center">Purity</th><th class="text-center">Quality</th><th class="text-center">AMR</th><th class="text-center">PMR</th><th class="text-center">EMR</th><th>Status</th></tr></thead>
                 <tbody>
                     @foreach ($rows as $row)
                         <tr class="border-b border-base-content/10 hover:bg-base-200/30"><td class="text-center py-3">{{ ($rows->firstItem() ?? 1) + $loop->index }}</td><td>{{ $row['branch'] }}</td><td class=" text-start font-medium">{{ $row['warehouse'] }}</td><td class="text-center font-semibold">{{ $row['pile'] }}</td><td class="text-center">{{ $row['variety'] }}</td><td class="text-center">{{ $row['age'] ?? '—' }}</td><td class="text-center font-mono">{{ number_format((float) $row['volume_bags'], 3) }}</td><td class="text-center font-mono">{{ $row['purity'] !== null ? number_format((float) $row['purity'], 2).'%' : 'N/A' }}</td><td class="text-center">{{ $row['quality'] }}</td><td class="text-center font-mono">{{ $formatPercentage($row['amr']) }}</td><td class="text-center font-mono">{{ $formatPercentage($row['pmr']) }}</td><td class="text-center font-mono">{{ $row['emr_display'] }}</td><td><span class="badge badge-soft text-xs font-semibold !text-black {{ $row['status'] === 'VALID' ? 'badge-primary' : ($row['status'] === 'QUESTIONABLE' ? 'badge-warning' : (str_contains($row['status'], 'Blocked') ? 'badge-error' : 'badge-neutral')) }}">{{ $row['status'] }}</span></td></tr>

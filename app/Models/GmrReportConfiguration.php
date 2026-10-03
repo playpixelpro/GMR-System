@@ -15,6 +15,7 @@ class GmrReportConfiguration extends Model
         'region_text',
         'branch_text',
         'visible_columns',
+        'column_labels',
         'paper_size',
         'custom_width',
         'custom_height',
@@ -33,6 +34,7 @@ class GmrReportConfiguration extends Model
             'custom_width' => 'float',
             'custom_height' => 'float',
             'visible_columns' => 'array',
+            'column_labels' => 'array',
             'margin_top' => 'float',
             'margin_right' => 'float',
             'margin_bottom' => 'float',
@@ -150,6 +152,31 @@ class GmrReportConfiguration extends Model
                 'width' => 9,
             ],
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function getReportColumnLabels(): array
+    {
+        $labels = array_map(
+            fn (array $column): string => $column['label'],
+            static::availableReportColumns(),
+        );
+
+        if (! is_array($this->column_labels)) {
+            return $labels;
+        }
+
+        foreach ($labels as $columnKey => $defaultLabel) {
+            $configuredLabel = $this->column_labels[$columnKey] ?? null;
+
+            if (is_string($configuredLabel) && trim($configuredLabel) !== '') {
+                $labels[$columnKey] = trim($configuredLabel);
+            }
+        }
+
+        return $labels;
     }
 
     /**

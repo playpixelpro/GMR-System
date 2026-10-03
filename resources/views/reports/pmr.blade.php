@@ -107,7 +107,7 @@
           <th data-col="mc" class="text-end px-2.5 py-2">MC</th>
           <th data-col="quality" class="text-center px-2.5 py-2">QUALITY <br> (CONDITION)</th>
           <th data-col="aged_months" class="text-center px-2.5 py-2">AGED <br>( in months)</th>
-          <th data-col="volume_bags" class="text-center px-2.5 py-2">VOLUME BEFORE TEST MILLING <br> (bags)</th>
+          <th data-col="volume_bags" class="text-center px-2.5 py-2">VOLUME <br> (bags)</th>
           <th data-col="trial" class="text-center px-2.5 py-2">NO. OF <br> TRIAL</th>
           <th data-col="recovery_rate" class="text-center px-2.0 py-2">RECOVERY<br> RATE (%)</th>
           <th data-col="mean" class="text-center px-2.5 py-2">MEAN (%)</th>

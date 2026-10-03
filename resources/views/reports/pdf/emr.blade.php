@@ -105,8 +105,8 @@
                 <th style="width: 55px;">Pile No.</th>
                 <th style="width: 80px;">Variety</th>
                 <th style="width: 45px;">Aged (mos)</th>
-                <th style="width: 55px;">Volume Before Test Milling (kg)</th>
-                <th style="width: 55px;">Volume Before Test Milling (bags)</th>
+                <th style="width: 55px;">Volume (kg)</th>
+                <th style="width: 55px;">Volume (bags)</th>
                 <th style="width: 50px;">Purity (%)</th>
                 <th style="width: 60px;">Quality</th>
                 <th style="width: 55px;">AMR (%)</th>

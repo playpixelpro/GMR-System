@@ -173,7 +173,7 @@
             <tr>
                 @foreach ($visibleColumns as $columnKey)
                     <th style="width: {{ $reportColumns[$columnKey]['width'] / $visibleColumnWidth * 100 }}%">
-                        {{ $reportColumns[$columnKey]['label'] }}
+                        {{ $columnLabels[$columnKey] ?? $reportColumns[$columnKey]['label'] }}
                     </th>
                 @endforeach
             </tr>

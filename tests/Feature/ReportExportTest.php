@@ -48,7 +48,7 @@ class ReportExportTest extends TestCase
         $response->assertSee('Excel Export');
         $response->assertSee('PDF Download');
         $response->assertSee('Note: Volume values shown are before test milling.');
-        $response->assertSee('Volume Before Test Milling');
+        $response->assertSee('Volume <br>(bags)', false);
     }
 
     public function test_pmr_report_view_renders_excel_and_pdf_buttons(): void
@@ -61,7 +61,7 @@ class ReportExportTest extends TestCase
         $response->assertSee('Excel Export');
         $response->assertSee('PDF Download');
         $response->assertSee('Note: Volume values shown are before test milling.');
-        $response->assertSee('VOLUME BEFORE TEST MILLING');
+        $response->assertSee('VOLUME <br> (bags)', false);
     }
 
     public function test_amr_export_excel_returns_valid_xlsx_stream(): void

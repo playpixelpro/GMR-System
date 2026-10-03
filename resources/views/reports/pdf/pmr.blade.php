@@ -123,7 +123,7 @@
                 <th style="width: 40px;">MC (%)</th>
                 <th style="width: 60px;">Quality</th>
                 <th style="width: 40px;">Aged (mos)</th>
-                <th style="width: 65px;">Volume Before Test Milling (bags)</th>
+                <th style="width: 65px;">Volume (bags)</th>
                 <th style="width: 40px;">Trial</th>
                 <th style="width: 55px;">Recovery Rate (%)</th>
                 <th style="width: 55px;">Mean (%)</th>

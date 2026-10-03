@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
@@ -286,6 +287,7 @@ class GmrReportService
             'signatories' => $signatories,
             'branchName' => $branchName,
             'visibleColumns' => $config->getVisibleReportColumns(),
+            'columnLabels' => $config->getReportColumnLabels(),
             'isPdf' => true,
         ]);
         $pdf->setOption('isPhpEnabled', true);
@@ -312,6 +314,7 @@ class GmrReportService
     ): StreamedResponse {
         $reportColumns = GmrReportConfiguration::availableReportColumns();
         $visibleColumns = $config->getVisibleReportColumns();
+        $columnLabels = $config->getReportColumnLabels();
         $columnCount = count($visibleColumns);
         $lastColumn = Coordinate::stringFromColumnIndex($columnCount);
 
@@ -368,9 +371,10 @@ class GmrReportService
         // Table headers on row 6
         foreach ($visibleColumns as $index => $columnKey) {
             $column = Coordinate::stringFromColumnIndex($index + 1);
-            $sheet->setCellValue(
+            $sheet->setCellValueExplicit(
                 "{$column}6",
-                $reportColumns[$columnKey]['label'],
+                $columnLabels[$columnKey] ?? $reportColumns[$columnKey]['label'],
+                DataType::TYPE_STRING,
             );
         }
 

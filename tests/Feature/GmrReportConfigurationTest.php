@@ -70,6 +70,8 @@ class GmrReportConfigurationTest extends TestCase
             ->assertOk()
             ->assertSee('GMR Report Configuration')
             ->assertSee('Report Table Columns')
+            ->assertSee('Report heading')
+            ->assertSee('name="column_labels[volume_before_test_milling]"', false)
             ->assertSee('Volume in Bags Before Test Milling')
             ->assertSee('Volume in Bags After Test Milling')
             ->assertSee('Paper Size')
@@ -188,6 +190,14 @@ class GmrReportConfigurationTest extends TestCase
                     'volume_before_test_milling',
                     'volume_after_test_milling',
                 ],
+                'column_labels' => [
+                    ...array_map(
+                        fn (array $column): string => $column['label'],
+                        GmrReportConfiguration::availableReportColumns(),
+                    ),
+                    'volume_before_test_milling' => 'Pre-test volume (bags)',
+                    'volume_after_test_milling' => 'Post-test volume (bags)',
+                ],
             ],
         );
 
@@ -205,6 +215,10 @@ class GmrReportConfigurationTest extends TestCase
         $this->assertSame(
             ['volume_before_test_milling', 'volume_after_test_milling'],
             $config->getVisibleReportColumns(),
+        );
+        $this->assertSame(
+            'Pre-test volume (bags)',
+            $config->getReportColumnLabels()['volume_before_test_milling'],
         );
     }
 
@@ -228,6 +242,7 @@ class GmrReportConfigurationTest extends TestCase
             'margin_unit',
         ]);
         $requestData['visible_columns'] = ['unknown_column'];
+        $requestData['column_labels'] = $config->getReportColumnLabels();
 
         $this->actingAs($this->rmecUser)
             ->put(route('gmr.config.update'), $requestData)
@@ -237,6 +252,38 @@ class GmrReportConfigurationTest extends TestCase
             array_keys(GmrReportConfiguration::availableReportColumns()),
             $config->fresh()->getVisibleReportColumns(),
         );
+    }
+
+    public function test_rmec_cannot_save_unrecognized_gmr_report_column_labels(): void
+    {
+        $config = GmrReportConfiguration::current();
+        $requestData = $config->only([
+            'title',
+            'subtitle',
+            'region_text',
+            'branch_text',
+            'paper_size',
+            'custom_width',
+            'custom_height',
+            'custom_unit',
+            'orientation',
+            'margin_top',
+            'margin_right',
+            'margin_bottom',
+            'margin_left',
+            'margin_unit',
+        ]);
+        $requestData['visible_columns'] = array_keys(
+            GmrReportConfiguration::availableReportColumns(),
+        );
+        $requestData['column_labels'] = [
+            ...$config->getReportColumnLabels(),
+            'unknown_column' => 'Unknown heading',
+        ];
+
+        $this->actingAs($this->rmecUser)
+            ->put(route('gmr.config.update'), $requestData)
+            ->assertSessionHasErrors('column_labels');
     }
 
     public function test_rmec_can_save_custom_paper_dimensions(): void
@@ -257,6 +304,10 @@ class GmrReportConfigurationTest extends TestCase
             'margin_left' => 0.5,
             'margin_unit' => 'in',
             'visible_columns' => array_keys(
+                GmrReportConfiguration::availableReportColumns(),
+            ),
+            'column_labels' => array_map(
+                fn (array $column): string => $column['label'],
                 GmrReportConfiguration::availableReportColumns(),
             ),
         ]);
@@ -456,6 +507,10 @@ class GmrReportConfigurationTest extends TestCase
                 'volume_before_test_milling',
                 'volume_after_test_milling',
             ],
+            'column_labels' => [
+                'volume_before_test_milling' => 'Before Milling Bags',
+                'volume_after_test_milling' => 'Remaining Bags',
+            ],
         ]);
 
         $this->actingAs($this->rmecUser)
@@ -464,8 +519,8 @@ class GmrReportConfigurationTest extends TestCase
             ])
             ->assertOk()
             ->assertSee('Volume before test milling is the pile’s original volume')
-            ->assertSee('Volume in Bags Before Test Milling')
-            ->assertSee('Volume in Bags After Test Milling')
+            ->assertSee('Before Milling Bags')
+            ->assertSee('Remaining Bags')
             ->assertSee('11,522')
             ->assertSee('1,522')
             ->assertDontSee('Warehouse')
@@ -527,6 +582,12 @@ class GmrReportConfigurationTest extends TestCase
         $rows = $service->getRowsForPiles([$pile1->id]);
         $config = $service->getConfiguration();
         $config->branch_text = 'North Cotabato';
+        $columnLabels = array_map(
+            fn (array $column): string => $column['label'],
+            GmrReportConfiguration::availableReportColumns(),
+        );
+        $columnLabels['volume_before_test_milling'] = 'Before Milling Bags';
+        $config->column_labels = $columnLabels;
         $signatories = $service->getActiveSignatories();
 
         $response = $service->exportExcel(
@@ -551,7 +612,7 @@ class GmrReportConfigurationTest extends TestCase
         );
         $this->assertSame('North Cotabato Branch', $sheet->getCell('A4')->getValue());
         $this->assertSame('Warehouse', $sheet->getCell('A6')->getValue());
-        $this->assertSame('Volume in Bags Before Test Milling', $sheet->getCell('C6')->getValue());
+        $this->assertSame('Before Milling Bags', $sheet->getCell('C6')->getValue());
         $this->assertSame('Volume in Bags After Test Milling', $sheet->getCell('D6')->getValue());
         $this->assertSame('PMR(%)', $sheet->getCell('F6')->getValue());
         $this->assertSame('AMR(%)', $sheet->getCell('G6')->getValue());

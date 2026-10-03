@@ -48,7 +48,7 @@ class EmrDashboardTest extends TestCase
         $response
             ->assertOk()
             ->assertSee('Note: Volume values shown are before test milling.')
-            ->assertSee('Volume Before Test Milling (bags)')
+            ->assertSee('Volume (bags)')
             ->assertSee('Total Piles')
             ->assertDontSee('Total Warehouses')
             ->assertSee('2', false)

@@ -123,7 +123,7 @@
                 <th style="width: 32px;">MC (%)</th>
                 <th style="width: 45px;">Quality</th>
                 <th style="width: 30px;">Aged (mos)</th>
-                <th style="width: 45px;">Volume Before Test Milling (bags)</th>
+                <th style="width: 45px;">Volume (bags)</th>
                 <th style="width: 60px;">Rice Miller</th>
                 <th style="width: 32px;">Trial</th>
                 <th style="width: 45px;">Palay In (kg)</th>

@@ -179,6 +179,7 @@ class GmrReportPrintController extends Controller
             'signatories' => $signatories,
             'branchName' => $branchName,
             'visibleColumns' => $config->getVisibleReportColumns(),
+            'columnLabels' => $config->getReportColumnLabels(),
             'printUrlWithPdf' => $printUrlWithPdf,
             'printUrlWithExcel' => $printUrlWithExcel,
             'selectedPileIds' => $allowedPileIds,

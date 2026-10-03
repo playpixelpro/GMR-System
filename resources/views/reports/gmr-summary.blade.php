@@ -68,7 +68,7 @@
         ],
         [
             ['label' => 'Total Piles', 'value' => number_format($summary['piles']), 'class' => 'text-lg xl:text-xl'],
-            ['label' => 'Volume Before Test Milling (bags)', 'value' => number_format($summary['volume_bags'], 3), 'class' => 'text-lg xl:text-xl'],
+            ['label' => 'Volume (bags)', 'value' => number_format($summary['volume_bags'], 3), 'class' => 'text-lg xl:text-xl'],
             ['label' => 'Average PMR', 'value' => $formatPercentage($summary['pmr']), 'class' => 'text-lg xl:text-xl'],
             ['label' => 'Average AMR', 'value' => $formatPercentage($summary['amr']), 'class' => 'text-lg xl:text-xl'],
             ['label' => 'Overall EMR Range', 'value' => $formatRange($summary['emr_lower'] ?? $summary['emr_min'] ?? null, $summary['emr_upper'] ?? $summary['emr_max'] ?? null), 'class' => 'text-lg xl:text-xl'],
@@ -97,7 +97,7 @@
                     <tr class="border-b border-base-content/15 text-sm font-semibold text-black">
                         <th>Warehouse</th>
                         <th class="text-end">Piles</th>
-                        <th class="text-end">Volume Before Test Milling (bags)</th>
+                        <th class="text-end">Total Volume (bags)</th>
                         <th class="text-end">Average PMR</th>
                         <th class="text-end">Average AMR</th>
                         <th class="text-end">EMR Range</th>
@@ -166,7 +166,7 @@
                             <th>Branch</th>
                             <th>Warehouse</th>
                             <th>Pile No.</th>
-                            <th class="text-end">Volume Before Test Milling (bags)</th>
+                            <th class="text-end">Volume (bags)</th>
                             <th class="text-end">PMR</th>
                             <th class="text-end">AMR</th>
                             <th>EMR</th>
