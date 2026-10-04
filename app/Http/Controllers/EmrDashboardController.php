@@ -233,6 +233,10 @@ class EmrDashboardController extends Controller
                 'volume_bags' => $pile->volume_kg !== null
                         ? (float) $pile->volume_kg / 50
                         : null,
+                'volume_after_test_milling_bags' => Pile::calculateVolumeAfterTestMillingBags(
+                    $pile->volume_kg,
+                    $pile->test_milling_volume_kg,
+                ),
                 'purity' => $pile->purity,
                 'quality' => $pile->quality ?? '—',
                 'amr' => $gate['amr_rate'],

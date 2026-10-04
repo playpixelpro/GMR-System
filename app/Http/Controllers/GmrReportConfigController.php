@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\GmrReportConfiguration;
 use App\Models\GmrReportSignatory;
 use App\Services\GmrReportService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class GmrReportConfigController extends Controller
@@ -43,6 +45,8 @@ class GmrReportConfigController extends Controller
         return view('reports.gmr-config', [
             'config' => $config,
             'signatories' => $signatories,
+            'reportColumns' => GmrReportConfiguration::availableReportColumns(),
+            'columnLabels' => $config->getReportColumnLabels(),
         ]);
     }
 
@@ -52,6 +56,23 @@ class GmrReportConfigController extends Controller
     public function update(Request $request): RedirectResponse
     {
         $this->authorizeRmec();
+
+        $availableColumns = array_keys(
+            GmrReportConfiguration::availableReportColumns(),
+        );
+        $columnLabelRules = [
+            'column_labels' => [
+                'required',
+                'array:'.implode(',', $availableColumns),
+            ],
+        ];
+        foreach ($availableColumns as $columnKey) {
+            $columnLabelRules["column_labels.{$columnKey}"] = [
+                'required',
+                'string',
+                'max:100',
+            ];
+        }
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -68,6 +89,14 @@ class GmrReportConfigController extends Controller
             'margin_bottom' => ['required', 'numeric', 'min:0', 'max:50'],
             'margin_left' => ['required', 'numeric', 'min:0', 'max:50'],
             'margin_unit' => ['required', 'string', 'in:in,mm,cm'],
+            'visible_columns' => ['required', 'array', 'min:1'],
+            'visible_columns.*' => [
+                'required',
+                'string',
+                'distinct',
+                Rule::in($availableColumns),
+            ],
+            ...$columnLabelRules,
         ]);
 
         $config = $this->reportService->getConfiguration();
@@ -188,7 +217,11 @@ class GmrReportConfigController extends Controller
             'rows' => $sampleRows,
             'config' => $config,
             'signatories' => $signatories,
-            'branchName' => $config->branch_text ?: 'North Cotabato Branch',
+            'branchName' => $this->reportService->formatBranchName(
+                $config->branch_text ?: 'North Cotabato',
+            ),
+            'visibleColumns' => $config->getVisibleReportColumns(),
+            'columnLabels' => $config->getReportColumnLabels(),
             'isPreview' => true,
         ]);
     }

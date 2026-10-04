@@ -9,6 +9,7 @@ use App\Models\PmrRecord;
 use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use Tests\TestCase;
 
 class GmrSummaryDashboardTest extends TestCase
@@ -98,6 +99,7 @@ class GmrSummaryDashboardTest extends TestCase
         $this->get(route('gmr.summary'))
             ->assertOk()
             ->assertSee(route('gmr.summary.export.excel'), false)
+            ->assertSee('Note: Volume values shown are before test milling.')
             ->assertSee('Excel Export');
     }
 
@@ -109,6 +111,7 @@ class GmrSummaryDashboardTest extends TestCase
             'name' => 'Export Warehouse',
         ]);
         $pile = $this->createPile($warehouse, '101', 50000);
+        $pile->update(['test_milling_volume_kg' => 10000]);
         $this->createAmrRecord($pile, 65.0);
         $this->createPmrRecord($pile, 66.0);
 
@@ -120,6 +123,18 @@ class GmrSummaryDashboardTest extends TestCase
         $response->assertOk();
         $this->assertStringContainsString('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', (string) $response->headers->get('Content-Type'));
         $this->assertStringContainsString('attachment; filename=GMR_Summary_', (string) $response->headers->get('Content-Disposition'));
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'gmr_summary_xlsx_');
+        file_put_contents($tempFile, $response->streamedContent());
+        $spreadsheet = IOFactory::load($tempFile);
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $this->assertSame('Volume Before Test Milling (50kg bags)', $sheet->getCell('E5')->getValue());
+        $this->assertSame('Volume After Test Milling (50kg bags)', $sheet->getCell('F5')->getValue());
+        $this->assertSame(1000.0, (float) $sheet->getCell('E6')->getValue());
+        $this->assertSame(800.0, (float) $sheet->getCell('F6')->getValue());
+
+        unlink($tempFile);
     }
 
     private function createPile(

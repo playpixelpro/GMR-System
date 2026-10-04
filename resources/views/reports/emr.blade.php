@@ -12,6 +12,7 @@
 <div class="mb-5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
     <div>
         <h1 class="text-2xl font-bold leading-tight text-black sm:text-3xl">EMR - Dashboard</h1>
+        <p class="mt-1 text-sm text-black">Note: Volume values shown are before test milling.</p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
         @if (auth()->user()?->hasRole('RMEC', 'ADMINISTRATOR'))
@@ -68,7 +69,7 @@
         ],
         [
             ['label' => 'Total Piles', 'value' => number_format($summary['piles']), 'accent' => 'primary', 'size' => 'text-lg xl:text-xl'],
-            ['label' => 'Volume in Bags', 'value' => number_format($summary['volume_bags'], 3), 'accent' => 'secondary', 'size' => 'text-base xl:text-lg'],
+            ['label' => 'Volume (bags)', 'value' => number_format($summary['volume_bags'], 3), 'accent' => 'secondary', 'size' => 'text-base xl:text-lg'],
             ['label' => 'Average Purity', 'value' => $formatPercentage($summary['purity']), 'accent' => 'accent', 'size' => 'text-lg xl:text-xl'],
             ['label' => 'Average AMR', 'value' => $formatPercentage($summary['amr']), 'accent' => 'primary', 'size' => 'text-lg xl:text-xl'],
             ['label' => 'Average PMR', 'value' => $formatPercentage($summary['pmr']), 'accent' => 'secondary', 'size' => 'text-lg xl:text-xl'],

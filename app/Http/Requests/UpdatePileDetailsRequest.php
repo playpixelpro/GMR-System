@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Pile;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdatePileDetailsRequest extends FormRequest
 {
@@ -57,7 +59,15 @@ class UpdatePileDetailsRequest extends FormRequest
             'mc' => ['required', 'numeric', 'between:0,100'],
             'quality' => ['required', 'string'],
             'volume' => ['required', 'numeric', 'min:0'],
-            'test_milling_volume' => ['nullable', 'numeric', 'min:0'],
+            'test_milling_volume' => [
+                'nullable',
+                Rule::requiredIf(
+                    fn (): bool => $this->filled('volume') &&
+                        (float) $this->input('volume') >= Pile::TEST_MILLING_REQUIRED_VOLUME_KG,
+                ),
+                'numeric',
+                'min:0',
+            ],
         ];
     }
 }

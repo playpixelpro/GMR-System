@@ -165,6 +165,10 @@ class GmrSummaryController extends Controller
                 'volume_bags' => $pile->volume_kg !== null
                         ? round((float) $pile->volume_kg / 50, 3)
                         : null,
+                'volume_after_test_milling_bags' => Pile::calculateVolumeAfterTestMillingBags(
+                    $pile->volume_kg,
+                    $pile->test_milling_volume_kg,
+                ),
                 'quality' => ! empty($pile->quality) ? strtoupper($pile->quality) : 'GQA',
                 'amr' => null,
                 'pmr' => null,
@@ -222,6 +226,10 @@ class GmrSummaryController extends Controller
             'volume_bags' => $pile->volume_kg !== null
                     ? round((float) $pile->volume_kg / 50, 3)
                     : null,
+            'volume_after_test_milling_bags' => Pile::calculateVolumeAfterTestMillingBags(
+                $pile->volume_kg,
+                $pile->test_milling_volume_kg,
+            ),
             'quality' => ! empty($pile->quality) ? strtoupper($pile->quality) : 'GQA',
             'amr' => $amr,
             'pmr' => $pmr,

@@ -36,7 +36,7 @@ Route::middleware('guest')->group(function (): void {
     Route::post('/register', [
         AuthController::class,
         'storeRegistration',
-    ])->name('register.store');
+    ])->middleware('throttle:5,10')->name('register.store');
     Route::get('/register/confirmation', [
         AuthController::class,
         'registerConfirmation',

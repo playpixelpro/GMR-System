@@ -129,9 +129,15 @@
                            class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
                 </div>
                 <div>
-                    <label for="test_milling_volume" class="block text-sm font-medium text-gray-700">Test Milling Volume in kg</label>
-                    <input type="text" name="test_milling_volume" id="test_milling_volume" value="{{ old('test_milling_volume') }}" inputmode="decimal" autocomplete="off" data-pile-detail-field data-number-format placeholder="Optional"
+                    <label for="test_milling_volume" class="block text-sm font-medium text-gray-700">
+                        Test Milling Volume in kg
+                        <span data-test-milling-required-indicator class="hidden text-red-600">*</span>
+                    </label>
+                    <input type="text" name="test_milling_volume" id="test_milling_volume" value="{{ old('test_milling_volume') }}" inputmode="decimal" autocomplete="off" data-pile-detail-field data-number-format placeholder="Optional" aria-describedby="test-milling-volume-help"
                            class="mt-1 block w-full rounded-md border border-blue-500! bg-white px-3 py-2 text-sm shadow-sm focus:border-green-500! focus:ring-green-500!">
+                    <p id="test-milling-volume-help" class="mt-1 text-xs text-gray-600">
+                        Required when the pile volume is {{ number_format(\App\Models\Pile::TEST_MILLING_REQUIRED_VOLUME_KG) }} kg or greater.
+                    </p>
                 </div>
             </div>
             <div class="mt-4 flex justify-end">
@@ -361,6 +367,9 @@
         const newWarehouseInput = document.querySelector('#new_warehouse_name');
         const pileSelect = document.querySelector('#pile_id');
         const newPileInput = document.querySelector('#new_pile_number');
+        const testMillingVolumeInput = document.querySelector('#test_milling_volume');
+        const testMillingVolumeRequiredIndicator = document.querySelector('[data-test-milling-required-indicator]');
+        const testMillingRequiredVolumeKg = @json(\App\Models\Pile::TEST_MILLING_REQUIRED_VOLUME_KG);
         const testSections = document.querySelectorAll('[data-test-section]');
         const editPileDetailsButton = document.querySelector('[data-edit-pile-details]');
         const updateRoute = '{{ route('records.update', ['formType' => 'FORM_TYPE', 'record' => 'RECORD_ID']) }}';
@@ -399,9 +408,21 @@
             return isNaN(num) ? null : num;
         }
 
+        function updateTestMillingVolumeRequirement() {
+            if (!testMillingVolumeInput) return;
+
+            const volume = getPileVolume();
+            const isRequired = volume !== null && volume >= testMillingRequiredVolumeKg;
+
+            testMillingVolumeInput.required = isRequired;
+            testMillingVolumeInput.placeholder = isRequired ? 'Required' : 'Optional';
+            testMillingVolumeInput.setAttribute('aria-required', String(isRequired));
+            testMillingVolumeRequiredIndicator?.classList.toggle('hidden', !isRequired);
+        }
+
         function isAmrLowVolume() {
             const vol = getPileVolume();
-            return vol !== null && vol < 50000;
+            return vol !== null && vol < testMillingRequiredVolumeKg;
         }
 
         function updateTrialRecoveryRate(row) {
@@ -1043,6 +1064,7 @@
                 if (formType.value) {
                     resetTrialRows(document.querySelector(`[data-test-section="${formType.value}"]`));
                 }
+                updateTestMillingVolumeRequirement();
                 updateTrialOptions();
                 updateAmrVolumeLayout();
                 return;
@@ -1068,6 +1090,7 @@
             if (testMillingVolInput) {
                 testMillingVolInput.value = details.test_milling_volume ? formatVolume(String(details.test_milling_volume)) : '';
             }
+            updateTestMillingVolumeRequirement();
             updateTrialOptions();
             updateAmrVolumeLayout();
         }
@@ -1112,6 +1135,7 @@
             if (isNewPile) {
                 setPileDetailsLocked(false, false);
                 resetTrialRows(document.querySelector(`[data-test-section="${formType.value}"]`));
+                updateTestMillingVolumeRequirement();
                 updateTrialOptions();
                 updateAmrVolumeLayout();
                 if (openDialog) {
@@ -1473,6 +1497,7 @@
         const volumeInputField = document.querySelector('#volume');
         if (volumeInputField) {
             volumeInputField.addEventListener('input', () => {
+                updateTestMillingVolumeRequirement();
                 updateAmrVolumeLayout();
                 updateTrialOptions();
             });
@@ -1493,6 +1518,12 @@
 
             if (pileDetailsLocked) {
                 setPileDetailsLocked(false);
+                return;
+            }
+
+            updateTestMillingVolumeRequirement();
+            if (testMillingVolumeInput?.required && !testMillingVolumeInput.value.trim()) {
+                testMillingVolumeInput.reportValidity();
                 return;
             }
 
@@ -1659,6 +1690,7 @@
                 });
                 updateTrialOptions();
                 updateAmrVolumeLayout();
+                updateTestMillingVolumeRequirement();
             }, 0);
         });
         branchSelect.addEventListener('change', toggleNewBranch);
@@ -1679,6 +1711,7 @@
         }
         window.addEventListener('load', initAllDatePickers);
         initAllDatePickers();
+        updateTestMillingVolumeRequirement();
         updateTrialOptions();
         updateAmrVolumeLayout();
         toggleNewBranch();

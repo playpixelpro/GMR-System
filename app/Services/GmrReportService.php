@@ -10,6 +10,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
@@ -40,6 +42,19 @@ class GmrReportService
     public function getActiveSignatories(): Collection
     {
         return GmrReportSignatory::query()->active()->get();
+    }
+
+    public function formatBranchName(?string $branchName): string
+    {
+        $branchName = trim((string) $branchName);
+
+        if ($branchName === '') {
+            return 'North Cotabato Branch';
+        }
+
+        return str_ends_with(strtolower($branchName), ' branch')
+            ? $branchName
+            : "{$branchName} Branch";
     }
 
     /**
@@ -102,9 +117,13 @@ class GmrReportService
                 ($pile->warehouse?->branch?->name ?? '—'),
             'warehouse' => $pile->warehouse?->name ?? '—',
             'pile' => $pile->pile_number ?? ($pile->number ?? '—'),
-            'volume_bags' => $pile->volume_kg !== null
+            'volume_before_test_milling_bags' => $pile->volume_kg !== null
                     ? round((float) $pile->volume_kg / 50, 3)
                     : null,
+            'volume_after_test_milling_bags' => Pile::calculateVolumeAfterTestMillingBags(
+                $pile->volume_kg,
+                $pile->test_milling_volume_kg,
+            ),
             'quality' => ! empty($pile->quality)
                 ? strtoupper($pile->quality)
                 : 'GQA',
@@ -159,7 +178,8 @@ class GmrReportService
             [
                 'warehouse' => 'GID#2, MLANG BS',
                 'pile' => '1',
-                'volume_bags' => 11522,
+                'volume_before_test_milling_bags' => 11522,
+                'volume_after_test_milling_bags' => null,
                 'quality' => 'GQA',
                 'amr' => 61.53,
                 'pmr' => 62.22,
@@ -169,7 +189,8 @@ class GmrReportService
             [
                 'warehouse' => 'GID#2, MLANG BS',
                 'pile' => '2',
-                'volume_bags' => 12259,
+                'volume_before_test_milling_bags' => 12259,
+                'volume_after_test_milling_bags' => null,
                 'quality' => 'GQA',
                 'amr' => 62.66,
                 'pmr' => 62.77,
@@ -179,7 +200,8 @@ class GmrReportService
             [
                 'warehouse' => 'GID#2, MLANG BS',
                 'pile' => '3',
-                'volume_bags' => 6624,
+                'volume_before_test_milling_bags' => 6624,
+                'volume_after_test_milling_bags' => null,
                 'quality' => 'GQA',
                 'amr' => 63.56,
                 'pmr' => 63.59,
@@ -189,7 +211,8 @@ class GmrReportService
             [
                 'warehouse' => 'GID#2, MLANG BS',
                 'pile' => '4',
-                'volume_bags' => 4871,
+                'volume_before_test_milling_bags' => 4871,
+                'volume_after_test_milling_bags' => null,
                 'quality' => 'GQA',
                 'amr' => 64.41,
                 'pmr' => 64.78,
@@ -199,7 +222,8 @@ class GmrReportService
             [
                 'warehouse' => 'GID#2, MLANG BS',
                 'pile' => '5',
-                'volume_bags' => 9438,
+                'volume_before_test_milling_bags' => 9438,
+                'volume_after_test_milling_bags' => null,
                 'quality' => 'GQA',
                 'amr' => 62.91,
                 'pmr' => 63.14,
@@ -209,7 +233,8 @@ class GmrReportService
             [
                 'warehouse' => 'GID#4, MLANG BS',
                 'pile' => '1',
-                'volume_bags' => 7517,
+                'volume_before_test_milling_bags' => 7517,
+                'volume_after_test_milling_bags' => null,
                 'quality' => 'GQA',
                 'amr' => 63.25,
                 'pmr' => 63.64,
@@ -219,7 +244,8 @@ class GmrReportService
             [
                 'warehouse' => 'GID#4, MLANG BS',
                 'pile' => '2',
-                'volume_bags' => 3165,
+                'volume_before_test_milling_bags' => 3165,
+                'volume_after_test_milling_bags' => null,
                 'quality' => 'GQA',
                 'amr' => 62.92,
                 'pmr' => 63.29,
@@ -229,7 +255,8 @@ class GmrReportService
             [
                 'warehouse' => 'GID#4, MLANG BS',
                 'pile' => '9',
-                'volume_bags' => 2165,
+                'volume_before_test_milling_bags' => 2165,
+                'volume_after_test_milling_bags' => null,
                 'quality' => 'GQA',
                 'amr' => 62.43,
                 'pmr' => 63.66,
@@ -250,11 +277,17 @@ class GmrReportService
         Collection $signatories,
         ?string $branchName = null,
     ): Response {
+        $branchName = $this->formatBranchName(
+            $config->branch_text ?: ($branchName ?? 'North Cotabato'),
+        );
+
         $pdf = Pdf::loadView('reports.gmr-print-pdf', [
             'rows' => $rows,
             'config' => $config,
             'signatories' => $signatories,
             'branchName' => $branchName,
+            'visibleColumns' => $config->getVisibleReportColumns(),
+            'columnLabels' => $config->getReportColumnLabels(),
             'isPdf' => true,
         ]);
         $pdf->setOption('isPhpEnabled', true);
@@ -279,9 +312,27 @@ class GmrReportService
         Collection $signatories,
         ?string $branchName = null,
     ): StreamedResponse {
+        $reportColumns = GmrReportConfiguration::availableReportColumns();
+        $visibleColumns = $config->getVisibleReportColumns();
+        $columnLabels = $config->getReportColumnLabels();
+        $columnCount = count($visibleColumns);
+        $lastColumn = Coordinate::stringFromColumnIndex($columnCount);
+
         $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('GMR Report');
+
+        $mergeAcrossRow = function (int $rowNumber, int $startIndex, int $endIndex) use ($sheet): string {
+            $startColumn = Coordinate::stringFromColumnIndex($startIndex);
+            $endColumn = Coordinate::stringFromColumnIndex($endIndex);
+            $range = "{$startColumn}{$rowNumber}:{$endColumn}{$rowNumber}";
+
+            if ($startIndex < $endIndex) {
+                $sheet->mergeCells($range);
+            }
+
+            return $range;
+        };
 
         // Document header
         $sheet->setCellValue(
@@ -295,11 +346,13 @@ class GmrReportService
         $sheet->setCellValue('A3', $config->region_text ?? 'Region XII');
         $sheet->setCellValue(
             'A4',
-            $config->branch_text ?: $branchName ?? 'North Cotabato Branch',
+            $this->formatBranchName(
+                $config->branch_text ?: ($branchName ?? 'North Cotabato'),
+            ),
         );
 
         foreach (range(1, 4) as $hRow) {
-            $sheet->mergeCells("A{$hRow}:H{$hRow}");
+            $mergeAcrossRow($hRow, 1, $columnCount);
             $sheet
                 ->getStyle("A{$hRow}")
                 ->getAlignment()
@@ -316,18 +369,13 @@ class GmrReportService
         $sheet->getStyle('A4')->getFont()->setBold(true)->setSize(10);
 
         // Table headers on row 6
-        $headers = [
-            'A' => 'Warehouse',
-            'B' => 'Pile No.',
-            'C' => 'Volume in Bags',
-            'D' => 'Quality',
-            'E' => 'PMR(%)',
-            'F' => 'AMR(%)',
-            'G' => 'EMR(%)',
-            'H' => 'GMR(%)',
-        ];
-        foreach ($headers as $col => $label) {
-            $sheet->setCellValue("{$col}6", $label);
+        foreach ($visibleColumns as $index => $columnKey) {
+            $column = Coordinate::stringFromColumnIndex($index + 1);
+            $sheet->setCellValueExplicit(
+                "{$column}6",
+                $columnLabels[$columnKey] ?? $reportColumns[$columnKey]['label'],
+                DataType::TYPE_STRING,
+            );
         }
 
         $headerStyle = [
@@ -352,114 +400,59 @@ class GmrReportService
                 ],
             ],
         ];
-        $sheet->getStyle('A6:H6')->applyFromArray($headerStyle);
+        $sheet->getStyle("A6:{$lastColumn}6")->applyFromArray($headerStyle);
         $sheet->getRowDimension(6)->setRowHeight(24);
 
         // Data rows starting at row 7
         $row = 7;
         foreach ($rows as $item) {
-            $sheet->setCellValue("A{$row}", $item['warehouse'] ?? '—');
-            $sheet->setCellValue("B{$row}", $item['pile'] ?? '—');
+            foreach ($visibleColumns as $index => $columnKey) {
+                $column = $reportColumns[$columnKey];
+                $columnLetter = Coordinate::stringFromColumnIndex($index + 1);
+                $value = $item[$column['field']] ?? null;
 
-            if ($item['volume_bags'] !== null) {
-                $sheet->setCellValue("C{$row}", (float) $item['volume_bags']);
+                $cellValue = match ($column['type']) {
+                    'emr' => str_replace('%', '', (string) ($value ?? '—')),
+                    'bags', 'percentage' => $value !== null
+                        ? (float) $value
+                        : '—',
+                    default => $value ?? '—',
+                };
+
+                $sheet->setCellValue("{$columnLetter}{$row}", $cellValue);
+
+                if ($value !== null && $column['type'] === 'bags') {
+                    $sheet
+                        ->getStyle("{$columnLetter}{$row}")
+                        ->getNumberFormat()
+                        ->setFormatCode('#,##0');
+                } elseif ($value !== null && $column['type'] === 'percentage') {
+                    $sheet
+                        ->getStyle("{$columnLetter}{$row}")
+                        ->getNumberFormat()
+                        ->setFormatCode('0.00');
+                }
+
+                $alignment = match ($column['alignment']) {
+                    'left' => Alignment::HORIZONTAL_LEFT,
+                    'right' => Alignment::HORIZONTAL_RIGHT,
+                    default => Alignment::HORIZONTAL_CENTER,
+                };
                 $sheet
-                    ->getStyle("C{$row}")
-                    ->getNumberFormat()
-                    ->setFormatCode('#,##0');
-            } else {
-                $sheet->setCellValue("C{$row}", '—');
-            }
+                    ->getStyle("{$columnLetter}{$row}")
+                    ->getAlignment()
+                    ->setHorizontal($alignment);
 
-            $sheet->setCellValue("D{$row}", $item['quality'] ?? 'GQA');
-
-            if ($item['pmr'] !== null) {
-                $sheet->setCellValue("E{$row}", (float) $item['pmr']);
-                $sheet
-                    ->getStyle("E{$row}")
-                    ->getNumberFormat()
-                    ->setFormatCode('0.00');
-            } else {
-                $sheet->setCellValue("E{$row}", '—');
-            }
-
-            if ($item['amr'] !== null) {
-                $sheet->setCellValue("F{$row}", (float) $item['amr']);
-                $sheet
-                    ->getStyle("F{$row}")
-                    ->getNumberFormat()
-                    ->setFormatCode('0.00');
-            } else {
-                $sheet->setCellValue("F{$row}", '—');
-            }
-
-            $sheet->setCellValue(
-                "G{$row}",
-                str_replace('%', '', (string) ($item['emr'] ?? '—')),
-            );
-
-            if ($item['gmr'] !== null) {
-                $sheet->setCellValue("H{$row}", (float) $item['gmr']);
-                $sheet
-                    ->getStyle("H{$row}")
-                    ->getNumberFormat()
-                    ->setFormatCode('0.00');
-            } else {
-                $sheet->setCellValue("H{$row}", '—');
+                if ($column['bold']) {
+                    $sheet
+                        ->getStyle("{$columnLetter}{$row}")
+                        ->getFont()
+                        ->setBold(true);
+                }
             }
 
             $sheet
-                ->getStyle("A{$row}")
-                ->getAlignment()
-                ->setHorizontal(Alignment::HORIZONTAL_LEFT);
-            $sheet
-                ->getStyle("B{$row}")
-                ->getAlignment()
-                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet
-                ->getStyle("C{$row}")
-                ->getAlignment()
-                ->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-            $sheet
-                ->getStyle("D{$row}")
-                ->getAlignment()
-                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet
-                ->getStyle("E{$row}:F{$row}")
-                ->getAlignment()
-                ->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-            $sheet
-                ->getStyle("G{$row}")
-                ->getAlignment()
-                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet
-                ->getStyle("H{$row}")
-                ->getAlignment()
-                ->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-
-            $sheet
-                ->getStyle("A{$row}")
-                ->getFont()
-                ->setBold(true);
-            $sheet
-                ->getStyle("B{$row}")
-                ->getFont()
-                ->setBold(true);
-            $sheet
-                ->getStyle("D{$row}")
-                ->getFont()
-                ->setBold(true);
-            $sheet
-                ->getStyle("G{$row}")
-                ->getFont()
-                ->setBold(true);
-            $sheet
-                ->getStyle("H{$row}")
-                ->getFont()
-                ->setBold(true);
-
-            $sheet
-                ->getStyle("A{$row}:H{$row}")
+                ->getStyle("A{$row}:{$lastColumn}{$row}")
                 ->getBorders()
                 ->getAllBorders()
                 ->setBorderStyle(Border::BORDER_THIN)
@@ -473,7 +466,7 @@ class GmrReportService
         $lastDataRow = $row - 1;
         if ($lastDataRow >= 7) {
             $sheet
-                ->getStyle("A{$lastDataRow}:H{$lastDataRow}")
+                ->getStyle("A{$lastDataRow}:{$lastColumn}{$lastDataRow}")
                 ->getBorders()
                 ->getBottom()
                 ->setBorderStyle(Border::BORDER_MEDIUM)
@@ -484,14 +477,14 @@ class GmrReportService
         // Signatories Section
         $currRow = $row + 2;
         $sheet->setCellValue("A{$currRow}", 'Prepared and Recommended By:');
-        $sheet->mergeCells("A{$currRow}:H{$currRow}");
+        $sectionRange = $mergeAcrossRow($currRow, 1, $columnCount);
         $sheet
-            ->getStyle("A{$currRow}")
+            ->getStyle($sectionRange)
             ->getFont()
             ->setBold(true)
             ->setSize(10);
         $sheet
-            ->getStyle("A{$currRow}")
+            ->getStyle($sectionRange)
             ->getAlignment()
             ->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $currRow++;
@@ -500,17 +493,64 @@ class GmrReportService
             "A{$currRow}",
             'Regional Milling Committee (RMEC) Members:',
         );
-        $sheet->mergeCells("A{$currRow}:H{$currRow}");
+        $sectionRange = $mergeAcrossRow($currRow, 1, $columnCount);
         $sheet
-            ->getStyle("A{$currRow}")
+            ->getStyle($sectionRange)
             ->getFont()
             ->setBold(true)
             ->setSize(9.5);
         $sheet
-            ->getStyle("A{$currRow}")
+            ->getStyle($sectionRange)
             ->getAlignment()
             ->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $currRow += 2;
+
+        $writeSignatory = function (
+            object $signatory,
+            int $rowNumber,
+            int $startIndex,
+            int $endIndex,
+            float $nameFontSize = 9.5,
+        ) use ($sheet, $mergeAcrossRow): void {
+            $nameRange = $mergeAcrossRow($rowNumber, $startIndex, $endIndex);
+            $startColumn = Coordinate::stringFromColumnIndex($startIndex);
+            $nameCell = "{$startColumn}{$rowNumber}";
+            $sheet->setCellValue($nameCell, strtoupper($signatory->name));
+            $sheet
+                ->getStyle($nameRange)
+                ->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet
+                ->getStyle($nameCell)
+                ->getFont()
+                ->setBold(true)
+                ->setSize($nameFontSize);
+            $sheet
+                ->getStyle($nameRange)
+                ->getBorders()
+                ->getBottom()
+                ->setBorderStyle(Border::BORDER_THIN);
+
+            $positionRow = $rowNumber + 1;
+            $positionRange = $mergeAcrossRow(
+                $positionRow,
+                $startIndex,
+                $endIndex,
+            );
+            $sheet->setCellValue(
+                "{$startColumn}{$positionRow}",
+                $signatory->position,
+            );
+            $sheet
+                ->getStyle($positionRange)
+                ->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet
+                ->getStyle("{$startColumn}{$positionRow}")
+                ->getFont()
+                ->setItalic(true)
+                ->setSize(8);
+        };
 
         $activeList = $signatories ?? collect();
         $members = $activeList
@@ -528,198 +568,75 @@ class GmrReportService
             ->filter(fn ($s) => $s->role_group === 'reviewer')
             ->values();
 
-        for ($i = 0; $i < $members->count(); $i += 2) {
-            $m1 = $members[$i] ?? null;
-            $m2 = $members[$i + 1] ?? null;
+        if ($columnCount === 1) {
+            foreach ($members as $member) {
+                $writeSignatory($member, $currRow, 1, $columnCount);
+                $currRow += 3;
+            }
+        } else {
+            $leftEndIndex = intdiv($columnCount, 2);
+            $rightStartIndex = $leftEndIndex + 1;
 
-            if ($m1) {
-                $sheet->setCellValue("B{$currRow}", strtoupper($m1->name));
-                $sheet->mergeCells("B{$currRow}:C{$currRow}");
-                $sheet
-                    ->getStyle("B{$currRow}:C{$currRow}")
-                    ->getAlignment()
-                    ->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                $sheet
-                    ->getStyle("B{$currRow}")
-                    ->getFont()
-                    ->setBold(true)
-                    ->setSize(9.5);
-                $sheet
-                    ->getStyle("B{$currRow}:C{$currRow}")
-                    ->getBorders()
-                    ->getBottom()
-                    ->setBorderStyle(Border::BORDER_THIN);
-            }
-            if ($m2) {
-                $sheet->setCellValue("F{$currRow}", strtoupper($m2->name));
-                $sheet->mergeCells("F{$currRow}:G{$currRow}");
-                $sheet
-                    ->getStyle("F{$currRow}:G{$currRow}")
-                    ->getAlignment()
-                    ->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                $sheet
-                    ->getStyle("F{$currRow}")
-                    ->getFont()
-                    ->setBold(true)
-                    ->setSize(9.5);
-                $sheet
-                    ->getStyle("F{$currRow}:G{$currRow}")
-                    ->getBorders()
-                    ->getBottom()
-                    ->setBorderStyle(Border::BORDER_THIN);
-            }
-            $currRow++;
+            for ($i = 0; $i < $members->count(); $i += 2) {
+                $firstMember = $members[$i] ?? null;
+                $secondMember = $members[$i + 1] ?? null;
 
-            if ($m1) {
-                $sheet->setCellValue("B{$currRow}", $m1->position);
-                $sheet->mergeCells("B{$currRow}:C{$currRow}");
-                $sheet
-                    ->getStyle("B{$currRow}:C{$currRow}")
-                    ->getAlignment()
-                    ->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                $sheet
-                    ->getStyle("B{$currRow}")
-                    ->getFont()
-                    ->setItalic(true)
-                    ->setSize(8);
+                if ($firstMember) {
+                    $writeSignatory($firstMember, $currRow, 1, $leftEndIndex);
+                }
+                if ($secondMember) {
+                    $writeSignatory(
+                        $secondMember,
+                        $currRow,
+                        $rightStartIndex,
+                        $columnCount,
+                    );
+                }
+
+                $currRow += 3;
             }
-            if ($m2) {
-                $sheet->setCellValue("F{$currRow}", $m2->position);
-                $sheet->mergeCells("F{$currRow}:G{$currRow}");
-                $sheet
-                    ->getStyle("F{$currRow}:G{$currRow}")
-                    ->getAlignment()
-                    ->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                $sheet
-                    ->getStyle("F{$currRow}")
-                    ->getFont()
-                    ->setItalic(true)
-                    ->setSize(8);
-            }
-            $currRow += 2;
         }
 
         foreach ($chairpersons as $chair) {
-            $sheet->setCellValue("C{$currRow}", strtoupper($chair->name));
-            $sheet->mergeCells("C{$currRow}:F{$currRow}");
-            $sheet
-                ->getStyle("C{$currRow}:F{$currRow}")
-                ->getAlignment()
-                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet
-                ->getStyle("C{$currRow}")
-                ->getFont()
-                ->setBold(true)
-                ->setSize(9.5);
-            $sheet
-                ->getStyle("C{$currRow}:F{$currRow}")
-                ->getBorders()
-                ->getBottom()
-                ->setBorderStyle(Border::BORDER_THIN);
-            $currRow++;
-
-            $sheet->setCellValue("C{$currRow}", $chair->position);
-            $sheet->mergeCells("C{$currRow}:F{$currRow}");
-            $sheet
-                ->getStyle("C{$currRow}:F{$currRow}")
-                ->getAlignment()
-                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet
-                ->getStyle("C{$currRow}")
-                ->getFont()
-                ->setItalic(true)
-                ->setSize(8);
-            $currRow += 2;
+            $writeSignatory($chair, $currRow, 1, $columnCount);
+            $currRow += 3;
         }
 
         foreach ($coa as $coaRep) {
-            $sheet->mergeCells("C{$currRow}:F{$currRow}");
+            $signatureRange = $mergeAcrossRow($currRow, 1, $columnCount);
             $sheet
-                ->getStyle("C{$currRow}:F{$currRow}")
+                ->getStyle($signatureRange)
                 ->getBorders()
                 ->getBottom()
                 ->setBorderStyle(Border::BORDER_THIN);
             $currRow++;
 
-            $sheet->setCellValue("C{$currRow}", strtoupper($coaRep->name));
-            $sheet->mergeCells("C{$currRow}:F{$currRow}");
-            $sheet
-                ->getStyle("C{$currRow}:F{$currRow}")
-                ->getAlignment()
-                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet
-                ->getStyle("C{$currRow}")
-                ->getFont()
-                ->setBold(true)
-                ->setSize(9);
-            $currRow++;
-
-            if ($coaRep->position) {
-                $sheet->setCellValue("C{$currRow}", $coaRep->position);
-                $sheet->mergeCells("C{$currRow}:F{$currRow}");
-                $sheet
-                    ->getStyle("C{$currRow}:F{$currRow}")
-                    ->getAlignment()
-                    ->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                $sheet
-                    ->getStyle("C{$currRow}")
-                    ->getFont()
-                    ->setItalic(true)
-                    ->setSize(8);
-                $currRow++;
-            }
-            $currRow++;
+            $writeSignatory($coaRep, $currRow, 1, $columnCount, 9);
+            $currRow += 3;
         }
 
         if ($reviewers->isNotEmpty()) {
             $sheet->setCellValue("A{$currRow}", 'Reviewed by:');
-            $sheet->mergeCells("A{$currRow}:H{$currRow}");
+            $sectionRange = $mergeAcrossRow($currRow, 1, $columnCount);
             $sheet
-                ->getStyle("A{$currRow}")
+                ->getStyle($sectionRange)
                 ->getFont()
                 ->setBold(true)
                 ->setSize(9.5);
             $sheet
-                ->getStyle("A{$currRow}")
+                ->getStyle($sectionRange)
                 ->getAlignment()
                 ->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $currRow += 2;
 
             foreach ($reviewers as $rev) {
-                $sheet->setCellValue("C{$currRow}", strtoupper($rev->name));
-                $sheet->mergeCells("C{$currRow}:F{$currRow}");
-                $sheet
-                    ->getStyle("C{$currRow}:F{$currRow}")
-                    ->getAlignment()
-                    ->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                $sheet
-                    ->getStyle("C{$currRow}")
-                    ->getFont()
-                    ->setBold(true)
-                    ->setSize(9.5);
-                $sheet
-                    ->getStyle("C{$currRow}:F{$currRow}")
-                    ->getBorders()
-                    ->getBottom()
-                    ->setBorderStyle(Border::BORDER_THIN);
-                $currRow++;
-
-                $sheet->setCellValue("C{$currRow}", $rev->position);
-                $sheet->mergeCells("C{$currRow}:F{$currRow}");
-                $sheet
-                    ->getStyle("C{$currRow}:F{$currRow}")
-                    ->getAlignment()
-                    ->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                $sheet
-                    ->getStyle("C{$currRow}")
-                    ->getFont()
-                    ->setItalic(true)
-                    ->setSize(8);
-                $currRow += 2;
+                $writeSignatory($rev, $currRow, 1, $columnCount);
+                $currRow += 3;
             }
         }
 
-        foreach (range('A', 'H') as $col) {
+        foreach (range(1, $columnCount) as $columnIndex) {
+            $col = Coordinate::stringFromColumnIndex($columnIndex);
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 

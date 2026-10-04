@@ -211,6 +211,61 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Card 4: Report Table Columns -->
+                @php
+                    $oldSelectedColumns = old('visible_columns');
+                    $selectedColumns = is_array($oldSelectedColumns)
+                        ? $oldSelectedColumns
+                        : $config->getVisibleReportColumns();
+                @endphp
+                <div class="card border border-base-content/20 bg-base-100 shadow-sm">
+                    <div class="card-header border-b border-base-content/10 px-5 py-4">
+                        <div class="flex items-center gap-2">
+                            <span class="icon-[tabler--columns] size-5 text-primary"></span>
+                            <h2 class="card-title text-base font-bold">Report Table Columns</h2>
+                        </div>
+                        <p class="mt-1 text-xs text-base-content/60">
+                            Choose which columns appear in the print view, PDF, and Excel export, and edit each heading. Keep at least one column visible.
+                        </p>
+                    </div>
+                    <div class="card-body grid grid-cols-1 gap-3 p-5 sm:grid-cols-2">
+                        @foreach ($reportColumns as $columnKey => $column)
+                            @php
+                                $oldColumnLabel = old('column_labels.'.$columnKey);
+                                $columnLabel = is_string($oldColumnLabel)
+                                    ? $oldColumnLabel
+                                    : $columnLabels[$columnKey];
+                            @endphp
+                            <div class="space-y-2 rounded-lg border border-base-content/10 p-3 hover:bg-base-200/50">
+                                <label class="flex cursor-pointer items-start gap-3">
+                                    <input
+                                        type="checkbox"
+                                        name="visible_columns[]"
+                                        value="{{ $columnKey }}"
+                                        class="checkbox checkbox-primary checkbox-sm mt-0.5"
+                                        @checked(in_array($columnKey, $selectedColumns, true))
+                                    >
+                                    <span class="text-sm font-medium">{{ $columnLabel }}</span>
+                                </label>
+                                <div>
+                                    <label for="column-label-{{ $columnKey }}" class="text-xs font-medium text-base-content/70">
+                                        Report heading
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="column-label-{{ $columnKey }}"
+                                        name="column_labels[{{ $columnKey }}]"
+                                        value="{{ $columnLabel }}"
+                                        maxlength="100"
+                                        required
+                                        class="input input-bordered input-sm mt-1 w-full"
+                                    >
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
             </div>
 
             <!-- Right 1 Col: Summary & Quick Actions -->

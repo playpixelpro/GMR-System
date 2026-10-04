@@ -103,6 +103,7 @@
     <div class="header">
         <h1>National Food Authority</h1>
         <h2>Potential Milling Recovery (PMR) Report</h2>
+        <p style="font-size: 7px; margin: 0 0 3px;">Note: Volume values shown are before test milling.</p>
         <div class="meta">
             Branch: <strong>{{ $filterBranch ?? 'All Branches' }}</strong> &nbsp;|&nbsp;
             Warehouse: <strong>{{ $filterWarehouse ?? 'All Warehouses' }}</strong> &nbsp;|&nbsp;
