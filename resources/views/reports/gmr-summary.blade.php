@@ -11,6 +11,7 @@
 <div class="mb-5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
     <div>
         <h1 class="text-2xl font-bold leading-tight text-black sm:text-3xl">GMR Dashboard</h1>
+        <p class="mt-1 text-sm text-black">Note: Volume values shown are before test milling.</p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
         <a href="{{ route('gmr.summary.export.excel', request()->query()) }}" class="btn btn-outline btn-success btn-sm sm:btn-md gap-2" title="Export GMR summary to Excel (.xlsx)">

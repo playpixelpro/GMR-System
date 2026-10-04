@@ -161,6 +161,12 @@
             margin: 2px 0;
         }
 
+        .header-volume-note {
+            font-size: 8pt;
+            font-style: italic;
+            margin: 2px 0;
+        }
+
         .header-region {
             font-size: 11pt;
             font-weight: 700;
@@ -176,6 +182,7 @@
         /* Report Table */
         .gmr-table {
             width: 100%;
+            table-layout: fixed;
             border-collapse: collapse;
             border: 2px solid #000;
             margin-bottom: 20px;
@@ -195,6 +202,7 @@
             font-weight: 800;
             text-align: center;
             text-transform: uppercase;
+            white-space: normal;
         }
 
         .text-left { text-align: left; }
@@ -365,57 +373,51 @@
             <div class="header-section">
                 <h1 class="header-title">{{ $config->title }}</h1>
                 <div class="header-subtitle">{{ $config->subtitle }}</div>
+                <div class="header-volume-note">Note: Volume before test milling is the pile’s original volume; after-test volume is calculated by subtracting the test milling volume.</div>
                 <div class="header-region">{{ $config->region_text }}</div>
-                <div class="header-branch">{{ $config->branch_text ?: ($branchName ?? 'North Cotabato Branch') }}</div>
+                <div class="header-branch">{{ $branchName ?? ($config->branch_text ?: 'North Cotabato Branch') }}</div>
             </div>
 
             <!-- Table Section -->
+            @php
+                $reportColumns = \App\Models\GmrReportConfiguration::availableReportColumns();
+                $visibleColumnWidth = array_sum(array_map(
+                    fn (string $columnKey): int => $reportColumns[$columnKey]['width'],
+                    $visibleColumns,
+                ));
+            @endphp
             <table class="gmr-table">
                 <thead>
                     <tr>
-                        <th style="width: 25%;">Warehouse</th>
-                        <th style="width: 8%;">Pile No.</th>
-                        <th style="width: 14%;">Volume in Bags</th>
-                        <th style="width: 9%;">Quality</th>
-                        <th style="width: 11%;">PMR(%)</th>
-                        <th style="width: 11%;">AMR(%)</th>
-                        <th style="width: 14%;">EMR(%)</th>
-                        <th style="width: 8%;">GMR(%)</th>
+                        @foreach ($visibleColumns as $columnKey)
+                            <th style="width: {{ $reportColumns[$columnKey]['width'] / $visibleColumnWidth * 100 }}%">
+                                {{ $columnLabels[$columnKey] ?? $reportColumns[$columnKey]['label'] }}
+                            </th>
+                        @endforeach
                     </tr>
                 </thead>
                 <tbody>
-                    @php
-                        $totalBags = 0;
-                    @endphp
                     @forelse ($rows as $row)
-                        @php
-                            if (isset($row['volume_bags']) && is_numeric($row['volume_bags'])) {
-                                $totalBags += (float) $row['volume_bags'];
-                            }
-                        @endphp
                         <tr>
-                            <td class="text-left font-bold">{{ $row['warehouse'] }}</td>
-                            <td class="text-center font-bold">{{ $row['pile'] }}</td>
-                            <td class="text-right">
-                                {{ $row['volume_bags'] !== null ? number_format((float) $row['volume_bags']) : '—' }}
-                            </td>
-                            <td class="text-center font-bold">{{ $row['quality'] ?? 'GQA' }}</td>
-                            <td class="text-center">
-                                {{ $row['pmr'] !== null ? number_format((float) $row['pmr'], 2) : '—' }}
-                            </td>
-                            <td class="text-center">
-                                {{ $row['amr'] !== null ? number_format((float) $row['amr'], 2) : '—' }}
-                            </td>
-                            <td class="text-center font-bold">
-                                {{ str_replace('%', '', (string) ($row['emr'] ?? '—')) }}
-                            </td>
-                            <td class="text-center font-bold">
-                                {{ $row['gmr'] !== null ? number_format((float) $row['gmr'], 2) : '—' }}
-                            </td>
+                            @foreach ($visibleColumns as $columnKey)
+                                @php
+                                    $column = $reportColumns[$columnKey];
+                                    $value = $row[$column['field']] ?? null;
+                                    $displayValue = match ($column['type']) {
+                                        'bags' => $value !== null ? number_format((float) $value) : '—',
+                                        'percentage' => $value !== null ? number_format((float) $value, 2) : '—',
+                                        'emr' => str_replace('%', '', (string) ($value ?? '—')),
+                                        default => $value ?? '—',
+                                    };
+                                @endphp
+                                <td class="{{ $column['bold'] ? 'font-bold' : '' }}" style="text-align: {{ $column['alignment'] }}; {{ $columnKey === 'warehouse' ? 'white-space: normal; overflow-wrap: anywhere;' : '' }}">
+                                    {{ $displayValue }}
+                                </td>
+                            @endforeach
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center" style="padding: 20px;">No GMR records selected.</td>
+                            <td colspan="{{ count($visibleColumns) }}" class="text-center" style="padding: 20px;">No GMR records selected.</td>
                         </tr>
                     @endforelse
                 </tbody>

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Pile;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
@@ -34,9 +35,9 @@ class PmrExportService
         $filterText = 'Branch: '.($filters['branch'] ?? 'All Branches').' | Warehouse: '.($filters['warehouse'] ?? 'All Warehouses').' | Generated on: '.now()->format('Y-m-d H:i:s');
         $sheet->setCellValue('A3', $filterText);
 
-        $sheet->mergeCells('A1:O1');
-        $sheet->mergeCells('A2:O2');
-        $sheet->mergeCells('A3:O3');
+        $sheet->mergeCells('A1:P1');
+        $sheet->mergeCells('A2:P2');
+        $sheet->mergeCells('A3:P3');
 
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14)->setColor(new Color('064E3B'));
         $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(11);
@@ -55,12 +56,13 @@ class PmrExportService
             'G' => 'MC (%)',
             'H' => 'Quality',
             'I' => 'Aged (mos)',
-            'J' => 'Volume (50kg bags)',
-            'K' => 'Trial',
-            'L' => 'Recovery Rate (%)',
-            'M' => 'Mean (%)',
-            'N' => 'PMR (%)',
-            'O' => 'Status',
+            'J' => 'Volume Before Test Milling (50kg bags)',
+            'K' => 'Volume After Test Milling (50kg bags)',
+            'L' => 'Trial',
+            'M' => 'Recovery Rate (%)',
+            'N' => 'Mean (%)',
+            'O' => 'PMR (%)',
+            'P' => 'Status',
         ];
 
         foreach ($headers as $col => $header) {
@@ -90,7 +92,7 @@ class PmrExportService
             ],
         ];
 
-        $sheet->getStyle('A5:O5')->applyFromArray($headerStyle);
+        $sheet->getStyle('A5:P5')->applyFromArray($headerStyle);
         $sheet->getRowDimension(5)->setRowHeight(28);
 
         $row = 6;
@@ -115,6 +117,13 @@ class PmrExportService
             $quality = is_array($group) || $group instanceof \ArrayAccess ? ($group['quality'] ?? $pile?->quality ?? $firstRecord?->quality ?? '') : ($pile?->quality ?? $firstRecord?->quality ?? '');
             $agedMonths = is_array($group) || $group instanceof \ArrayAccess ? ($group['aged_months'] ?? $pile?->aged_months ?? $firstRecord?->aged_months ?? 0) : ($pile?->aged_months ?? $firstRecord?->aged_months ?? 0);
             $volumeKg = is_array($group) || $group instanceof \ArrayAccess ? ($group['volume_kg'] ?? $pile?->volume_kg ?? $firstRecord?->volume_kg ?? 0) : ($pile?->volume_kg ?? $firstRecord?->volume_kg ?? 0);
+            $testMillingVolumeKg = is_array($group) || $group instanceof \ArrayAccess
+                ? ($group['test_milling_volume_kg'] ?? $pile?->test_milling_volume_kg ?? $firstRecord?->test_milling_volume_kg)
+                : ($pile?->test_milling_volume_kg ?? $firstRecord?->test_milling_volume_kg);
+            $volumeAfterTestMillingBags = Pile::calculateVolumeAfterTestMillingBags(
+                $volumeKg,
+                $testMillingVolumeKg,
+            );
             $mean = is_array($group) || $group instanceof \ArrayAccess ? ($group['mean'] ?? $calculation->mean) : $calculation->mean;
             $amrRateValue = is_array($group) || $group instanceof \ArrayAccess ? ($group['amr_rate'] ?? null) : null;
             $pmrRateValue = $calculation->pmrRate ?? ($records->isNotEmpty() ? $mean : null);
@@ -145,8 +154,8 @@ class PmrExportService
             $startRow = $row;
             $endRow = $row + ($maxTrials - 1);
 
-            // Merged columns A-J and M-O
-            foreach (['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'M', 'N', 'O'] as $mergeCol) {
+            // Merge pile-level columns across trial rows.
+            foreach (['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'N', 'O', 'P'] as $mergeCol) {
                 if ($startRow !== $endRow) {
                     $sheet->mergeCells("{$mergeCol}{$startRow}:{$mergeCol}{$endRow}");
                 }
@@ -163,46 +172,47 @@ class PmrExportService
             $sheet->setCellValue("H{$startRow}", strtoupper(str_replace('_', ' ', $quality ?: '—')));
             $sheet->setCellValue("I{$startRow}", (float) $agedMonths);
             $sheet->setCellValue("J{$startRow}", round((float) $volumeKg / 50, 3));
+            $sheet->setCellValue("K{$startRow}", $volumeAfterTestMillingBags ?? '—');
 
-            $sheet->setCellValue("M{$startRow}", $mean !== null ? round($mean, 2) : '—');
-            $sheet->setCellValue("N{$startRow}", $pmrRateValue !== null ? round($pmrRateValue, 2) : '—');
-            $sheet->setCellValue("O{$startRow}", $statusText);
+            $sheet->setCellValue("N{$startRow}", $mean !== null ? round($mean, 2) : '—');
+            $sheet->setCellValue("O{$startRow}", $pmrRateValue !== null ? round($pmrRateValue, 2) : '—');
+            $sheet->setCellValue("P{$startRow}", $statusText);
 
             // Per trial rows
             for ($trial = 1; $trial <= $maxTrials; $trial++) {
                 $currentRow = $startRow + ($trial - 1);
                 $rec = $trialRecords->get($trial);
 
-                $sheet->setCellValue("K{$currentRow}", "Trial {$trial}");
-                $sheet->setCellValue("L{$currentRow}", $rec ? round($rec->recovery_rate_percentage, 2) : '—');
+                $sheet->setCellValue("L{$currentRow}", "Trial {$trial}");
+                $sheet->setCellValue("M{$currentRow}", $rec ? round($rec->recovery_rate_percentage, 2) : '—');
             }
 
             // Apply formatting for the group rows
-            $groupRange = "A{$startRow}:O{$endRow}";
+            $groupRange = "A{$startRow}:P{$endRow}";
             $sheet->getStyle($groupRange)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
             $sheet->getStyle("A{$startRow}:A{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $sheet->getStyle("D{$startRow}:D{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $sheet->getStyle("F{$startRow}:G{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
             $sheet->getStyle("H{$startRow}:I{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle("J{$startRow}:J{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-            $sheet->getStyle("K{$startRow}:K{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle("L{$startRow}:N{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-            $sheet->getStyle("O{$startRow}:O{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("J{$startRow}:K{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            $sheet->getStyle("L{$startRow}:L{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("M{$startRow}:O{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            $sheet->getStyle("P{$startRow}:P{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
             // Explicit 0.00 number format for numeric rates (ensuring pure numbers with no % symbol)
             $sheet->getStyle("F{$startRow}:G{$endRow}")->getNumberFormat()->setFormatCode('0.00');
-            $sheet->getStyle("J{$startRow}:J{$endRow}")->getNumberFormat()->setFormatCode('#,##0.000');
-            $sheet->getStyle("L{$startRow}:N{$endRow}")->getNumberFormat()->setFormatCode('0.00');
+            $sheet->getStyle("J{$startRow}:K{$endRow}")->getNumberFormat()->setFormatCode('#,##0.000');
+            $sheet->getStyle("M{$startRow}:O{$endRow}")->getNumberFormat()->setFormatCode('0.00');
 
             // Borders for group
             $sheet->getStyle($groupRange)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('D1D5DB');
-            $sheet->getStyle("A{$endRow}:O{$endRow}")->getBorders()->getBottom()->setBorderStyle(Border::BORDER_MEDIUM)->getColor()->setRGB('064E3B');
+            $sheet->getStyle("A{$endRow}:P{$endRow}")->getBorders()->getBottom()->setBorderStyle(Border::BORDER_MEDIUM)->getColor()->setRGB('064E3B');
 
             $row += $maxTrials;
         }
 
         // Auto-fit column widths
-        foreach (range('A', 'O') as $columnID) {
+        foreach (range('A', 'P') as $columnID) {
             $sheet->getColumnDimension($columnID)->setAutoSize(true);
         }
 

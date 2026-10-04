@@ -360,8 +360,9 @@ class DataEntryTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Test Milling Volume in kg');
+        $response->assertSee('Required when the pile volume is 50,000 kg or greater.');
         $response->assertSee('test_milling_volume');
-        $response->assertSee('Volume of Pile (kg) - Net of test Milling');
+        $response->assertSee('Volume of Pile (kg) - Before test Milling');
     }
 
     public function test_test_milling_volume_is_optional_and_persisted(): void
@@ -417,6 +418,28 @@ class DataEntryTest extends TestCase
         $this->assertNull($pile2->test_milling_volume_kg);
     }
 
+    public function test_amr_and_pmr_require_test_milling_volume_for_piles_of_50000_kg_or_more(): void
+    {
+        foreach (['amr', 'pmr'] as $formType) {
+            $this->post(route('records.store'), [
+                'form_type' => $formType,
+                'new_branch_name' => "Large Volume {$formType} Branch",
+                'new_warehouse_name' => "Large Volume {$formType} Warehouse",
+                'pile_number' => "LARGE-{$formType}",
+                'variety' => 'PD',
+                'purity' => 94.31,
+                'mc' => 11.1,
+                'quality' => 'gqa',
+                'aged' => 5,
+                'volume' => '50,000',
+                'test_milling_date' => '2026-09-24',
+                'no_of_trial' => 1,
+                'palay_input' => 100,
+                'rice_recovery' => 60,
+            ])->assertSessionHasErrors('test_milling_volume');
+        }
+    }
+
     public function test_update_pile_details_updates_test_milling_volume(): void
     {
         $branch = Branch::create(['name' => 'Update Test Branch']);
@@ -448,6 +471,52 @@ class DataEntryTest extends TestCase
         $response->assertOk();
         $pile->refresh();
         $this->assertEquals(500.250, (float) $pile->test_milling_volume_kg);
+    }
+
+    public function test_update_pile_details_requires_test_milling_volume_at_50000_kg(): void
+    {
+        $branch = Branch::create(['name' => 'Required Volume Branch']);
+        $warehouse = Warehouse::create(['branch_id' => $branch->id, 'name' => 'Required Volume Warehouse']);
+        $pile = Pile::create([
+            'branch_id' => $branch->id,
+            'warehouse_id' => $warehouse->id,
+            'pile_number' => 'REQ-1',
+            'number' => 'REQ-1',
+            'variety' => 'PD',
+            'purity' => 90,
+            'aged_months' => 2,
+            'mc' => 12,
+            'quality' => 'good',
+            'volume_kg' => 20000,
+        ]);
+
+        $this->patchJson(route('piles.details.update', $pile), [
+            'variety' => 'PD',
+            'purity' => 90,
+            'aged' => 2,
+            'mc' => 12,
+            'quality' => 'good',
+            'volume' => '50,000',
+            'test_milling_volume' => '',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('test_milling_volume');
+
+        $this->assertSame(20000.0, (float) $pile->fresh()->volume_kg);
+
+        $this->patchJson(route('piles.details.update', $pile), [
+            'variety' => 'PD',
+            'purity' => 90,
+            'aged' => 2,
+            'mc' => 12,
+            'quality' => 'good',
+            'volume' => '50,000',
+            'test_milling_volume' => '500.250',
+        ])
+            ->assertOk();
+
+        $this->assertSame(50000.0, (float) $pile->fresh()->volume_kg);
+        $this->assertSame(500.250, (float) $pile->fresh()->test_milling_volume_kg);
     }
 
     /**

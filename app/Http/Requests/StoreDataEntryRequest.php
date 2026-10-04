@@ -29,7 +29,8 @@ class StoreDataEntryRequest extends FormRequest
             $volume = $existingPile ? (float) $existingPile->volume_kg : null;
         }
 
-        return $volume !== null && $volume < 50000;
+        return $volume !== null &&
+            $volume < Pile::TEST_MILLING_REQUIRED_VOLUME_KG;
     }
 
     protected function prepareForValidation(): void
@@ -364,7 +365,15 @@ class StoreDataEntryRequest extends FormRequest
             ],
             'aged' => ['required', 'numeric', 'min:0'],
             'volume' => ['required', 'numeric', 'min:0'],
-            'test_milling_volume' => ['nullable', 'numeric', 'min:0'],
+            'test_milling_volume' => [
+                'nullable',
+                Rule::requiredIf(
+                    fn (): bool => $this->filled('volume') &&
+                        (float) $this->input('volume') >= Pile::TEST_MILLING_REQUIRED_VOLUME_KG,
+                ),
+                'numeric',
+                'min:0',
+            ],
             'trials' => ['required', 'array', 'min:1', 'max:'.$maximumTrial],
             'trials.*.trial_number' => [
                 'required',

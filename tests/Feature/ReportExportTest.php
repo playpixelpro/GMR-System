@@ -47,6 +47,8 @@ class ReportExportTest extends TestCase
         $response->assertSee(route('amr.export.pdf'));
         $response->assertSee('Excel Export');
         $response->assertSee('PDF Download');
+        $response->assertSee('Note: Volume values shown are before test milling.');
+        $response->assertSee('Volume <br>(bags)', false);
     }
 
     public function test_pmr_report_view_renders_excel_and_pdf_buttons(): void
@@ -58,13 +60,20 @@ class ReportExportTest extends TestCase
         $response->assertSee(route('pmr.export.pdf'));
         $response->assertSee('Excel Export');
         $response->assertSee('PDF Download');
+        $response->assertSee('Note: Volume values shown are before test milling.');
+        $response->assertSee('VOLUME <br> (bags)', false);
     }
 
     public function test_amr_export_excel_returns_valid_xlsx_stream(): void
     {
         $branch = Branch::create(['name' => 'Isabela Branch']);
         $warehouse = Warehouse::create(['name' => 'Santiago GID', 'branch_id' => $branch->id]);
-        $pile = Pile::create(['number' => 'Pile 1', 'warehouse_id' => $warehouse->id, 'volume_kg' => 60000]);
+        $pile = Pile::create([
+            'number' => 'Pile 1',
+            'warehouse_id' => $warehouse->id,
+            'volume_kg' => 60000,
+            'test_milling_volume_kg' => 10000,
+        ]);
 
         AmrRecord::create([
             'pile_id' => $pile->id,
@@ -89,15 +98,19 @@ class ReportExportTest extends TestCase
         file_put_contents($tempFile, $response->streamedContent());
         $spreadsheet = IOFactory::load($tempFile);
         $sheet = $spreadsheet->getActiveSheet();
-        $this->assertSame('Rec Rate (%)', $sheet->getCell('O5')->getValue());
-        $this->assertSame('Mean (%)', $sheet->getCell('P5')->getValue());
-        $this->assertSame('AMR (%)', $sheet->getCell('Q5')->getValue());
-        $this->assertEquals(65, $sheet->getCell('O6')->getValue());
-        $this->assertStringNotContainsString('%', (string) $sheet->getCell('O6')->getValue());
+        $this->assertSame('Volume Before Test Milling (50kg bags)', $sheet->getCell('J5')->getValue());
+        $this->assertSame('Volume After Test Milling (50kg bags)', $sheet->getCell('K5')->getValue());
+        $this->assertSame('Rec Rate (%)', $sheet->getCell('P5')->getValue());
+        $this->assertSame('Mean (%)', $sheet->getCell('Q5')->getValue());
+        $this->assertSame('AMR (%)', $sheet->getCell('R5')->getValue());
+        $this->assertEquals(1200, $sheet->getCell('J6')->getValue());
+        $this->assertEquals(1000, $sheet->getCell('K6')->getValue());
         $this->assertEquals(65, $sheet->getCell('P6')->getValue());
         $this->assertStringNotContainsString('%', (string) $sheet->getCell('P6')->getValue());
         $this->assertEquals(65, $sheet->getCell('Q6')->getValue());
         $this->assertStringNotContainsString('%', (string) $sheet->getCell('Q6')->getValue());
+        $this->assertEquals(65, $sheet->getCell('R6')->getValue());
+        $this->assertStringNotContainsString('%', (string) $sheet->getCell('R6')->getValue());
         unlink($tempFile);
     }
 
@@ -131,7 +144,12 @@ class ReportExportTest extends TestCase
     {
         $branch = Branch::create(['name' => 'Isabela Branch']);
         $warehouse = Warehouse::create(['name' => 'Santiago GID', 'branch_id' => $branch->id]);
-        $pile = Pile::create(['number' => 'Pile 2', 'warehouse_id' => $warehouse->id, 'volume_kg' => 45000]);
+        $pile = Pile::create([
+            'number' => 'Pile 2',
+            'warehouse_id' => $warehouse->id,
+            'volume_kg' => 45000,
+            'test_milling_volume_kg' => 5000,
+        ]);
 
         PmrRecord::create([
             'pile_id' => $pile->id,
@@ -154,15 +172,59 @@ class ReportExportTest extends TestCase
         file_put_contents($tempFile, $response->streamedContent());
         $spreadsheet = IOFactory::load($tempFile);
         $sheet = $spreadsheet->getActiveSheet();
-        $this->assertSame('Recovery Rate (%)', $sheet->getCell('L5')->getValue());
-        $this->assertSame('Mean (%)', $sheet->getCell('M5')->getValue());
-        $this->assertSame('PMR (%)', $sheet->getCell('N5')->getValue());
-        $this->assertEquals(65.5, $sheet->getCell('L6')->getValue());
-        $this->assertStringNotContainsString('%', (string) $sheet->getCell('L6')->getValue());
+        $this->assertSame('Volume Before Test Milling (50kg bags)', $sheet->getCell('J5')->getValue());
+        $this->assertSame('Volume After Test Milling (50kg bags)', $sheet->getCell('K5')->getValue());
+        $this->assertSame('Recovery Rate (%)', $sheet->getCell('M5')->getValue());
+        $this->assertSame('Mean (%)', $sheet->getCell('N5')->getValue());
+        $this->assertSame('PMR (%)', $sheet->getCell('O5')->getValue());
+        $this->assertEquals(900, $sheet->getCell('J6')->getValue());
+        $this->assertEquals(800, $sheet->getCell('K6')->getValue());
         $this->assertEquals(65.5, $sheet->getCell('M6')->getValue());
         $this->assertStringNotContainsString('%', (string) $sheet->getCell('M6')->getValue());
         $this->assertEquals(65.5, $sheet->getCell('N6')->getValue());
         $this->assertStringNotContainsString('%', (string) $sheet->getCell('N6')->getValue());
+        $this->assertEquals(65.5, $sheet->getCell('O6')->getValue());
+        $this->assertStringNotContainsString('%', (string) $sheet->getCell('O6')->getValue());
+        unlink($tempFile);
+    }
+
+    public function test_emr_export_excel_includes_volumes_before_and_after_test_milling(): void
+    {
+        $branch = Branch::create(['name' => 'EMR Export Branch']);
+        $warehouse = Warehouse::create([
+            'name' => 'EMR Export Warehouse',
+            'branch_id' => $branch->id,
+        ]);
+        Pile::create([
+            'branch_id' => $branch->id,
+            'warehouse_id' => $warehouse->id,
+            'number' => 'EMR-1',
+            'pile_number' => 'EMR-1',
+            'variety' => 'PD',
+            'volume_kg' => 60000,
+            'test_milling_volume_kg' => 10000,
+        ]);
+        $rmec = User::factory()->create([
+            'role' => 'RMEC',
+            'must_change_password' => false,
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($rmec)->get(route('emr.export.excel'));
+        $response->assertOk();
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'emr_xlsx_');
+        file_put_contents($tempFile, $response->streamedContent());
+        $spreadsheet = IOFactory::load($tempFile);
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $this->assertSame('Volume Before Test Milling (net kg)', $sheet->getCell('G5')->getValue());
+        $this->assertSame('Volume Before Test Milling (50kg bags)', $sheet->getCell('H5')->getValue());
+        $this->assertSame('Volume After Test Milling (50kg bags)', $sheet->getCell('I5')->getValue());
+        $this->assertSame(60000.0, (float) $sheet->getCell('G6')->getValue());
+        $this->assertSame(1200.0, (float) $sheet->getCell('H6')->getValue());
+        $this->assertSame(1000.0, (float) $sheet->getCell('I6')->getValue());
+
         unlink($tempFile);
     }
 

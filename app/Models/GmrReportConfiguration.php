@@ -14,6 +14,8 @@ class GmrReportConfiguration extends Model
         'subtitle',
         'region_text',
         'branch_text',
+        'visible_columns',
+        'column_labels',
         'paper_size',
         'custom_width',
         'custom_height',
@@ -31,6 +33,8 @@ class GmrReportConfiguration extends Model
         return [
             'custom_width' => 'float',
             'custom_height' => 'float',
+            'visible_columns' => 'array',
+            'column_labels' => 'array',
             'margin_top' => 'float',
             'margin_right' => 'float',
             'margin_bottom' => 'float',
@@ -67,6 +71,130 @@ class GmrReportConfiguration extends Model
             'margin_left' => 0.5,
             'margin_unit' => 'in',
         ]);
+    }
+
+    /**
+     * @return array<string, array{label: string, field: string, type: string, alignment: string, bold: bool, width: int}>
+     */
+    public static function availableReportColumns(): array
+    {
+        return [
+            'warehouse' => [
+                'label' => 'Warehouse',
+                'field' => 'warehouse',
+                'type' => 'text',
+                'alignment' => 'left',
+                'bold' => true,
+                'width' => 20,
+            ],
+            'pile' => [
+                'label' => 'Pile No.',
+                'field' => 'pile',
+                'type' => 'text',
+                'alignment' => 'center',
+                'bold' => true,
+                'width' => 8,
+            ],
+            'volume_before_test_milling' => [
+                'label' => 'Volume in Bags Before Test Milling',
+                'field' => 'volume_before_test_milling_bags',
+                'type' => 'bags',
+                'alignment' => 'right',
+                'bold' => false,
+                'width' => 15,
+            ],
+            'volume_after_test_milling' => [
+                'label' => 'Volume in Bags After Test Milling',
+                'field' => 'volume_after_test_milling_bags',
+                'type' => 'bags',
+                'alignment' => 'right',
+                'bold' => false,
+                'width' => 15,
+            ],
+            'quality' => [
+                'label' => 'Quality',
+                'field' => 'quality',
+                'type' => 'text',
+                'alignment' => 'center',
+                'bold' => true,
+                'width' => 8,
+            ],
+            'pmr' => [
+                'label' => 'PMR(%)',
+                'field' => 'pmr',
+                'type' => 'percentage',
+                'alignment' => 'center',
+                'bold' => false,
+                'width' => 8,
+            ],
+            'amr' => [
+                'label' => 'AMR(%)',
+                'field' => 'amr',
+                'type' => 'percentage',
+                'alignment' => 'center',
+                'bold' => false,
+                'width' => 8,
+            ],
+            'emr' => [
+                'label' => 'EMR(%)',
+                'field' => 'emr',
+                'type' => 'emr',
+                'alignment' => 'center',
+                'bold' => true,
+                'width' => 9,
+            ],
+            'gmr' => [
+                'label' => 'GMR(%)',
+                'field' => 'gmr',
+                'type' => 'percentage',
+                'alignment' => 'center',
+                'bold' => true,
+                'width' => 9,
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function getReportColumnLabels(): array
+    {
+        $labels = array_map(
+            fn (array $column): string => $column['label'],
+            static::availableReportColumns(),
+        );
+
+        if (! is_array($this->column_labels)) {
+            return $labels;
+        }
+
+        foreach ($labels as $columnKey => $defaultLabel) {
+            $configuredLabel = $this->column_labels[$columnKey] ?? null;
+
+            if (is_string($configuredLabel) && trim($configuredLabel) !== '') {
+                $labels[$columnKey] = trim($configuredLabel);
+            }
+        }
+
+        return $labels;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function getVisibleReportColumns(): array
+    {
+        $availableColumns = array_keys(static::availableReportColumns());
+
+        if (! is_array($this->visible_columns)) {
+            return $availableColumns;
+        }
+
+        $visibleColumns = array_values(
+            array_intersect($availableColumns, $this->visible_columns),
+        );
+
+        return $visibleColumns === [] ? $availableColumns : $visibleColumns;
     }
 
     /**

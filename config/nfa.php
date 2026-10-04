@@ -13,12 +13,12 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Default Administrator Credentials (for initial seeding)
+    | Initial Administrator Credentials
     |--------------------------------------------------------------------------
     */
     'admin' => [
-        'email' => env('NFA_ADMIN_EMAIL', 'admin@email.com'),
-        'password' => env('NFA_ADMIN_PASSWORD', 'ChangeMe!2026'),
+        'email' => env('NFA_ADMIN_EMAIL'),
+        'password' => env('NFA_ADMIN_PASSWORD'),
     ],
 
     /*

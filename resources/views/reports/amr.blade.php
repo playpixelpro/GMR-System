@@ -7,6 +7,7 @@
     <div>
         <h1 class="text-xl font-semibold text-base-content">AMR Report</h1>
         <p class="text-xs text-base-content/60">Actual Milling Recovery (AMR) — Commercial milling results and statistical analysis</p>
+        <p class="mt-1 text-xs font-medium text-base-content/70">Note: Volume values shown are before test milling.</p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
         <div class="dropdown relative inline-flex [--placement:bottom-end]">

@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Notifications\TemporaryPasswordNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -17,16 +18,16 @@ use Illuminate\View\View;
 
 class UserController extends Controller
 {
-    public function index(): View
+    public function index(): Response
     {
         /** @var User|null $currentUser */
         $currentUser = Auth::user();
         abort_unless($currentUser?->hasRole('ADMINISTRATOR'), 403);
 
-        return view('users.index', [
+        return response()->view('users.index', [
             'users' => User::query()->with('branch')->latest()->get(),
             'branches' => Branch::query()->orderBy('name')->get(),
-        ]);
+        ])->header('Cache-Control', 'private, no-store, max-age=0');
     }
 
     public function store(Request $request): RedirectResponse
@@ -43,7 +44,7 @@ class UserController extends Controller
                 Rule::requiredIf(fn () => $request->input('role') === 'STAFF'),
                 'exists:branches,id',
             ],
-            'password' => ['nullable', 'string', 'min:8', 'max:191'],
+            'password' => ['nullable', 'string', 'min:12', 'max:191'],
         ]);
 
         $temporaryPassword = ! empty($validated['password'])
@@ -72,9 +73,9 @@ class UserController extends Controller
             report($e);
         }
 
-        $status = "User created successfully. Temporary password: {$temporaryPassword} (The user must change this password upon first login).";
+        $status = 'User created successfully. The user must change their temporary password upon first login.';
         if (! $emailSent) {
-            $status .= ' Note: Email delivery is unavailable, so please share this temporary password with the user directly.';
+            $status .= ' Email delivery is unavailable; share the one-time credentials shown on the users page directly with the user.';
         }
 
         return back()
@@ -104,7 +105,7 @@ class UserController extends Controller
         }
 
         $validated = $request->validate([
-            'password' => ['nullable', 'string', 'min:8', 'max:191'],
+            'password' => ['nullable', 'string', 'min:12', 'max:191'],
         ]);
 
         $temporaryPassword = ! empty($validated['password'])
@@ -137,7 +138,7 @@ class UserController extends Controller
                 ? 'A new temporary password was emailed to the user.'
                 : "A new temporary password was emailed to {$user->name}.";
         } else {
-            $status = "A new temporary password was generated for {$user->name}: {$temporaryPassword}. Note: Email delivery is unavailable, please share this password directly with the user.";
+            $status = "A new temporary password was generated for {$user->name}. Email delivery is unavailable; share the one-time credentials shown on the users page directly with the user.";
         }
 
         return back()

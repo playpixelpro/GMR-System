@@ -12,6 +12,25 @@ class Pile extends Model
 {
     use HasFactory;
 
+    public const BAG_WEIGHT_KG = 50;
+
+    public const TEST_MILLING_REQUIRED_VOLUME_KG = 50000;
+
+    public static function calculateVolumeAfterTestMillingBags(
+        int|float|string|null $volumeBeforeTestMillingKg,
+        int|float|string|null $testMillingVolumeKg,
+    ): ?float {
+        if ($volumeBeforeTestMillingKg === null || $testMillingVolumeKg === null) {
+            return null;
+        }
+
+        return round(
+            ((float) $volumeBeforeTestMillingKg - (float) $testMillingVolumeKg) /
+                self::BAG_WEIGHT_KG,
+            3,
+        );
+    }
+
     protected $fillable = [
         'branch_id',
         'warehouse_id',
