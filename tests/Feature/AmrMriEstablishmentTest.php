@@ -545,6 +545,7 @@ class AmrMriEstablishmentTest extends TestCase
         $this->assertTrue($conduct1->is_locked);
         $this->assertSame('RETEST', $conduct1->status);
         $this->assertSame('retest', $pile->amr_status);
+        $lockedConductVolume = $conduct1->getRawOriginal('volume_kg');
 
         // 1. Staff cannot edit conduct 1 via records.update
         $this->actingAs($staffUser)->patchJson(
@@ -560,7 +561,7 @@ class AmrMriEstablishmentTest extends TestCase
             route('records.destroy', ['formType' => 'amr', 'record' => $conduct1->id]),
         )->assertForbidden();
 
-        // 3. Staff cannot modify pile details while locked
+        // 3. Staff can update pile details for the retest without changing the locked conduct
         $this->actingAs($staffUser)->patchJson(
             route('piles.details.update', $pile),
             [
@@ -570,8 +571,15 @@ class AmrMriEstablishmentTest extends TestCase
                 'mc' => 12.0,
                 'quality' => 'good',
                 'volume' => 43000,
+                'test_milling_volume' => 750,
             ],
-        )->assertForbidden();
+        )->assertOk();
+
+        $pile->refresh();
+        $this->assertSame(5.0, (float) $pile->aged_months);
+        $this->assertSame(43000.0, (float) $pile->volume_kg);
+        $this->assertSame(750.0, (float) $pile->test_milling_volume_kg);
+        $this->assertSame($lockedConductVolume, $conduct1->fresh()->getRawOriginal('volume_kg'));
 
         // 4. Staff CAN create a new test conduct (Conduct 2) without modifying conduct 1
         $this->actingAs($staffUser)->post(route('records.store'), [
