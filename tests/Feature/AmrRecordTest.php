@@ -237,6 +237,40 @@ class AmrRecordTest extends TestCase
         $response->assertSee('Trial 3');
     }
 
+    public function test_amr_report_shows_the_rice_miller_from_the_latest_retest_conduct(): void
+    {
+        $branch = Branch::create(['name' => 'Retest Branch']);
+        $warehouse = Warehouse::create([
+            'branch_id' => $branch->id,
+            'name' => 'Retest Warehouse',
+        ]);
+        $pile = Pile::create([
+            'branch_id' => $branch->id,
+            'warehouse_id' => $warehouse->id,
+            'number' => 'Retest Pile',
+            'amr_status' => 'retest',
+        ]);
+
+        AmrRecord::factory()->create([
+            'pile_id' => $pile->id,
+            'conduct_number' => 1,
+            'trial_number' => 1,
+            'rice_millers' => 'Original Miller',
+        ]);
+        AmrRecord::factory()->create([
+            'pile_id' => $pile->id,
+            'conduct_number' => 2,
+            'trial_number' => 1,
+            'rice_millers' => 'Retest Miller',
+        ]);
+
+        $response = $this->get(route('amr.index'));
+
+        $response->assertOk();
+        $recordGroup = $response->viewData('recordGroups')->first();
+        $this->assertSame('Retest Miller', $recordGroup['rice_millers']);
+    }
+
     public function test_amr_report_filters_by_branch_and_warehouse(): void
     {
         $includedBranch = Branch::create(['name' => 'Included Branch']);
