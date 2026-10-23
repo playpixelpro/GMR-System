@@ -28,12 +28,22 @@ class ReportColumnSetting extends Model
      */
     public static function forReport(string $type): array
     {
+        $availableColumns = array_keys(static::availableColumns($type));
         $setting = static::where('report_type', $type)->first();
-        if ($setting && is_array($setting->visible_columns)) {
-            return $setting->visible_columns;
+        $visibleColumns = $setting?->visible_columns;
+
+        if (is_array($visibleColumns)) {
+            $visibleColumns = array_values(array_unique(array_intersect(
+                $availableColumns,
+                $visibleColumns,
+            )));
+
+            if ($visibleColumns !== []) {
+                return $visibleColumns;
+            }
         }
 
-        return static::defaultColumns($type);
+        return $availableColumns;
     }
 
     /**
@@ -43,9 +53,19 @@ class ReportColumnSetting extends Model
      */
     public static function setForReport(string $type, array $columns): self
     {
+        $availableColumns = array_keys(static::availableColumns($type));
+        $columns = array_values(array_unique(array_intersect(
+            $availableColumns,
+            $columns,
+        )));
+
+        if ($columns === []) {
+            $columns = $availableColumns;
+        }
+
         return static::updateOrCreate(
             ['report_type' => $type],
-            ['visible_columns' => array_values(array_unique($columns))]
+            ['visible_columns' => $columns]
         );
     }
 
