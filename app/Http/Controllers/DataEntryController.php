@@ -210,11 +210,25 @@ class DataEntryController extends Controller
         $latestAmrRecords = AmrRecord::where('pile_id', $pile->id)
             ->where('conduct_number', AmrRecord::where('pile_id', $pile->id)->max('conduct_number'))
             ->get();
+        $latestPmrRecords = PmrRecord::where('pile_id', $pile->id)
+            ->where('conduct_number', PmrRecord::where('pile_id', $pile->id)->max('conduct_number'))
+            ->get();
         $isAmrLocked = $latestAmrRecords->isNotEmpty() && $latestAmrRecords->every('is_locked');
-        $isRmecActioned = in_array(strtolower((string) $pile->amr_status), ['recommended', 'retest'], true);
+        $isPmrLocked = $latestPmrRecords->isNotEmpty() && $latestPmrRecords->every('is_locked');
+        $hasRetest = strtolower((string) $pile->amr_status) === 'retest'
+            || strtolower((string) $pile->pmr_status) === 'retest'
+            || $latestAmrRecords->contains('status', 'RETEST')
+            || $latestPmrRecords->contains('status', 'RETEST');
+        $isRecommended = strtolower((string) $pile->amr_status) === 'recommended'
+            || strtolower((string) $pile->pmr_status) === 'recommended'
+            || $latestAmrRecords->contains('status', 'RECOMMENDED')
+            || $latestPmrRecords->contains('status', 'RECOMMENDED');
 
-        if ($currentUser?->hasRole('STAFF') && ($isAmrLocked || $isRmecActioned)) {
-            abort(403, 'Pile details cannot be modified because the AMR test milling is locked by RMEC or Administrator.');
+        if (
+            $currentUser?->hasRole('STAFF')
+            && ($isRecommended || (($isAmrLocked || $isPmrLocked) && ! $hasRetest))
+        ) {
+            abort(403, 'Pile details cannot be modified because the test milling is locked by RMEC or Administrator.');
         }
 
         $validated = $request->validated();

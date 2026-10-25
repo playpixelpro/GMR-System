@@ -827,22 +827,34 @@
 // PMR Column Visibility Manager
 (function () {
     const STORAGE_KEY = 'nfa_pmr_visible_columns';
-    const serverDefaults = @json($visibleColumns ?? \App\Models\ReportColumnSetting::forReport('pmr'));
+    const serverDefaults = @json($visibleColumns ?? \App\Models\ReportColumnSetting::forReport('pmr')) || [];
+    const allColKeys = Array.from(document.querySelectorAll('.col-toggle-cb')).map(cb => cb.dataset.targetCol);
+    const validColKeys = new Set(allColKeys);
+    const defaultColumns = serverDefaults.filter(colKey => validColKeys.has(colKey));
+    const fallbackColumns = defaultColumns.length > 0 ? defaultColumns : allColKeys;
     const emptyCell = document.querySelector('tbody tr td[colspan]');
+
+    function normalizeColumns(columns) {
+        const normalized = Array.isArray(columns)
+            ? [...new Set(columns)].filter(colKey => validColKeys.has(colKey))
+            : [];
+
+        return normalized.length > 0 ? normalized : fallbackColumns;
+    }
 
     function getVisibleColumns() {
         try {
             const stored = localStorage.getItem(STORAGE_KEY);
             if (stored) {
                 const parsed = JSON.parse(stored);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                    return parsed;
+                if (Array.isArray(parsed)) {
+                    return normalizeColumns(parsed);
                 }
             }
         } catch (e) {
             console.error('Failed to read localStorage column settings', e);
         }
-        return serverDefaults;
+        return fallbackColumns;
     }
 
     function setVisibleColumns(cols) {
@@ -854,10 +866,10 @@
     }
 
     function applyVisibility(visibleCols) {
-        const allColKeys = Array.from(document.querySelectorAll('.col-toggle-cb')).map(cb => cb.dataset.targetCol);
+        const normalizedVisibleCols = normalizeColumns(visibleCols);
         
         allColKeys.forEach(colKey => {
-            const isVisible = visibleCols.includes(colKey);
+            const isVisible = normalizedVisibleCols.includes(colKey);
             const cells = document.querySelectorAll(`[data-col="${colKey}"]`);
             cells.forEach(el => {
                 if (isVisible) {
@@ -875,12 +887,13 @@
         });
 
         if (emptyCell) {
-            emptyCell.setAttribute('colspan', visibleCols.length.toString());
+            emptyCell.setAttribute('colspan', normalizedVisibleCols.length.toString());
         }
     }
 
     // Initialize visibility on page load
     const currentVisible = getVisibleColumns();
+    setVisibleColumns(currentVisible);
     applyVisibility(currentVisible);
 
     // Event listener for checkbox changes

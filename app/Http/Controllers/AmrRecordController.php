@@ -210,6 +210,10 @@ class AmrRecordController extends Controller
                 $mean = null;
             }
 
+            $latestRiceMiller = $records->isNotEmpty()
+                ? $latestRecords->first()?->rice_millers
+                : null;
+
             // Determine PMR rate
             $pmrRate = null;
             if ($pile->pmrCalculation?->pmr_rate !== null) {
@@ -254,7 +258,7 @@ class AmrRecordController extends Controller
                 'quality' => $pile->quality ?? ($firstRecord?->quality ?? ''),
                 'aged_months' => $pile->aged_months ?? ($firstRecord?->aged_months ?? 0),
                 'volume_kg' => $pile->volume_kg ?? ($firstRecord?->volume_kg ?? 0),
-                'rice_millers' => $records->first()?->rice_millers ?? '—',
+                'rice_millers' => $latestRiceMiller ?: '—',
             ]);
         }
 

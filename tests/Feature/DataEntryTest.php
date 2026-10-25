@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AmrRecord;
 use App\Models\Branch;
 use App\Models\Pile;
+use App\Models\PmrRecord;
 use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -471,6 +472,102 @@ class DataEntryTest extends TestCase
         $response->assertOk();
         $pile->refresh();
         $this->assertEquals(500.250, (float) $pile->test_milling_volume_kg);
+    }
+
+    public function test_staff_can_update_pile_details_while_pmr_is_awaiting_retest(): void
+    {
+        $branch = Branch::create(['name' => 'PMR Retest Branch']);
+        $warehouse = Warehouse::create(['branch_id' => $branch->id, 'name' => 'PMR Retest Warehouse']);
+        $pile = Pile::create([
+            'branch_id' => $branch->id,
+            'warehouse_id' => $warehouse->id,
+            'pile_number' => 'PMR-RETEST-1',
+            'number' => 'PMR-RETEST-1',
+            'variety' => 'PD',
+            'purity' => 90,
+            'aged_months' => 2,
+            'mc' => 12,
+            'quality' => 'good',
+            'volume_kg' => 20000,
+            'pmr_status' => 'retest',
+        ]);
+        $staffUser = User::factory()->create([
+            'role' => 'staff',
+            'branch_id' => $branch->id,
+            'must_change_password' => false,
+            'is_active' => true,
+        ]);
+        $lockedRecord = PmrRecord::factory()->create([
+            'pile_id' => $pile->id,
+            'conduct_number' => 1,
+            'trial_number' => 1,
+            'status' => 'RETEST',
+            'is_locked' => true,
+        ]);
+        $lockedRecordVolume = $lockedRecord->getRawOriginal('volume_kg');
+
+        $response = $this->actingAs($staffUser)->patchJson(route('piles.details.update', $pile), [
+            'variety' => 'PD-UPDATED',
+            'purity' => 92,
+            'aged' => 4.5,
+            'mc' => 13,
+            'quality' => 'fair',
+            'volume' => 19500,
+            'test_milling_volume' => 600,
+        ]);
+
+        $response->assertOk();
+        $this->assertSame('PD-UPDATED', $pile->fresh()->variety);
+        $this->assertSame(4.5, (float) $pile->fresh()->aged_months);
+        $this->assertSame(19500.0, (float) $pile->fresh()->volume_kg);
+        $this->assertSame(600.0, (float) $pile->fresh()->test_milling_volume_kg);
+        $this->assertSame($lockedRecordVolume, $lockedRecord->fresh()->getRawOriginal('volume_kg'));
+        $this->assertTrue($lockedRecord->fresh()->is_locked);
+    }
+
+    public function test_staff_cannot_update_pile_details_after_pmr_is_recommended(): void
+    {
+        $branch = Branch::create(['name' => 'PMR Recommended Branch']);
+        $warehouse = Warehouse::create(['branch_id' => $branch->id, 'name' => 'PMR Recommended Warehouse']);
+        $pile = Pile::create([
+            'branch_id' => $branch->id,
+            'warehouse_id' => $warehouse->id,
+            'pile_number' => 'PMR-RECOMMENDED-1',
+            'number' => 'PMR-RECOMMENDED-1',
+            'variety' => 'PD',
+            'purity' => 90,
+            'aged_months' => 2,
+            'mc' => 12,
+            'quality' => 'good',
+            'volume_kg' => 20000,
+            'pmr_status' => 'recommended',
+        ]);
+        $staffUser = User::factory()->create([
+            'role' => 'staff',
+            'branch_id' => $branch->id,
+            'must_change_password' => false,
+            'is_active' => true,
+        ]);
+        PmrRecord::factory()->create([
+            'pile_id' => $pile->id,
+            'conduct_number' => 1,
+            'trial_number' => 1,
+            'status' => 'RECOMMENDED',
+            'is_locked' => true,
+        ]);
+
+        $this->actingAs($staffUser)->patchJson(route('piles.details.update', $pile), [
+            'variety' => 'PD-UPDATED',
+            'purity' => 92,
+            'aged' => 4.5,
+            'mc' => 13,
+            'quality' => 'fair',
+            'volume' => 19500,
+            'test_milling_volume' => 600,
+        ])->assertForbidden();
+
+        $this->assertSame('PD', $pile->fresh()->variety);
+        $this->assertSame(20000.0, (float) $pile->fresh()->volume_kg);
     }
 
     public function test_update_pile_details_requires_test_milling_volume_at_50000_kg(): void
