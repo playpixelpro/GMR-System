@@ -68,6 +68,7 @@ class AmrRecordController extends Controller
         $filterNames = [
             'branch' => $filters['branch_id'] ? Branch::find($filters['branch_id'])?->name : 'All Branches',
             'warehouse' => $filters['warehouse_id'] ? Warehouse::find($filters['warehouse_id'])?->name : 'All Warehouses',
+            'gmr_status' => $this->gmrFilterLabel($filters['gmr_filter']),
         ];
 
         return $this->exportService->exportExcel($groups, $filterNames);
@@ -85,6 +86,7 @@ class AmrRecordController extends Controller
         $filterNames = [
             'branch' => $filters['branch_id'] ? Branch::find($filters['branch_id'])?->name : 'All Branches',
             'warehouse' => $filters['warehouse_id'] ? Warehouse::find($filters['warehouse_id'])?->name : 'All Warehouses',
+            'gmr_status' => $this->gmrFilterLabel($filters['gmr_filter']),
         ];
 
         return $this->exportService->exportPdf($groups, $filterNames);
@@ -108,7 +110,7 @@ class AmrRecordController extends Controller
     /**
      * Build the collection of record groups for AMR.
      *
-     * @param  array{branch_id: ?int, warehouse_id: ?int}  $filters
+     * @param  array{branch_id: ?int, warehouse_id: ?int, gmr_filter: string}  $filters
      * @return Collection<int, array<string, mixed>>
      */
     public function getRecordGroups(array $filters): Collection
@@ -161,6 +163,13 @@ class AmrRecordController extends Controller
                     $warehouseId,
                 ),
             )
+            ->when($filters['gmr_filter'] !== 'all', function ($query) use ($filters): void {
+                match ($filters['gmr_filter']) {
+                    'submitted' => $query->where('gmr_status', 'submitted'),
+                    'approved' => $query->where('gmr_status', 'approved'),
+                    default => $query->whereNull('gmr_status'),
+                };
+            })
             ->orderBy('warehouse_id')
             ->orderBy('pile_number')
             ->get();
@@ -250,7 +259,7 @@ class AmrRecordController extends Controller
         }
 
         // 2. Fetch standalone AMR records without pile_id
-        $standaloneRecords = AmrRecord::query()
+        $standaloneRecords = $filters['gmr_filter'] === 'all' ? AmrRecord::query()
             ->whereNull('pile_id')
             ->when(
                 $hasFilters,
@@ -272,7 +281,7 @@ class AmrRecordController extends Controller
                     $record->volume_kg,
                     $record->rice_millers,
                 ]),
-            );
+            ) : collect();
 
         foreach ($standaloneRecords as $key => $standaloneGroup) {
             $first = $standaloneGroup->first();
@@ -351,7 +360,7 @@ class AmrRecordController extends Controller
     }
 
     /**
-     * @return array{branch_id: ?int, warehouse_id: ?int}
+     * @return array{branch_id: ?int, warehouse_id: ?int, gmr_filter: string}
      */
     private function filters(Request $request): array
     {
@@ -363,6 +372,19 @@ class AmrRecordController extends Controller
         return [
             'branch_id' => $branchId,
             'warehouse_id' => $request->integer('warehouse_id') ?: null,
+            'gmr_filter' => in_array($request->input('gmr_filter'), ['ongoing', 'submitted', 'approved', 'all'], true)
+                ? $request->input('gmr_filter')
+                : 'ongoing',
         ];
+    }
+
+    private function gmrFilterLabel(string $filter): string
+    {
+        return match ($filter) {
+            'submitted' => 'Submitted to CO',
+            'approved' => 'Approved by CO',
+            'all' => 'All',
+            default => 'Ongoing',
+        };
     }
 }

@@ -107,6 +107,7 @@
         <div class="meta">
             Branch: <strong>{{ $filterBranch ?? 'All Branches' }}</strong> &nbsp;|&nbsp;
             Warehouse: <strong>{{ $filterWarehouse ?? 'All Warehouses' }}</strong> &nbsp;|&nbsp;
+            GMR Status: <strong>{{ $filterGmrStatus ?? 'Ongoing' }}</strong> &nbsp;|&nbsp;
             Generated on: <strong>{{ $generatedAt }}</strong>
         </div>
     </div>

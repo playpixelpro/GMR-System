@@ -20,7 +20,7 @@ class PmrExportService
      * Generate and stream an Excel (.xlsx) file for the PMR report.
      *
      * @param  Collection<int, mixed>  $recordGroups
-     * @param  array{branch?: ?string, warehouse?: ?string}  $filters
+     * @param  array{branch?: ?string, warehouse?: ?string, gmr_status?: ?string}  $filters
      */
     public function exportExcel(Collection $recordGroups, array $filters = []): StreamedResponse
     {
@@ -32,7 +32,7 @@ class PmrExportService
         $sheet->setCellValue('A1', 'NATIONAL FOOD AUTHORITY');
         $sheet->setCellValue('A2', 'POTENTIAL MILLING RECOVERY (PMR) REPORT');
 
-        $filterText = 'Branch: '.($filters['branch'] ?? 'All Branches').' | Warehouse: '.($filters['warehouse'] ?? 'All Warehouses').' | Generated on: '.now()->format('Y-m-d H:i:s');
+        $filterText = 'Branch: '.($filters['branch'] ?? 'All Branches').' | Warehouse: '.($filters['warehouse'] ?? 'All Warehouses').' | GMR Status: '.($filters['gmr_status'] ?? 'Ongoing').' | Generated on: '.now()->format('Y-m-d H:i:s');
         $sheet->setCellValue('A3', $filterText);
 
         $sheet->mergeCells('A1:P1');
@@ -236,7 +236,7 @@ class PmrExportService
      * Generate and download a PDF file for the PMR report.
      *
      * @param  Collection<int, mixed>  $recordGroups
-     * @param  array{branch?: ?string, warehouse?: ?string}  $filters
+     * @param  array{branch?: ?string, warehouse?: ?string, gmr_status?: ?string}  $filters
      */
     public function exportPdf(Collection $recordGroups, array $filters = []): Response
     {
@@ -244,6 +244,7 @@ class PmrExportService
             'recordGroups' => $recordGroups,
             'filterBranch' => $filters['branch'] ?? null,
             'filterWarehouse' => $filters['warehouse'] ?? null,
+            'filterGmrStatus' => $filters['gmr_status'] ?? 'Ongoing',
             'generatedAt' => now()->format('F d, Y h:i A'),
         ]);
 
