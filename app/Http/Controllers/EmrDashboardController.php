@@ -64,7 +64,7 @@ class EmrDashboardController extends Controller
     {
         $filters = $this->filters($request);
         $rows = $this->rows($filters);
-        $this->logEmrExport($request, 'csv');
+        $this->logEmrExport($request, 'csv', $filters);
 
         return response()->streamDownload(
             function () use ($rows): void {
@@ -121,7 +121,7 @@ class EmrDashboardController extends Controller
         $filters = $this->filters($request);
         $rows = $this->rows($filters);
         $filterNames = $this->filterNames($filters);
-        $this->logEmrExport($request, 'excel');
+        $this->logEmrExport($request, 'excel', $filters);
 
         return $this->exportService->exportExcel($rows, $filterNames);
     }
@@ -134,12 +134,12 @@ class EmrDashboardController extends Controller
         $filters = $this->filters($request);
         $rows = $this->rows($filters);
         $filterNames = $this->filterNames($filters);
-        $this->logEmrExport($request, 'pdf');
+        $this->logEmrExport($request, 'pdf', $filters);
 
         return $this->exportService->exportPdf($rows, $filterNames);
     }
 
-    private function logEmrExport(Request $request, string $format): void
+    private function logEmrExport(Request $request, string $format, array $filters): void
     {
         AuditLog::create([
             'module' => 'emr',
@@ -150,24 +150,36 @@ class EmrDashboardController extends Controller
                 'format' => $format,
                 'branch_id' => $request->integer('branch_id') ?: null,
                 'warehouse_id' => $request->integer('warehouse_id') ?: null,
+                'gmr_filter' => $filters['gmr_filter'],
             ],
         ]);
     }
 
     /**
-     * @param  array{branch_id: ?int, warehouse_id: ?int}  $filters
-     * @return array{branch: ?string, warehouse: ?string}
+     * @param  array{branch_id: ?int, warehouse_id: ?int, gmr_filter: string}  $filters
+     * @return array{branch: ?string, warehouse: ?string, gmr_status: string}
      */
     private function filterNames(array $filters): array
     {
         return [
             'branch' => $filters['branch_id'] ? Branch::find($filters['branch_id'])?->name : null,
             'warehouse' => $filters['warehouse_id'] ? Warehouse::find($filters['warehouse_id'])?->name : null,
+            'gmr_status' => $this->gmrFilterLabel($filters['gmr_filter']),
         ];
     }
 
+    private function gmrFilterLabel(string $filter): string
+    {
+        return match ($filter) {
+            'submitted' => 'Submitted to CO',
+            'approved' => 'Approved by CO',
+            'all' => 'All',
+            default => 'Ongoing',
+        };
+    }
+
     /**
-     * @param  array{branch_id: ?int, warehouse_id: ?int}  $filters
+     * @param  array{branch_id: ?int, warehouse_id: ?int, gmr_filter: string}  $filters
      * @return Collection<int, array<string, mixed>>
      */
     private function rows(array $filters): Collection
@@ -211,6 +223,13 @@ class EmrDashboardController extends Controller
                     $warehouseId,
                 ),
             )
+            ->when($filters['gmr_filter'] !== 'all', function ($query) use ($filters): void {
+                match ($filters['gmr_filter']) {
+                    'submitted' => $query->where('gmr_status', 'submitted'),
+                    'approved' => $query->where('gmr_status', 'approved'),
+                    default => $query->whereNull('gmr_status'),
+                };
+            })
             ->orderBy('branch_id')
             ->orderBy('warehouse_id')
             ->orderBy('pile_number')
@@ -338,7 +357,7 @@ class EmrDashboardController extends Controller
     }
 
     /**
-     * @return array{branch_id: ?int, warehouse_id: ?int}
+     * @return array{branch_id: ?int, warehouse_id: ?int, gmr_filter: string}
      */
     private function filters(Request $request): array
     {
@@ -362,6 +381,9 @@ class EmrDashboardController extends Controller
         return [
             'branch_id' => $branchId,
             'warehouse_id' => $warehouseId,
+            'gmr_filter' => in_array($request->input('gmr_filter'), ['ongoing', 'submitted', 'approved', 'all'], true)
+                ? $request->input('gmr_filter')
+                : 'ongoing',
         ];
     }
 

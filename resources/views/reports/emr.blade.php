@@ -29,7 +29,7 @@
 </div>
 
 <form method="GET" action="{{ route('emr.index') }}" class="card mb-5 border border-base-content/10 bg-base-100 p-4 shadow-sm">
-    <div class="grid grid-cols-1 items-end gap-4 md:grid-cols-3">
+    <div class="grid grid-cols-1 items-end gap-4 md:grid-cols-4">
         <label class="form-control">
             <span class="label-text mb-2 text-sm font-semibold text-black">Branch</span>
             @php
@@ -54,6 +54,15 @@
                 @foreach ($warehouses as $warehouse)
                     <option value="{{ $warehouse->id }}" @selected($filters['warehouse_id'] === $warehouse->id)>{{ $warehouse->name }}</option>
                 @endforeach
+            </select>
+        </label>
+        <label class="form-control">
+            <span class="label-text mb-2 text-sm font-semibold text-black">GMR Status</span>
+            <select name="gmr_filter" class="select select-bordered min-h-11 w-full text-base text-black" onchange="this.form.submit()">
+                <option value="ongoing" @selected($filters['gmr_filter'] === 'ongoing')>Ongoing</option>
+                <option value="submitted" @selected($filters['gmr_filter'] === 'submitted')>Submitted to CO</option>
+                <option value="approved" @selected($filters['gmr_filter'] === 'approved')>Approved by CO</option>
+                <option value="all" @selected($filters['gmr_filter'] === 'all')>All</option>
             </select>
         </label>
         <div class="flex gap-2">

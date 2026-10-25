@@ -17,7 +17,7 @@ class GmrSummaryExportService
      * Generate and stream an Excel (.xlsx) file for the GMR Summary report.
      *
      * @param  Collection<int, array<string, mixed>>  $rows
-     * @param  array{branch?: ?string, warehouse?: ?string}  $filters
+     * @param  array{branch?: ?string, warehouse?: ?string, gmr_status?: ?string}  $filters
      */
     public function exportExcel(Collection $rows, array $filters = []): StreamedResponse
     {
@@ -29,7 +29,7 @@ class GmrSummaryExportService
         $sheet->setCellValue('A1', 'NATIONAL FOOD AUTHORITY');
         $sheet->setCellValue('A2', 'GUARANTEED MILLING RECOVERY (GMR) SUMMARY REPORT');
 
-        $filterText = 'Branch: '.($filters['branch'] ?? 'All Branches').' | Warehouse: '.($filters['warehouse'] ?? 'All Warehouses').' | Generated on: '.now()->format('Y-m-d H:i:s');
+        $filterText = 'Branch: '.($filters['branch'] ?? 'All Branches').' | Warehouse: '.($filters['warehouse'] ?? 'All Warehouses').' | GMR Status: '.($filters['gmr_status'] ?? 'Ongoing').' | Generated on: '.now()->format('Y-m-d H:i:s');
         $sheet->setCellValue('A3', $filterText);
 
         $sheet->mergeCells('A1:L1');
