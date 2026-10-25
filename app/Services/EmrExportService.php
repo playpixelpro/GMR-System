@@ -19,7 +19,7 @@ class EmrExportService
      * Generate and stream an Excel (.xlsx) file for the EMR dashboard.
      *
      * @param  Collection<int, array<string, mixed>>  $rows
-     * @param  array{branch?: ?string, warehouse?: ?string}  $filters
+     * @param  array{branch?: ?string, warehouse?: ?string, gmr_status?: ?string}  $filters
      */
     public function exportExcel(Collection $rows, array $filters = []): StreamedResponse
     {
@@ -31,7 +31,7 @@ class EmrExportService
         $sheet->setCellValue('A1', 'NATIONAL FOOD AUTHORITY');
         $sheet->setCellValue('A2', 'EXPECTED MILLING RECOVERY (EMR) REPORT');
 
-        $filterText = 'Branch: '.($filters['branch'] ?? 'All Branches').' | Warehouse: '.($filters['warehouse'] ?? 'All Warehouses').' | Generated on: '.now()->format('Y-m-d H:i:s');
+        $filterText = 'Branch: '.($filters['branch'] ?? 'All Branches').' | Warehouse: '.($filters['warehouse'] ?? 'All Warehouses').' | GMR Status: '.($filters['gmr_status'] ?? 'Ongoing').' | Generated on: '.now()->format('Y-m-d H:i:s');
         $sheet->setCellValue('A3', $filterText);
 
         $sheet->mergeCells('A1:N1');
@@ -149,7 +149,7 @@ class EmrExportService
      * Generate and download a PDF file for the EMR dashboard.
      *
      * @param  Collection<int, array<string, mixed>>  $rows
-     * @param  array{branch?: ?string, warehouse?: ?string}  $filters
+     * @param  array{branch?: ?string, warehouse?: ?string, gmr_status?: ?string}  $filters
      */
     public function exportPdf(Collection $rows, array $filters = []): Response
     {
@@ -157,6 +157,7 @@ class EmrExportService
             'rows' => $rows,
             'filterBranch' => $filters['branch'] ?? null,
             'filterWarehouse' => $filters['warehouse'] ?? null,
+            'filterGmrStatus' => $filters['gmr_status'] ?? 'Ongoing',
             'generatedAt' => now()->format('F d, Y h:i A'),
         ]);
 

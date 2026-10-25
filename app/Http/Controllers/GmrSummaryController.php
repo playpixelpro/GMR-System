@@ -28,11 +28,7 @@ class GmrSummaryController extends Controller
     {
         $user = $request->user();
         $isBranchRestricted = (bool) $user?->isBranchRestricted();
-
-        $filters = [
-            'branch_id' => $isBranchRestricted ? (int) $user->branch_id : ($request->integer('branch_id') ?: null),
-            'warehouse_id' => $request->integer('warehouse_id') ?: null,
-        ];
+        $filters = $this->filters($request);
         $rows = $this->rows($filters);
         $warehouses = Warehouse::query()
             ->when(
@@ -63,13 +59,7 @@ class GmrSummaryController extends Controller
      */
     public function exportExcel(Request $request): StreamedResponse
     {
-        $user = $request->user();
-        $isBranchRestricted = (bool) $user?->isBranchRestricted();
-
-        $filters = [
-            'branch_id' => $isBranchRestricted ? (int) $user->branch_id : ($request->integer('branch_id') ?: null),
-            'warehouse_id' => $request->integer('warehouse_id') ?: null,
-        ];
+        $filters = $this->filters($request);
         $rows = $this->rows($filters);
 
         AuditLog::create([
@@ -81,19 +71,21 @@ class GmrSummaryController extends Controller
                 'format' => 'excel',
                 'branch_id' => $filters['branch_id'],
                 'warehouse_id' => $filters['warehouse_id'],
+                'gmr_filter' => $filters['gmr_filter'],
             ],
         ]);
 
         $filterNames = [
             'branch' => $filters['branch_id'] ? Branch::find($filters['branch_id'])?->name : 'All Branches',
             'warehouse' => $filters['warehouse_id'] ? Warehouse::find($filters['warehouse_id'])?->name : 'All Warehouses',
+            'gmr_status' => $this->gmrFilterLabel($filters['gmr_filter']),
         ];
 
         return $this->exportService->exportExcel($rows, $filterNames);
     }
 
     /**
-     * @param  array{branch_id: ?int, warehouse_id: ?int}  $filters
+     * @param  array{branch_id: ?int, warehouse_id: ?int, gmr_filter: string}  $filters
      * @return Collection<int, array<string, mixed>>
      */
     private function rows(array $filters): Collection
@@ -135,6 +127,13 @@ class GmrSummaryController extends Controller
                     $warehouseId,
                 ),
             )
+            ->when($filters['gmr_filter'] !== 'all', function ($query) use ($filters): void {
+                match ($filters['gmr_filter']) {
+                    'submitted' => $query->where('gmr_status', 'submitted'),
+                    'approved' => $query->where('gmr_status', 'approved'),
+                    default => $query->whereNull('gmr_status'),
+                };
+            })
             ->orderBy('branch_id')
             ->orderBy('warehouse_id')
             ->orderBy('pile_number')
@@ -142,6 +141,34 @@ class GmrSummaryController extends Controller
             ->get()
             ->map(fn (Pile $pile): array => $this->mapPile($pile))
             ->values();
+    }
+
+    /**
+     * @return array{branch_id: ?int, warehouse_id: ?int, gmr_filter: string}
+     */
+    private function filters(Request $request): array
+    {
+        $user = $request->user();
+
+        return [
+            'branch_id' => $user?->isBranchRestricted()
+                ? (int) $user->branch_id
+                : ($request->integer('branch_id') ?: null),
+            'warehouse_id' => $request->integer('warehouse_id') ?: null,
+            'gmr_filter' => in_array($request->input('gmr_filter'), ['ongoing', 'submitted', 'approved', 'all'], true)
+                ? $request->input('gmr_filter')
+                : 'ongoing',
+        ];
+    }
+
+    private function gmrFilterLabel(string $filter): string
+    {
+        return match ($filter) {
+            'submitted' => 'Submitted to CO',
+            'approved' => 'Approved by CO',
+            'all' => 'All',
+            default => 'Ongoing',
+        };
     }
 
     /**

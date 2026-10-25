@@ -94,6 +94,60 @@ class GmrSummaryDashboardTest extends TestCase
             ->assertSee('GMR is 60% or lower');
     }
 
+    public function test_summary_dashboard_filters_piles_by_gmr_status_and_defaults_to_ongoing(): void
+    {
+        $branch = Branch::create(['name' => 'GMR Filter Branch']);
+        $warehouse = Warehouse::create([
+            'branch_id' => $branch->id,
+            'name' => 'GMR Filter Warehouse',
+        ]);
+
+        $ongoingPile = $this->createPile($warehouse, 'ONGOING-PILE', 5000);
+        $submittedPile = $this->createPile($warehouse, 'SUBMITTED-PILE', 5000);
+        $approvedPile = $this->createPile($warehouse, 'APPROVED-PILE', 5000);
+        $submittedPile->update(['gmr_status' => 'submitted']);
+        $approvedPile->update([
+            'gmr_status' => 'approved',
+            'gmr_locked_at' => now(),
+        ]);
+
+        foreach ([$ongoingPile, $submittedPile, $approvedPile] as $pile) {
+            $this->createAmrRecord($pile, 65.0);
+            $this->createPmrRecord($pile, 66.0);
+        }
+
+        $this->get(route('gmr.summary', [
+            'branch_id' => $branch->id,
+            'warehouse_id' => $warehouse->id,
+        ]))
+            ->assertSee('ONGOING-PILE')
+            ->assertDontSee('SUBMITTED-PILE')
+            ->assertDontSee('APPROVED-PILE')
+            ->assertSee('<option value="ongoing" selected', false);
+
+        foreach ([
+            'submitted' => ['SUBMITTED-PILE'],
+            'approved' => ['APPROVED-PILE'],
+            'all' => ['ONGOING-PILE', 'SUBMITTED-PILE', 'APPROVED-PILE'],
+        ] as $filter => $visiblePiles) {
+            $response = $this->get(route('gmr.summary', [
+                'branch_id' => $branch->id,
+                'warehouse_id' => $warehouse->id,
+                'gmr_filter' => $filter,
+            ]));
+
+            foreach ($visiblePiles as $pileNumber) {
+                $response->assertSee($pileNumber);
+            }
+            foreach (array_diff(['ONGOING-PILE', 'SUBMITTED-PILE', 'APPROVED-PILE'], $visiblePiles) as $pileNumber) {
+                $response->assertDontSee($pileNumber);
+            }
+        }
+
+        $this->get(route('gmr.summary', ['gmr_filter' => 'invalid']))
+            ->assertSee('<option value="ongoing" selected', false);
+    }
+
     public function test_summary_dashboard_renders_excel_export_button(): void
     {
         $this->get(route('gmr.summary'))
@@ -134,6 +188,41 @@ class GmrSummaryDashboardTest extends TestCase
         $this->assertSame(1000.0, (float) $sheet->getCell('E6')->getValue());
         $this->assertSame(800.0, (float) $sheet->getCell('F6')->getValue());
 
+        unlink($tempFile);
+    }
+
+    public function test_summary_excel_export_uses_the_selected_gmr_status(): void
+    {
+        $branch = Branch::create(['name' => 'Filtered Export Branch']);
+        $warehouse = Warehouse::create([
+            'branch_id' => $branch->id,
+            'name' => 'Filtered Export Warehouse',
+        ]);
+        $ongoingPile = $this->createPile($warehouse, 'ONGOING-PILE', 5000);
+        $approvedPile = $this->createPile($warehouse, 'APPROVED-PILE', 5000);
+        $approvedPile->update([
+            'gmr_status' => 'approved',
+            'gmr_locked_at' => now(),
+        ]);
+
+        foreach ([$ongoingPile, $approvedPile] as $pile) {
+            $this->createAmrRecord($pile, 65.0);
+            $this->createPmrRecord($pile, 66.0);
+        }
+
+        $response = $this->get(route('gmr.summary.export.excel', [
+            'branch_id' => $branch->id,
+            'warehouse_id' => $warehouse->id,
+            'gmr_filter' => 'approved',
+        ]));
+        $response->assertOk();
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'gmr_summary_status_');
+        file_put_contents($tempFile, $response->streamedContent());
+        $sheet = IOFactory::load($tempFile)->getActiveSheet();
+        $this->assertStringContainsString('GMR Status: Approved by CO', (string) $sheet->getCell('A3')->getValue());
+        $this->assertSame('APPROVED-PILE', $sheet->getCell('D6')->getValue());
+        $this->assertNull($sheet->getCell('D7')->getValue());
         unlink($tempFile);
     }
 

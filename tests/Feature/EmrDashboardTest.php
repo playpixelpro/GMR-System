@@ -8,7 +8,9 @@ use App\Models\Pile;
 use App\Models\PmrRecord;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Services\EmrExportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Tests\TestCase;
 
@@ -74,6 +76,101 @@ class EmrDashboardTest extends TestCase
             ->assertSee('QUESTIONABLE');
     }
 
+    public function test_dashboard_filters_piles_by_gmr_status_and_defaults_to_ongoing(): void
+    {
+        [$branch, $warehouse] = $this->createHierarchy();
+        $this->createPile($warehouse, 'ONGOING-PILE', 1000, 61, 62);
+        $submittedPile = $this->createPile($warehouse, 'SUBMITTED-PILE', 1000, 61, 62);
+        $approvedPile = $this->createPile($warehouse, 'APPROVED-PILE', 1000, 61, 62);
+        $submittedPile->update(['gmr_status' => 'submitted']);
+        $approvedPile->update([
+            'gmr_status' => 'approved',
+            'gmr_locked_at' => now(),
+        ]);
+
+        $defaultResponse = $this->get(route('emr.index', [
+            'branch_id' => $branch->id,
+            'warehouse_id' => $warehouse->id,
+        ]));
+        $defaultResponse
+            ->assertSee('ONGOING-PILE')
+            ->assertDontSee('SUBMITTED-PILE')
+            ->assertDontSee('APPROVED-PILE')
+            ->assertSee('<option value="ongoing" selected', false);
+
+        foreach ([
+            'submitted' => ['SUBMITTED-PILE'],
+            'approved' => ['APPROVED-PILE'],
+            'all' => ['ONGOING-PILE', 'SUBMITTED-PILE', 'APPROVED-PILE'],
+        ] as $filter => $visiblePiles) {
+            $response = $this->get(route('emr.index', [
+                'branch_id' => $branch->id,
+                'warehouse_id' => $warehouse->id,
+                'gmr_filter' => $filter,
+            ]));
+
+            foreach ($visiblePiles as $pileNumber) {
+                $response->assertSee($pileNumber);
+            }
+            foreach (array_diff(['ONGOING-PILE', 'SUBMITTED-PILE', 'APPROVED-PILE'], $visiblePiles) as $pileNumber) {
+                $response->assertDontSee($pileNumber);
+            }
+        }
+
+        $this->get(route('emr.index', ['gmr_filter' => 'invalid']))
+            ->assertSee('<option value="ongoing" selected', false);
+    }
+
+    public function test_emr_exports_use_the_selected_gmr_status(): void
+    {
+        [, $warehouse] = $this->createHierarchy();
+        $this->createPile($warehouse, 'ONGOING-PILE', 1000, 61, 62);
+        $approvedPile = $this->createPile($warehouse, 'APPROVED-PILE', 1000, 61, 62);
+        $approvedPile->update([
+            'gmr_status' => 'approved',
+            'gmr_locked_at' => now(),
+        ]);
+
+        $query = [
+            'branch_id' => $warehouse->branch_id,
+            'warehouse_id' => $warehouse->id,
+            'gmr_filter' => 'approved',
+        ];
+        $csvResponse = $this->get(route('emr.export', $query));
+        $csvResponse->assertOk();
+
+        /** @var StreamedResponse $streamedResponse */
+        $streamedResponse = $csvResponse->baseResponse;
+        ob_start();
+        $streamedResponse->getCallback()();
+        $csv = ob_get_clean();
+        $this->assertStringContainsString('APPROVED-PILE', $csv);
+        $this->assertStringNotContainsString('ONGOING-PILE', $csv);
+
+        $excelResponse = $this->get(route('emr.export.excel', $query));
+        $tempFile = tempnam(sys_get_temp_dir(), 'emr_gmr_filter_');
+        file_put_contents($tempFile, $excelResponse->streamedContent());
+        $spreadsheet = IOFactory::load($tempFile);
+        $sheet = $spreadsheet->getActiveSheet();
+        $this->assertStringContainsString('GMR Status: Approved by CO', (string) $sheet->getCell('A3')->getValue());
+        $this->assertSame('APPROVED-PILE', $sheet->getCell('D6')->getValue());
+        unlink($tempFile);
+
+        $pdfExporter = \Mockery::mock(EmrExportService::class);
+        $pdfExporter
+            ->shouldReceive('exportPdf')
+            ->once()
+            ->withArgs(fn ($rows, array $filters): bool => $rows->pluck('pile')->all() === ['APPROVED-PILE'] &&
+                $filters['gmr_status'] === 'Approved by CO'
+            )
+            ->andReturn(response('Filtered EMR PDF'));
+        $this->app->instance(EmrExportService::class, $pdfExporter);
+
+        $this->get(route('emr.export.pdf', $query))
+            ->assertOk()
+            ->assertSee('Filtered EMR PDF');
+    }
+
     public function test_export_contains_numeric_emr_values_and_current_filter(): void
     {
         [$branch, $warehouse, $otherWarehouse] = $this->createHierarchy();
@@ -130,6 +227,7 @@ class EmrDashboardTest extends TestCase
         int $volume,
         float $amr,
         float $pmr,
+        ?string $gmrStatus = null,
     ): Pile {
         $pile = Pile::create([
             'branch_id' => $warehouse->branch_id,
@@ -141,6 +239,8 @@ class EmrDashboardTest extends TestCase
             'aged_months' => 5,
             'quality' => 'GQA',
             'volume_kg' => $volume,
+            'gmr_status' => $gmrStatus,
+            'gmr_locked_at' => $gmrStatus === 'approved' ? now() : null,
         ]);
 
         $recordDetails = [
