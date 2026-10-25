@@ -340,7 +340,7 @@ class ReportExportTest extends TestCase
         $this->assertStringNotContainsString('65.50%', $pmrHtml);
     }
 
-    public function test_exports_with_branch_and_warehouse_filters(): void
+    public function test_exports_with_branch_warehouse_and_gmr_status_filters(): void
     {
         $branch = Branch::create(['name' => 'Isabela Branch']);
         $warehouse = Warehouse::create(['name' => 'Santiago GID', 'branch_id' => $branch->id]);
@@ -348,11 +348,27 @@ class ReportExportTest extends TestCase
         $query = [
             'branch_id' => $branch->id,
             'warehouse_id' => $warehouse->id,
+            'gmr_filter' => 'approved',
         ];
 
-        $this->actingAs($this->user)->get(route('amr.export.excel', $query))->assertOk();
+        $amrExcel = $this->actingAs($this->user)->get(route('amr.export.excel', $query));
+        $amrExcel->assertOk();
+        $amrTempFile = tempnam(sys_get_temp_dir(), 'amr_gmr_filter_');
+        file_put_contents($amrTempFile, $amrExcel->streamedContent());
+        $amrSpreadsheet = IOFactory::load($amrTempFile);
+        $this->assertStringContainsString('GMR Status: Approved by CO', (string) $amrSpreadsheet->getActiveSheet()->getCell('A3')->getValue());
+        unlink($amrTempFile);
+
         $this->actingAs($this->user)->get(route('amr.export.pdf', $query))->assertOk();
-        $this->actingAs($this->user)->get(route('pmr.export.excel', $query))->assertOk();
+
+        $pmrExcel = $this->actingAs($this->user)->get(route('pmr.export.excel', $query));
+        $pmrExcel->assertOk();
+        $pmrTempFile = tempnam(sys_get_temp_dir(), 'pmr_gmr_filter_');
+        file_put_contents($pmrTempFile, $pmrExcel->streamedContent());
+        $pmrSpreadsheet = IOFactory::load($pmrTempFile);
+        $this->assertStringContainsString('GMR Status: Approved by CO', (string) $pmrSpreadsheet->getActiveSheet()->getCell('A3')->getValue());
+        unlink($pmrTempFile);
+
         $this->actingAs($this->user)->get(route('pmr.export.pdf', $query))->assertOk();
     }
 }

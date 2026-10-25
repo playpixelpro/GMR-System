@@ -109,7 +109,7 @@ class PmrRecordTest extends TestCase
             ]);
         }
 
-        $response = $this->get(route('pmr.index'));
+        $response = $this->get(route('pmr.index', ['gmr_filter' => 'all']));
 
         $response->assertOk();
         $response->assertSee('62.36');
@@ -172,6 +172,60 @@ class PmrRecordTest extends TestCase
             '<span class="font-medium text-base-content">0.00</span>',
             false,
         );
+    }
+
+    public function test_pmr_report_filters_piles_by_gmr_status_and_shows_legacy_rows_only_in_all(): void
+    {
+        $branch = Branch::create(['name' => 'GMR Filter Branch']);
+        $warehouse = Warehouse::create([
+            'branch_id' => $branch->id,
+            'name' => 'GMR Filter Warehouse',
+        ]);
+
+        foreach ([
+            'ONGOING-PILE' => null,
+            'SUBMITTED-PILE' => 'submitted',
+            'APPROVED-PILE' => 'approved',
+        ] as $pileNumber => $gmrStatus) {
+            Pile::create([
+                'branch_id' => $branch->id,
+                'warehouse_id' => $warehouse->id,
+                'pile_number' => $pileNumber,
+                'number' => $pileNumber,
+                'variety' => 'PD',
+                'gmr_status' => $gmrStatus,
+                'gmr_locked_at' => $gmrStatus === 'approved' ? now() : null,
+            ]);
+        }
+
+        PmrRecord::factory()->create([
+            'warehouse_name' => $warehouse->name,
+            'pile_number' => 'LEGACY-PILE',
+            'variety' => 'PD',
+        ]);
+
+        $expectedPiles = [
+            'ongoing' => ['ONGOING-PILE'],
+            'submitted' => ['SUBMITTED-PILE'],
+            'approved' => ['APPROVED-PILE'],
+            'all' => ['ONGOING-PILE', 'SUBMITTED-PILE', 'APPROVED-PILE', 'LEGACY-PILE'],
+        ];
+
+        foreach ($expectedPiles as $filter => $pileNumbers) {
+            $routeParameters = ['warehouse_id' => $warehouse->id];
+            if ($filter !== 'ongoing') {
+                $routeParameters['gmr_filter'] = $filter;
+            }
+            $response = $this->get(route('pmr.index', $routeParameters));
+
+            $response->assertOk();
+            foreach ($pileNumbers as $pileNumber) {
+                $response->assertSee($pileNumber);
+            }
+            foreach (array_diff(['ONGOING-PILE', 'SUBMITTED-PILE', 'APPROVED-PILE', 'LEGACY-PILE'], $pileNumbers) as $pileNumber) {
+                $response->assertDontSee($pileNumber);
+            }
+        }
     }
 
     public function test_pmr_cannot_use_more_than_three_trials(): void
@@ -275,7 +329,7 @@ class PmrRecordTest extends TestCase
             ]);
         }
 
-        $response = $this->get(route('pmr.index'));
+        $response = $this->get(route('pmr.index', ['gmr_filter' => 'all']));
 
         $response->assertOk();
         $response->assertSee('Lower than 60%');

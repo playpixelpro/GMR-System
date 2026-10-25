@@ -227,7 +227,7 @@ class AmrRecordTest extends TestCase
             'rice_recovery_kg' => '6300.00',
         ]);
 
-        $response = $this->get(route('amr.index'));
+        $response = $this->get(route('amr.index', ['gmr_filter' => 'all']));
 
         $response->assertOk();
         $response->assertSee('62.50');
@@ -301,6 +301,7 @@ class AmrRecordTest extends TestCase
             route('amr.index', [
                 'branch_id' => $includedBranch->id,
                 'warehouse_id' => $includedWarehouse->id,
+                'gmr_filter' => 'all',
             ]),
         );
 
@@ -308,6 +309,60 @@ class AmrRecordTest extends TestCase
             ->assertOk()
             ->assertSee('Included Warehouse')
             ->assertDontSee('Excluded Warehouse');
+    }
+
+    public function test_amr_report_filters_piles_by_gmr_status_and_shows_legacy_rows_only_in_all(): void
+    {
+        $branch = Branch::create(['name' => 'GMR Filter Branch']);
+        $warehouse = Warehouse::create([
+            'branch_id' => $branch->id,
+            'name' => 'GMR Filter Warehouse',
+        ]);
+
+        foreach ([
+            'ONGOING-PILE' => null,
+            'SUBMITTED-PILE' => 'submitted',
+            'APPROVED-PILE' => 'approved',
+        ] as $pileNumber => $gmrStatus) {
+            Pile::create([
+                'branch_id' => $branch->id,
+                'warehouse_id' => $warehouse->id,
+                'pile_number' => $pileNumber,
+                'number' => $pileNumber,
+                'variety' => 'PD',
+                'gmr_status' => $gmrStatus,
+                'gmr_locked_at' => $gmrStatus === 'approved' ? now() : null,
+            ]);
+        }
+
+        AmrRecord::factory()->create([
+            'warehouse_name' => $warehouse->name,
+            'pile_number' => 'LEGACY-PILE',
+            'variety' => 'PD',
+        ]);
+
+        $expectedPiles = [
+            'ongoing' => ['ONGOING-PILE'],
+            'submitted' => ['SUBMITTED-PILE'],
+            'approved' => ['APPROVED-PILE'],
+            'all' => ['ONGOING-PILE', 'SUBMITTED-PILE', 'APPROVED-PILE', 'LEGACY-PILE'],
+        ];
+
+        foreach ($expectedPiles as $filter => $pileNumbers) {
+            $routeParameters = ['warehouse_id' => $warehouse->id];
+            if ($filter !== 'ongoing') {
+                $routeParameters['gmr_filter'] = $filter;
+            }
+            $response = $this->get(route('amr.index', $routeParameters));
+
+            $response->assertOk();
+            foreach ($pileNumbers as $pileNumber) {
+                $response->assertSee($pileNumber);
+            }
+            foreach (array_diff(['ONGOING-PILE', 'SUBMITTED-PILE', 'APPROVED-PILE', 'LEGACY-PILE'], $pileNumbers) as $pileNumber) {
+                $response->assertDontSee($pileNumber);
+            }
+        }
     }
 
     public function test_amr_status_shows_ok_when_recovery_rate_is_at_least_60_percent(): void
@@ -323,7 +378,7 @@ class AmrRecordTest extends TestCase
             ]);
         }
 
-        $response = $this->get(route('amr.index'));
+        $response = $this->get(route('amr.index', ['gmr_filter' => 'all']));
 
         $response->assertOk();
         $response->assertSee('OK');
@@ -343,7 +398,7 @@ class AmrRecordTest extends TestCase
             ]);
         }
 
-        $response = $this->get(route('amr.index'));
+        $response = $this->get(route('amr.index', ['gmr_filter' => 'all']));
 
         $response->assertOk();
         $response->assertSee('Lower than 60%');
