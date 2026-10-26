@@ -57,7 +57,6 @@
 
         .gmr-table {
             width: 100%;
-            table-layout: fixed;
             border-collapse: collapse;
             margin-bottom: 15px;
         }
@@ -67,7 +66,7 @@
             border: 1px solid #000;
             padding: 3px 5px;
             font-size: 8pt;
-            white-space: nowrap;
+            vertical-align: middle;
         }
 
         .gmr-table th {
@@ -75,7 +74,7 @@
             text-align: center;
             text-transform: uppercase;
             background-color: #fff;
-            white-space: normal;
+            line-height: 1.2;
         }
 
         .text-left { text-align: left; }
@@ -163,16 +162,15 @@
     <!-- Table Section -->
     @php
         $reportColumns = \App\Models\GmrReportConfiguration::availableReportColumns();
-        $visibleColumnWidth = array_sum(array_map(
-            fn (string $columnKey): int => $reportColumns[$columnKey]['width'],
-            $visibleColumns,
-        ));
     @endphp
     <table class="gmr-table">
         <thead>
             <tr>
                 @foreach ($visibleColumns as $columnKey)
-                    <th style="width: {{ $reportColumns[$columnKey]['width'] / $visibleColumnWidth * 100 }}%">
+                    @php
+                        $isCompactColumn = in_array($columnKey, ['pile', 'variety', 'quality', 'pmr', 'amr', 'emr', 'gmr'], true);
+                    @endphp
+                    <th style="{{ $isCompactColumn ? 'white-space: nowrap;' : 'white-space: normal;' }}">
                         {{ $columnLabels[$columnKey] ?? $reportColumns[$columnKey]['label'] }}
                     </th>
                 @endforeach
@@ -191,8 +189,12 @@
                                 'emr' => str_replace('%', '', (string) ($value ?? '—')),
                                 default => $value ?? '—',
                             };
+                            $wrapStyle = match ($columnKey) {
+                                'warehouse' => 'white-space: normal;',
+                                default => 'white-space: nowrap;',
+                            };
                         @endphp
-                        <td class="{{ $column['bold'] ? 'font-bold' : '' }}" style="text-align: {{ $column['alignment'] }}; {{ $columnKey === 'warehouse' ? 'white-space: normal; overflow-wrap: anywhere;' : '' }}">
+                        <td class="{{ $column['bold'] ? 'font-bold' : '' }}" style="text-align: {{ $column['alignment'] }}; {{ $wrapStyle }}">
                             {{ $displayValue }}
                         </td>
                     @endforeach

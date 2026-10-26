@@ -71,6 +71,7 @@ class GmrSummaryDashboardTest extends TestCase
                 false,
             )
             ->assertSee('Included Warehouse')
+            ->assertSee('Variety')
             ->assertDontSee('Excluded Warehouse')
             ->assertDontSee('EMR vs GMR by Pile');
     }

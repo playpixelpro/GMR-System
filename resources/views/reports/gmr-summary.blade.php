@@ -169,20 +169,21 @@
                 </div>
             </div>
             <div class="overflow-x-auto">
-                <table class="table table-sm min-w-[88rem] text-sm">
+                <table class="table table-sm min-w-full text-sm">
                     <thead>
                         <tr class="border-y border-base-content/15 bg-base-200/60 text-sm font-semibold text-black">
-                            <th>Branch</th>
-                            <th>Warehouse</th>
-                            <th>Pile No.</th>
-                            <th class="text-end">Volume (bags)</th>
-                            <th class="text-end">PMR</th>
-                            <th class="text-end">AMR</th>
-                            <th>EMR</th>
-                            <th class="text-end">GMR</th>
-                            <th>Status</th>
-                            <th>Approved GMR</th>
-                            <th class="text-center w-28">
+                            <th class="whitespace-nowrap">Branch</th>
+                            <th class="whitespace-nowrap">Warehouse</th>
+                            <th class="whitespace-nowrap">Pile No.</th>
+                            <th class="whitespace-nowrap">Variety</th>
+                            <th class="text-end whitespace-nowrap">Volume (bags)</th>
+                            <th class="text-end whitespace-nowrap">PMR</th>
+                            <th class="text-end whitespace-nowrap">AMR</th>
+                            <th class="whitespace-nowrap">EMR</th>
+                            <th class="text-end whitespace-nowrap">GMR</th>
+                            <th class="whitespace-nowrap">Status</th>
+                            <th class="whitespace-nowrap">Approved GMR</th>
+                            <th class="text-center w-28 whitespace-nowrap">
                                 <label class="flex items-center justify-center gap-1 cursor-pointer" title="Select All for Report">
                                     <input type="checkbox" id="select-all-checkbox" class="checkbox checkbox-primary checkbox-xs" disabled />
                                     <span class="text-xs font-bold text-black">Select</span>
@@ -193,10 +194,11 @@
                     <tbody>
                         @foreach ($rows as $row)
                             <tr class="border-b border-base-content/10 hover:bg-base-200/30" data-row-branch-id="{{ $row['branch_id'] }}">
-                                <td>{{ $row['branch'] }}</td>
-                                <td class="font-medium">{{ $row['warehouse'] }}</td>
-                                <td class="font-semibold">{{ $row['pile'] }}</td>
-                                <td class="text-end font-mono">{{ $row['volume_bags'] !== null ? number_format($row['volume_bags'], 3) : 'N/A' }}</td>
+                                <td class="whitespace-nowrap">{{ $row['branch'] }}</td>
+                                <td class="font-medium whitespace-nowrap">{{ $row['warehouse'] }}</td>
+                                <td class="font-semibold whitespace-nowrap">{{ $row['pile'] }}</td>
+                                <td class="font-medium whitespace-nowrap">{{ $row['variety'] ?? '—' }}</td>
+                                <td class="text-end font-mono whitespace-nowrap">{{ $row['volume_bags'] !== null ? number_format($row['volume_bags'], 3) : 'N/A' }}</td>
                                 <td class="text-end font-mono">{{ $formatPercentage($row['pmr']) }}</td>
                                 <td class="text-end font-mono">{{ $formatPercentage($row['amr']) }}</td>
                                 <td class="font-mono">{{ $formatRange($row['amr'], $row['pmr']) }}</td>
