@@ -117,6 +117,7 @@ class GmrReportService
                 ($pile->warehouse?->branch?->name ?? '—'),
             'warehouse' => $pile->warehouse?->name ?? '—',
             'pile' => $pile->pile_number ?? ($pile->number ?? '—'),
+            'variety' => $pile->variety ?? '—',
             'volume_before_test_milling_bags' => $pile->volume_kg !== null
                     ? round((float) $pile->volume_kg / 50, 3)
                     : null,
@@ -178,6 +179,7 @@ class GmrReportService
             [
                 'warehouse' => 'GID#2, MLANG BS',
                 'pile' => '1',
+                'variety' => 'RC 160',
                 'volume_before_test_milling_bags' => 11522,
                 'volume_after_test_milling_bags' => null,
                 'quality' => 'GQA',
@@ -189,6 +191,7 @@ class GmrReportService
             [
                 'warehouse' => 'GID#2, MLANG BS',
                 'pile' => '2',
+                'variety' => 'RC 160',
                 'volume_before_test_milling_bags' => 12259,
                 'volume_after_test_milling_bags' => null,
                 'quality' => 'GQA',
@@ -200,6 +203,7 @@ class GmrReportService
             [
                 'warehouse' => 'GID#2, MLANG BS',
                 'pile' => '3',
+                'variety' => 'RC 216',
                 'volume_before_test_milling_bags' => 6624,
                 'volume_after_test_milling_bags' => null,
                 'quality' => 'GQA',
@@ -211,6 +215,7 @@ class GmrReportService
             [
                 'warehouse' => 'GID#2, MLANG BS',
                 'pile' => '4',
+                'variety' => 'RC 222',
                 'volume_before_test_milling_bags' => 4871,
                 'volume_after_test_milling_bags' => null,
                 'quality' => 'GQA',
@@ -222,6 +227,7 @@ class GmrReportService
             [
                 'warehouse' => 'GID#2, MLANG BS',
                 'pile' => '5',
+                'variety' => 'RC 222',
                 'volume_before_test_milling_bags' => 9438,
                 'volume_after_test_milling_bags' => null,
                 'quality' => 'GQA',
@@ -233,6 +239,7 @@ class GmrReportService
             [
                 'warehouse' => 'GID#4, MLANG BS',
                 'pile' => '1',
+                'variety' => 'RC 160',
                 'volume_before_test_milling_bags' => 7517,
                 'volume_after_test_milling_bags' => null,
                 'quality' => 'GQA',
@@ -244,6 +251,7 @@ class GmrReportService
             [
                 'warehouse' => 'GID#4, MLANG BS',
                 'pile' => '2',
+                'variety' => 'RC 160',
                 'volume_before_test_milling_bags' => 3165,
                 'volume_after_test_milling_bags' => null,
                 'quality' => 'GQA',
@@ -255,6 +263,7 @@ class GmrReportService
             [
                 'warehouse' => 'GID#4, MLANG BS',
                 'pile' => '9',
+                'variety' => 'RC 216',
                 'volume_before_test_milling_bags' => 2165,
                 'volume_after_test_milling_bags' => null,
                 'quality' => 'GQA',

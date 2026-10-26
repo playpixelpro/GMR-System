@@ -71,6 +71,8 @@ class GmrReportConfigurationTest extends TestCase
             ->assertSee('GMR Report Configuration')
             ->assertSee('Report Table Columns')
             ->assertSee('Report heading')
+            ->assertSee('name="column_labels[variety]"', false)
+            ->assertSee('Variety')
             ->assertSee('name="column_labels[volume_before_test_milling]"', false)
             ->assertSee('Volume in Bags Before Test Milling')
             ->assertSee('Volume in Bags After Test Milling')
@@ -527,6 +529,46 @@ class GmrReportConfigurationTest extends TestCase
             ->assertDontSee('GMR(%)');
     }
 
+    public function test_rmec_can_toggle_variety_column_and_customize_its_label(): void
+    {
+        [, $warehouse] = $this->createHierarchy();
+        $pile = $this->createPileWithRates(
+            $warehouse,
+            '1',
+            11522 * 50,
+            61.53,
+            62.22,
+        );
+
+        GmrReportConfiguration::current()->update([
+            'visible_columns' => [
+                'warehouse',
+                'pile',
+                'variety',
+                'gmr',
+            ],
+            'column_labels' => [
+                'variety' => 'Palay Variety',
+            ],
+        ]);
+
+        $response = $this->actingAs($this->rmecUser)
+            ->post(route('gmr.report.print'), [
+                'selected_piles' => [$pile->id],
+            ]);
+
+        $response
+            ->assertOk()
+            ->assertSee('Palay Variety')
+            ->assertSee('PD')
+            ->assertDontSee('>Quality<', false)
+            ->assertDontSee('>PMR(%)<', false);
+
+        // Column widths should auto-adjust without fixed inline percentage widths
+        $this->assertStringNotContainsString('table-layout: fixed', $response->getContent());
+        $this->assertStringNotContainsString('th style="width:', $response->getContent());
+    }
+
     public function test_print_with_excel_parameter_downloads_xlsx_file(): void
     {
         [$branch, $warehouse] = $this->createHierarchy();
@@ -612,23 +654,24 @@ class GmrReportConfigurationTest extends TestCase
         );
         $this->assertSame('North Cotabato Branch', $sheet->getCell('A4')->getValue());
         $this->assertSame('Warehouse', $sheet->getCell('A6')->getValue());
-        $this->assertSame('Before Milling Bags', $sheet->getCell('C6')->getValue());
-        $this->assertSame('Volume in Bags After Test Milling', $sheet->getCell('D6')->getValue());
-        $this->assertSame('PMR(%)', $sheet->getCell('F6')->getValue());
-        $this->assertSame('AMR(%)', $sheet->getCell('G6')->getValue());
-        $this->assertSame('EMR(%)', $sheet->getCell('H6')->getValue());
-        $this->assertSame('GMR(%)', $sheet->getCell('I6')->getValue());
+        $this->assertSame('Pile No.', $sheet->getCell('B6')->getValue());
+        $this->assertSame('Variety', $sheet->getCell('C6')->getValue());
+        $this->assertSame('Before Milling Bags', $sheet->getCell('D6')->getValue());
+        $this->assertSame('Volume in Bags After Test Milling', $sheet->getCell('E6')->getValue());
+        $this->assertSame('Quality', $sheet->getCell('F6')->getValue());
+        $this->assertSame('PMR(%)', $sheet->getCell('G6')->getValue());
+        $this->assertSame('AMR(%)', $sheet->getCell('H6')->getValue());
+        $this->assertSame('EMR(%)', $sheet->getCell('I6')->getValue());
+        $this->assertSame('GMR(%)', $sheet->getCell('J6')->getValue());
         $this->assertSame('GID#2, MLANG BS', $sheet->getCell('A7')->getValue());
         $this->assertSame('1', (string) $sheet->getCell('B7')->getValue());
-        $this->assertEquals(11522, $sheet->getCell('C7')->getValue());
-        $this->assertEquals(1522, $sheet->getCell('D7')->getValue());
-        $this->assertEquals(62.22, $sheet->getCell('F7')->getValue());
-        $this->assertEquals(61.53, $sheet->getCell('G7')->getValue());
-        $this->assertEquals(61.88, $sheet->getCell('I7')->getValue());
-        $this->assertStringNotContainsString(
-            '%',
-            (string) $sheet->getCell('F7')->getValue(),
-        );
+        $this->assertSame('PD', $sheet->getCell('C7')->getValue());
+        $this->assertEquals(11522, $sheet->getCell('D7')->getValue());
+        $this->assertEquals(1522, $sheet->getCell('E7')->getValue());
+        $this->assertEquals('GQA', $sheet->getCell('F7')->getValue());
+        $this->assertEquals(62.22, $sheet->getCell('G7')->getValue());
+        $this->assertEquals(61.53, $sheet->getCell('H7')->getValue());
+        $this->assertEquals(61.88, $sheet->getCell('J7')->getValue());
         $this->assertStringNotContainsString(
             '%',
             (string) $sheet->getCell('G7')->getValue(),
@@ -640,6 +683,10 @@ class GmrReportConfigurationTest extends TestCase
         $this->assertStringNotContainsString(
             '%',
             (string) $sheet->getCell('I7')->getValue(),
+        );
+        $this->assertStringNotContainsString(
+            '%',
+            (string) $sheet->getCell('J7')->getValue(),
         );
         unlink($tempFile);
     }

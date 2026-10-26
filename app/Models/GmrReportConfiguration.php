@@ -95,6 +95,14 @@ class GmrReportConfiguration extends Model
                 'bold' => true,
                 'width' => 8,
             ],
+            'variety' => [
+                'label' => 'Variety',
+                'field' => 'variety',
+                'type' => 'text',
+                'alignment' => 'center',
+                'bold' => false,
+                'width' => 10,
+            ],
             'volume_before_test_milling' => [
                 'label' => 'Volume in Bags Before Test Milling',
                 'field' => 'volume_before_test_milling_bags',
