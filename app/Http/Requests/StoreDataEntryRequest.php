@@ -60,6 +60,23 @@ class StoreDataEntryRequest extends FormRequest
             ]);
         }
 
+        if ($this->input('form_type') === 'amr' && is_array($this->input('trials'))) {
+            $computedSum = 0.0;
+            $hasPalay = false;
+            foreach ($this->input('trials') as $trial) {
+                if (isset($trial['palay_input']) && $trial['palay_input'] !== '' && $trial['palay_input'] !== null) {
+                    $clean = str_replace(',', '', (string) $trial['palay_input']);
+                    if (is_numeric($clean)) {
+                        $computedSum += (float) $clean;
+                        $hasPalay = true;
+                    }
+                }
+            }
+            if ($hasPalay && $computedSum > 0) {
+                $this->merge(['test_milling_volume' => (string) $computedSum]);
+            }
+        }
+
         $formType = $this->input('form_type', 'amr');
         $recordModel =
             $formType === 'amr' ? AmrRecord::class : PmrRecord::class;
@@ -367,10 +384,6 @@ class StoreDataEntryRequest extends FormRequest
             'volume' => ['required', 'numeric', 'min:0'],
             'test_milling_volume' => [
                 'nullable',
-                Rule::requiredIf(
-                    fn (): bool => $this->filled('volume') &&
-                        (float) $this->input('volume') >= Pile::TEST_MILLING_REQUIRED_VOLUME_KG,
-                ),
                 'numeric',
                 'min:0',
             ],

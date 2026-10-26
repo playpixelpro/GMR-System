@@ -360,16 +360,17 @@ class DataEntryTest extends TestCase
         $response = $this->get(route('records.create'));
 
         $response->assertOk();
-        $response->assertSee('Test Milling Volume in kg');
-        $response->assertSee('Required when the pile volume is 50,000 kg or greater.');
         $response->assertSee('test_milling_volume');
         $response->assertSee('Volume of Pile (kg) - Before test Milling');
+        $response->assertSee('Equivalent Volume in Bags (@ 50 kg/bag)');
+        $response->assertSee('id="volume_bags"', false);
+        $response->assertSee('amr-total-palay-badge');
     }
 
     public function test_test_milling_volume_is_optional_and_persisted(): void
     {
         $payloadWithVolume = [
-            'form_type' => 'amr',
+            'form_type' => 'pmr',
             'new_branch_name' => 'TM Branch',
             'new_warehouse_name' => 'Warehouse TM',
             'test_milling_date' => '2026-09-24',
@@ -381,22 +382,20 @@ class DataEntryTest extends TestCase
             'aged' => 3,
             'volume' => 30000,
             'test_milling_volume' => '1,500.500',
-            'rice_millers' => 'Miller TM',
             'no_of_trial' => 1,
-            'palay_input' => 100,
-            'rice_recovery' => 65,
+            'recovery_rate' => 65,
         ];
 
         $this->post(route('records.store'), $payloadWithVolume)->assertRedirect();
 
         $pile = Pile::where('number', 'TM-1')->firstOrFail();
         $this->assertEquals(1500.500, (float) $pile->test_milling_volume_kg);
-        $record = AmrRecord::where('pile_id', $pile->id)->firstOrFail();
+        $record = PmrRecord::where('pile_id', $pile->id)->firstOrFail();
         $this->assertEquals(1500.500, (float) $record->test_milling_volume_kg);
 
         // Optional: without test_milling_volume
         $payloadWithoutVolume = [
-            'form_type' => 'amr',
+            'form_type' => 'pmr',
             'new_branch_name' => 'TM Branch 2',
             'new_warehouse_name' => 'Warehouse TM 2',
             'test_milling_date' => '2026-09-24',
@@ -407,10 +406,8 @@ class DataEntryTest extends TestCase
             'quality' => 'good',
             'aged' => 3,
             'volume' => 30000,
-            'rice_millers' => 'Miller TM 2',
             'no_of_trial' => 1,
-            'palay_input' => 100,
-            'rice_recovery' => 65,
+            'recovery_rate' => 65,
         ];
 
         $this->post(route('records.store'), $payloadWithoutVolume)->assertRedirect();
@@ -419,26 +416,46 @@ class DataEntryTest extends TestCase
         $this->assertNull($pile2->test_milling_volume_kg);
     }
 
-    public function test_amr_and_pmr_require_test_milling_volume_for_piles_of_50000_kg_or_more(): void
+    public function test_amr_auto_computes_test_milling_volume_from_trial_palay_inputs(): void
     {
-        foreach (['amr', 'pmr'] as $formType) {
-            $this->post(route('records.store'), [
-                'form_type' => $formType,
-                'new_branch_name' => "Large Volume {$formType} Branch",
-                'new_warehouse_name' => "Large Volume {$formType} Warehouse",
-                'pile_number' => "LARGE-{$formType}",
-                'variety' => 'PD',
-                'purity' => 94.31,
-                'mc' => 11.1,
-                'quality' => 'gqa',
-                'aged' => 5,
-                'volume' => '50,000',
-                'test_milling_date' => '2026-09-24',
-                'no_of_trial' => 1,
-                'palay_input' => 100,
-                'rice_recovery' => 60,
-            ])->assertSessionHasErrors('test_milling_volume');
-        }
+        $this->post(route('records.store'), [
+            'form_type' => 'amr',
+            'new_branch_name' => 'Auto Volume AMR Branch',
+            'new_warehouse_name' => 'Auto Volume AMR Warehouse',
+            'pile_number' => 'AUTO-AMR-1',
+            'variety' => 'PD',
+            'purity' => 94.31,
+            'mc' => 11.1,
+            'quality' => 'gqa',
+            'aged' => 5,
+            'volume' => '50,000',
+            'trials' => [
+                [
+                    'trial_number' => 1,
+                    'test_milling_date' => '2026-09-24',
+                    'rice_millers' => 'Miller 1',
+                    'palay_input' => '200',
+                    'rice_recovery' => '130',
+                ],
+                [
+                    'trial_number' => 2,
+                    'test_milling_date' => '2026-09-25',
+                    'rice_millers' => 'Miller 1',
+                    'palay_input' => '200',
+                    'rice_recovery' => '130',
+                ],
+                [
+                    'trial_number' => 3,
+                    'test_milling_date' => '2026-09-26',
+                    'rice_millers' => 'Miller 1',
+                    'palay_input' => '200',
+                    'rice_recovery' => '130',
+                ],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $pile = Pile::where('pile_number', 'AUTO-AMR-1')->firstOrFail();
+        $this->assertSame(600.0, (float) $pile->test_milling_volume_kg);
     }
 
     public function test_update_pile_details_updates_test_milling_volume(): void
@@ -570,7 +587,7 @@ class DataEntryTest extends TestCase
         $this->assertSame(20000.0, (float) $pile->fresh()->volume_kg);
     }
 
-    public function test_update_pile_details_requires_test_milling_volume_at_50000_kg(): void
+    public function test_update_pile_details_allows_updating_volume_without_test_milling_volume(): void
     {
         $branch = Branch::create(['name' => 'Required Volume Branch']);
         $warehouse = Warehouse::create(['branch_id' => $branch->id, 'name' => 'Required Volume Warehouse']);
@@ -595,25 +612,9 @@ class DataEntryTest extends TestCase
             'quality' => 'good',
             'volume' => '50,000',
             'test_milling_volume' => '',
-        ])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors('test_milling_volume');
-
-        $this->assertSame(20000.0, (float) $pile->fresh()->volume_kg);
-
-        $this->patchJson(route('piles.details.update', $pile), [
-            'variety' => 'PD',
-            'purity' => 90,
-            'aged' => 2,
-            'mc' => 12,
-            'quality' => 'good',
-            'volume' => '50,000',
-            'test_milling_volume' => '500.250',
-        ])
-            ->assertOk();
+        ])->assertOk();
 
         $this->assertSame(50000.0, (float) $pile->fresh()->volume_kg);
-        $this->assertSame(500.250, (float) $pile->fresh()->test_milling_volume_kg);
     }
 
     /**

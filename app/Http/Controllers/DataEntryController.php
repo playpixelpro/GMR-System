@@ -71,8 +71,34 @@ class DataEntryController extends Controller
                 $amrRecords = $pile->amrRecords;
                 $amrLatestConduct = $amrRecords->max('conduct_number') ?? 1;
                 $amrRecordsForConduct = $amrRecords->where('conduct_number', $amrLatestConduct);
-                $amrLatestIsRetest = $amrRecordsForConduct->contains('status', 'RETEST');
+                $amrLatestIsRetest = $amrRecordsForConduct->contains('status', 'RETEST')
+                    || strtolower((string) $pile->amr_status) === 'retest';
                 $amrActiveRecords = $amrLatestIsRetest ? collect() : $amrRecordsForConduct;
+
+                $prevMilledKg = 0.0;
+                $retestInfo = null;
+                if ($amrLatestIsRetest && $amrRecordsForConduct->isNotEmpty()) {
+                    $prevMilledKg = (float) $amrRecordsForConduct->sum('palay_input_kg');
+                    if ($prevMilledKg > 0 && $pile->volume_kg !== null) {
+                        $adjustedVolumeKg = max(0, (float) $pile->volume_kg - $prevMilledKg);
+                        $retestInfo = [
+                            'is_retest' => true,
+                            'previous_conduct' => $amrLatestConduct,
+                            'previous_milled_kg' => $prevMilledKg,
+                            'previous_milled_bags' => round($prevMilledKg / 50, 3),
+                            'original_volume_kg' => (float) $pile->volume_kg,
+                            'original_volume_bags' => round((float) $pile->volume_kg / 50, 3),
+                            'adjusted_volume_kg' => $adjustedVolumeKg,
+                            'adjusted_volume_bags' => round($adjustedVolumeKg / 50, 3),
+                        ];
+                    }
+                }
+
+                $amrSharedData = $sharedData;
+                if ($retestInfo) {
+                    $amrSharedData['volume'] = $retestInfo['adjusted_volume_kg'];
+                    $amrSharedData['test_milling_volume'] = null;
+                }
 
                 $pmrRecords = $pile->pmrRecords;
                 $pmrLatestConduct = $pmrRecords->max('conduct_number') ?? 1;
@@ -103,10 +129,12 @@ class DataEntryController extends Controller
                     'is_pmr_locked' => $pmrRecordsForConduct->isNotEmpty() && $pmrRecordsForConduct->every('is_locked'),
                     'is_amr_retest' => $amrLatestIsRetest,
                     'is_pmr_retest' => $pmrLatestIsRetest,
+                    'retest_info' => $retestInfo,
                     'shared' => $sharedData,
                     'pmr_rate' => $pilePmrRate,
                     'amr' => [
-                        ...$sharedData,
+                        ...$amrSharedData,
+                        'retest_info' => $retestInfo,
                         'pmr_rate' => $pilePmrRate,
                         'rice_millers' => $amrRecords->first()?->rice_millers,
                         'trials' => $amrActiveRecords
@@ -250,6 +278,10 @@ class DataEntryController extends Controller
             }
         }
 
+        $testMillingVolume = array_key_exists('test_milling_volume', $validated) && $validated['test_milling_volume'] !== null && $validated['test_milling_volume'] !== ''
+            ? $validated['test_milling_volume']
+            : $pile->test_milling_volume_kg;
+
         $updateData = [
             'variety' => $validated['variety'],
             'purity' => $validated['purity'],
@@ -257,7 +289,7 @@ class DataEntryController extends Controller
             'mc' => $validated['mc'],
             'quality' => $validated['quality'],
             'volume_kg' => $validated['volume'],
-            'test_milling_volume_kg' => $validated['test_milling_volume'] ?? null,
+            'test_milling_volume_kg' => $testMillingVolume,
         ];
 
         DB::transaction(function () use ($pile, $updateData, $isTestsLocked, $currentUser): void {
@@ -633,6 +665,17 @@ class DataEntryController extends Controller
                 ]);
             }
 
+            $computedPalayInputSum = collect($validated['trials'] ?? [])
+                ->sum(function ($trial) {
+                    $clean = str_replace(',', '', (string) ($trial['palay_input'] ?? ''));
+
+                    return is_numeric($clean) ? (float) $clean : 0;
+                });
+
+            $testMillingVolume = ($validated['form_type'] === 'amr' && $computedPalayInputSum > 0)
+                ? $computedPalayInputSum
+                : ($validated['test_milling_volume'] ?? null);
+
             // Update pile attributes
             $pile->update([
                 'variety' => $validated['variety'],
@@ -641,10 +684,10 @@ class DataEntryController extends Controller
                 'quality' => $validated['quality'],
                 'aged_months' => $validated['aged'],
                 'volume_kg' => $validated['volume'],
-                'test_milling_volume_kg' => $validated['test_milling_volume'] ?? null,
+                'test_milling_volume_kg' => $testMillingVolume,
             ]);
 
-            // Sync updated attributes across all existing trials for this pile
+            // Sync updated attributes across unlocked trials for this conduct
             $sharedAttributes = [
                 'variety' => $validated['variety'],
                 'purity' => $validated['purity'],
@@ -652,10 +695,10 @@ class DataEntryController extends Controller
                 'quality' => $validated['quality'],
                 'aged_months' => $validated['aged'],
                 'volume_kg' => $validated['volume'],
-                'test_milling_volume_kg' => $validated['test_milling_volume'] ?? null,
+                'test_milling_volume_kg' => $testMillingVolume,
             ];
-            AmrRecord::where('pile_id', $pile->id)->update($sharedAttributes);
-            PmrRecord::where('pile_id', $pile->id)->update($sharedAttributes);
+            AmrRecord::where('pile_id', $pile->id)->where('is_locked', false)->update($sharedAttributes);
+            PmrRecord::where('pile_id', $pile->id)->where('is_locked', false)->update($sharedAttributes);
 
             $trials = $validated['trials'];
             $count = 0;
@@ -740,7 +783,7 @@ class DataEntryController extends Controller
                     'quality' => $validated['quality'],
                     'aged_months' => $validated['aged'],
                     'volume_kg' => $validated['volume'],
-                    'test_milling_volume_kg' => $validated['test_milling_volume'] ?? null,
+                    'test_milling_volume_kg' => $testMillingVolume,
                     'rice_millers' => $validated['form_type'] === 'amr'
                             ? $trial['rice_millers'] ?? null
                             : null,

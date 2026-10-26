@@ -163,7 +163,7 @@ class AmrRecord extends Model
 
     public function getVolumeKgAttribute($value)
     {
-        return $this->pile?->volume_kg ?? $value;
+        return $value ?? $this->pile?->volume_kg;
     }
 
     public function getMillingRecoveryPercentageAttribute(): float
