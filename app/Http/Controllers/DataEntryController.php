@@ -189,6 +189,7 @@ class DataEntryController extends Controller
             'piles' => $piles,
             'formType' => $request->query('type') ?? $request->query('form_type'),
             'isStaff' => $isStaff,
+            'isAdmin' => (bool) $currentUser?->hasRole('ADMINISTRATOR'),
             'userBranchId' => $userBranchId,
             'assignedBranch' => $assignedBranch,
         ]);
@@ -224,14 +225,30 @@ class DataEntryController extends Controller
             || $latestAmrRecords->contains('status', 'RECOMMENDED')
             || $latestPmrRecords->contains('status', 'RECOMMENDED');
 
-        if (
-            $currentUser?->hasRole('STAFF')
-            && ($isRecommended || (($isAmrLocked || $isPmrLocked) && ! $hasRetest))
-        ) {
-            abort(403, 'Pile details cannot be modified because the test milling is locked by RMEC or Administrator.');
-        }
+        $isTestsLocked = $isRecommended || (($isAmrLocked || $isPmrLocked) && ! $hasRetest);
 
         $validated = $request->validated();
+
+        if ($isTestsLocked) {
+            if (! $currentUser?->hasRole('ADMINISTRATOR')) {
+                abort(403, 'Pile details cannot be modified because the test milling is locked by RMEC or Administrator.');
+            }
+
+            $oldVolume = (float) ($pile->volume_kg ?? 0);
+            $newVolume = (float) $validated['volume'];
+
+            $isOldLow = $oldVolume < Pile::TEST_MILLING_REQUIRED_VOLUME_KG;
+            $isNewLow = $newVolume < Pile::TEST_MILLING_REQUIRED_VOLUME_KG;
+
+            if ($oldVolume > 0 && $isOldLow !== $isNewLow) {
+                return response()->json([
+                    'message' => 'Cannot change volume across the 50,000 kg threshold while test milling is locked, as this alters the test milling methodology (MRI vs Standard AMR).',
+                    'errors' => [
+                        'volume' => ['Cannot change volume across the 50,000 kg threshold while test milling is locked.'],
+                    ],
+                ], 422);
+            }
+        }
 
         $updateData = [
             'variety' => $validated['variety'],
@@ -243,7 +260,7 @@ class DataEntryController extends Controller
             'test_milling_volume_kg' => $validated['test_milling_volume'] ?? null,
         ];
 
-        DB::transaction(function () use ($pile, $updateData): void {
+        DB::transaction(function () use ($pile, $updateData, $isTestsLocked, $currentUser): void {
             $pile->update($updateData);
 
             $childUpdateData = [
@@ -256,14 +273,27 @@ class DataEntryController extends Controller
                 'test_milling_volume_kg' => $updateData['test_milling_volume_kg'],
             ];
 
-            $pile->amrRecords()->where('is_locked', false)->update($childUpdateData);
-            $pile->pmrRecords()->where('is_locked', false)->update($childUpdateData);
+            if ($isTestsLocked && $currentUser?->hasRole('ADMINISTRATOR')) {
+                $pile->amrRecords()->update($childUpdateData);
+                $pile->pmrRecords()->update($childUpdateData);
+            } else {
+                $pile->amrRecords()->where('is_locked', false)->update($childUpdateData);
+                $pile->pmrRecords()->where('is_locked', false)->update($childUpdateData);
+            }
         });
 
-        AuditLog::record('DATA_EDITED', $pile, [
+        $action = ($isTestsLocked && $currentUser?->hasRole('ADMINISTRATOR'))
+            ? 'ADMIN_PILE_DETAILS_CORRECTED'
+            : 'DATA_EDITED';
+        $desc = ($isTestsLocked && $currentUser?->hasRole('ADMINISTRATOR'))
+            ? 'Administrator corrected pile details for locked test milling'
+            : 'Pile details updated';
+
+        AuditLog::record($action, $pile, [
             'details' => $updateData,
+            'is_tests_locked' => $isTestsLocked,
             'user_id' => Auth::id(),
-        ], 'pile', 'Pile details updated');
+        ], 'pile', $desc);
 
         return response()->json([
             'message' => 'Pile details updated successfully.',

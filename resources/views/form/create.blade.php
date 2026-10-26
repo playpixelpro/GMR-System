@@ -355,6 +355,7 @@
 
     <script>
         const isStaffUser = @json((bool) ($isStaff && $userBranchId));
+        const isAdminUser = @json((bool) ($isAdmin ?? auth()->user()?->hasRole('ADMINISTRATOR')));
         const assignedBranchId = @json($userBranchId ? (string) $userBranchId : null);
         const pileData = @json($piles);
         let pileDetailsLocked = true;
@@ -406,6 +407,25 @@
             if (clean === '') return null;
             const num = parseFloat(clean);
             return isNaN(num) ? null : num;
+        }
+
+        function getPileLockStatus(pile) {
+            if (!pile) return { isLocked: false, isAmrLocked: false, isPmrLocked: false };
+            const isAmrLocked = Boolean(
+                (pile.amr?.records?.length > 0 && pile.amr.records.every((r) => r.is_locked) && !pile.is_amr_retest) ||
+                (pile.is_amr_locked && !pile.is_amr_retest) ||
+                String(pile.amr_status || '').toLowerCase() === 'recommended'
+            );
+            const isPmrLocked = Boolean(
+                (pile.pmr?.records?.length > 0 && pile.pmr.records.every((r) => r.is_locked) && !pile.is_pmr_retest) ||
+                (pile.is_pmr_locked && !pile.is_pmr_retest) ||
+                String(pile.pmr_status || '').toLowerCase() === 'recommended'
+            );
+            return {
+                isLocked: isAmrLocked || isPmrLocked,
+                isAmrLocked,
+                isPmrLocked,
+            };
         }
 
         function updateTestMillingVolumeRequirement() {
@@ -558,8 +578,13 @@
                             submitButton.title = 'Test milling is locked and cannot be edited';
                         }
                         if (editPileDetailsButton) {
-                            editPileDetailsButton.disabled = true;
-                            editPileDetailsButton.title = 'Pile details cannot be edited while test milling is locked';
+                            if (isAdminUser) {
+                                editPileDetailsButton.disabled = !pileHasSavedDetails;
+                                editPileDetailsButton.title = 'Administrator: Test milling is locked. You can edit pile details (volume cannot cross 50,000 kg threshold).';
+                            } else {
+                                editPileDetailsButton.disabled = true;
+                                editPileDetailsButton.title = 'Pile details cannot be edited while test milling is locked';
+                            }
                         }
                     } else {
                         mriSection.querySelectorAll('input, select, textarea').forEach((field) => {
@@ -1037,15 +1062,16 @@
                 field.classList.toggle('cursor-not-allowed', locked);
             });
             const selectedPile = pileData.find((pile) => String(pile.id) === pileSelect.value);
-            const isTestLocked = Boolean(
-                selectedPile && formType.value && selectedPile[formType.value]?.records?.length > 0 &&
-                selectedPile[formType.value].records.every((r) => r.is_locked) &&
-                !selectedPile[`is_${formType.value}_retest`]
-            ) || Boolean(selectedPile && selectedPile[`is_${formType?.value}_locked`] && !selectedPile[`is_${formType?.value}_retest`]);
+            const lockStatus = getPileLockStatus(selectedPile);
 
-            if (isTestLocked) {
-                editPileDetailsButton.disabled = true;
-                editPileDetailsButton.title = 'Pile details cannot be edited while test milling is locked';
+            if (lockStatus.isLocked) {
+                if (isAdminUser) {
+                    editPileDetailsButton.disabled = !pileHasSavedDetails;
+                    editPileDetailsButton.title = 'Administrator: Test milling is locked. You can edit pile details (volume cannot cross 50,000 kg threshold).';
+                } else {
+                    editPileDetailsButton.disabled = true;
+                    editPileDetailsButton.title = 'Pile details cannot be edited while test milling is locked';
+                }
             } else {
                 editPileDetailsButton.disabled = !pileHasSavedDetails;
                 editPileDetailsButton.removeAttribute('title');
@@ -1505,13 +1531,9 @@
 
         editPileDetailsButton.addEventListener('click', async () => {
             const selectedPile = pileData.find((pile) => String(pile.id) === pileSelect.value);
-            const isTestLocked = Boolean(
-                selectedPile && formType.value && selectedPile[formType.value]?.records?.length > 0 &&
-                selectedPile[formType.value].records.every((r) => r.is_locked) &&
-                !selectedPile[`is_${formType.value}_retest`]
-            ) || Boolean(selectedPile && selectedPile[`is_${formType?.value}_locked`] && !selectedPile[`is_${formType?.value}_retest`]);
+            const lockStatus = getPileLockStatus(selectedPile);
 
-            if (isTestLocked) {
+            if (lockStatus.isLocked && !isAdminUser) {
                 window.showAlert('Pile details cannot be modified because the test milling is locked by RMEC or Administrator.', 'error');
                 return;
             }
@@ -1525,6 +1547,26 @@
             if (testMillingVolumeInput?.required && !testMillingVolumeInput.value.trim()) {
                 testMillingVolumeInput.reportValidity();
                 return;
+            }
+
+            if (lockStatus.isLocked) {
+                const oldVolume = parseFloat(
+                    selectedPile?.shared?.volume ?? selectedPile?.amr?.volume ?? selectedPile?.pmr?.volume ?? 0
+                );
+                const newVolumeStr = (document.querySelector('#volume')?.value || '').replace(/,/g, '');
+                const newVolume = parseFloat(newVolumeStr);
+
+                if (!isNaN(oldVolume) && !isNaN(newVolume) && oldVolume > 0) {
+                    const isOldLow = oldVolume < testMillingRequiredVolumeKg;
+                    const isNewLow = newVolume < testMillingRequiredVolumeKg;
+                    if (isOldLow !== isNewLow) {
+                        window.showAlert(
+                            'Cannot change volume across the 50,000 kg threshold while test milling is locked, as this alters the test milling methodology (MRI vs Standard AMR).',
+                            'error'
+                        );
+                        return;
+                    }
+                }
             }
 
             const selectedPileId = pileSelect.value;
@@ -1552,6 +1594,8 @@
                 }
 
                 const selectedPile = pileData.find((pile) => String(pile.id) === selectedPileId);
+                const updatedVolume = payload.get('volume').replaceAll(',', '');
+                const updatedTestMillingVolume = payload.get('test_milling_volume').replaceAll(',', '');
                 ['amr', 'pmr'].forEach((type) => {
                     const details = selectedPile?.[type];
                     if (details) {
@@ -1560,8 +1604,8 @@
                         details.aged = payload.get('aged');
                         details.mc = payload.get('mc');
                         details.quality = payload.get('quality');
-                        details.volume = payload.get('volume').replaceAll(',', '');
-                        details.test_milling_volume = payload.get('test_milling_volume').replaceAll(',', '');
+                        details.volume = updatedVolume;
+                        details.test_milling_volume = updatedTestMillingVolume;
                     }
                 });
                 if (selectedPile?.shared) {
@@ -1570,12 +1614,13 @@
                     selectedPile.shared.aged = payload.get('aged');
                     selectedPile.shared.mc = payload.get('mc');
                     selectedPile.shared.quality = payload.get('quality');
-                    selectedPile.shared.volume = payload.get('volume').replaceAll(',', '');
-                    selectedPile.shared.test_milling_volume = payload.get('test_milling_volume').replaceAll(',', '');
+                    selectedPile.shared.volume = updatedVolume;
+                    selectedPile.shared.test_milling_volume = updatedTestMillingVolume;
                 }
                 setPileDetailsLocked(true, true);
                 updateAmrVolumeLayout();
                 updateTrialOptions();
+                window.showAlert(data.message || 'Pile details updated successfully.', 'success');
             } catch (error) {
                 window.showAlert(error.message, 'error');
                 editPileDetailsButton.disabled = false;
