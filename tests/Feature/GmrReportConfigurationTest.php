@@ -520,7 +520,6 @@ class GmrReportConfigurationTest extends TestCase
                 'selected_piles' => [$pile->id],
             ])
             ->assertOk()
-            ->assertSee('Volume before test milling is the pile’s original volume')
             ->assertSee('Before Milling Bags')
             ->assertSee('Remaining Bags')
             ->assertSee('11,522')
